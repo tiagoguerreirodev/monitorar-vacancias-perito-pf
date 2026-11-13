@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "reference_month": "2026-09",
+      "authorized": 1195,
+      "distributed": 1195,
+      "occupied": 1108,
+      "vacant": 87,
+      "organization": {
+        "code": 20115,
+        "name": "DEPARTAMENTO DE POLICIA FEDERAL",
+        "abbreviation": "DPF"
+      },
+      "class_codes": [
+        901004,
+        901005,
+        901006,
+        901011
+      ],
+      "source": {
+        "url": "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2026/CargosVagosVacancias_202609.ods",
+        "sha256": "545aa858ae68dd60e5ef7463f548ce3ff3fb5cfdfa5d71978348f5436b1aae89",
+        "retrieved_at": "2026-11-13T23:15:56.052978Z"
+      }
+    }
+  ]
+}
