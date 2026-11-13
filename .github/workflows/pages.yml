@@ -1,0 +1,65 @@
+{
+  "name": "Refresh and deploy Pages",
+  "on": {
+    "schedule": [{"cron": "0 9 28 * *", "timezone": "America/Sao_Paulo"}],
+    "workflow_dispatch": {}
+  },
+  "permissions": {"contents": "read"},
+  "concurrency": {"group": "pages-main", "cancel-in-progress": false},
+  "jobs": {
+    "refresh": {
+      "if": "${{ github.repository == 'tiagoguerreirodev/monitorar-vacancias-perito-pf' && github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}",
+      "runs-on": "ubuntu-latest",
+      "timeout-minutes": 30,
+      "permissions": {"contents": "write"},
+      "outputs": {
+        "revision": "${{ steps.persist.outputs.revision }}",
+        "artifact_name": "pages-${{ github.run_id }}-${{ github.run_attempt }}"
+      },
+      "steps": [
+        {"uses": "actions/checkout@v7", "with": {"ref": "${{ github.sha }}", "persist-credentials": false}},
+        {"uses": "actions/setup-python@v7", "with": {"python-version": "3.13"}},
+        {"name": "Validate before refreshing", "run": "python3 -m unittest discover -v"},
+        {"name": "Refresh and build complete candidate", "run": "python3 -m perito_dashboard --data-dir data --site-dir site"},
+        {
+          "name": "Persist accepted aggregates without force pushing",
+          "id": "persist",
+          "env": {"EXPECTED_REVISION": "${{ github.sha }}", "GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}"},
+          "run": "bash .github/scripts/persist-data.sh"
+        },
+        {
+          "name": "Record artifact provenance",
+          "id": "provenance",
+          "env": {"CODE_REVISION": "${{ github.sha }}", "DATA_REVISION": "${{ steps.persist.outputs.revision }}"},
+          "run": "printf '{\"code_revision\":\"%s\",\"data_revision\":\"%s\",\"run_id\":\"%s\",\"run_attempt\":\"%s\"}\\n' \"$CODE_REVISION\" \"$DATA_REVISION\" \"$GITHUB_RUN_ID\" \"$GITHUB_RUN_ATTEMPT\" > site/build.json"
+        },
+        {
+          "name": "Upload this run's validated site",
+          "uses": "actions/upload-pages-artifact@v5",
+          "with": {"path": "site", "name": "pages-${{ github.run_id }}-${{ github.run_attempt }}"}
+        }
+      ]
+    },
+    "deploy": {
+      "if": "${{ github.repository == 'tiagoguerreirodev/monitorar-vacancias-perito-pf' && github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}",
+      "needs": "refresh",
+      "runs-on": "ubuntu-latest",
+      "timeout-minutes": 10,
+      "permissions": {"contents": "read", "pages": "write", "id-token": "write"},
+      "environment": {"name": "github-pages", "url": "${{ steps.deployment.outputs.page_url }}"},
+      "steps": [
+        {
+          "name": "Reject a superseded candidate before deployment",
+          "env": {"EXPECTED_REVISION": "${{ needs.refresh.outputs.revision }}", "REPOSITORY": "${{ github.repository }}", "GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}"},
+          "run": ": \"${EXPECTED_REVISION:?Missing accepted revision}\"\ncurrent=$(gh api \"repos/$REPOSITORY/git/ref/heads/main\" --jq .object.sha)\nif [[ \"$current\" != \"$EXPECTED_REVISION\" ]]; then\n  echo '::error::main changed before deployment; run a fresh workflow on main.' >&2\n  exit 1\nfi"
+        },
+        {
+          "name": "Deploy this run's artifact explicitly",
+          "id": "deployment",
+          "uses": "actions/deploy-pages@v5",
+          "with": {"artifact_name": "${{ needs.refresh.outputs.artifact_name }}"}
+        }
+      ]
+    }
+  }
+}
