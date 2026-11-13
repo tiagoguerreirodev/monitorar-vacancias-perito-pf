@@ -45,6 +45,18 @@ def set_cell(row, header, name, value):
     ET.SubElement(cell, TEXT + "p").text = str(value)
 
 
+def monthly_resource(month, edit=None):
+    """A dated official-format response, optionally with changed aggregate cells."""
+    def dated(table, header):
+        for row in table.findall(TABLE + "table-row")[1:]:
+            if any("".join(cell.itertext()).strip() for cell in list(row)[:len(header)]):
+                set_cell(row, header, "ANO_MES", month.replace("-", ""))
+        if edit is not None:
+            edit(table, header)
+    return (ARCHIVE_URL + month[:4] + "/CargosVagosVacancias_" + month.replace("-", "") + ".ods",
+            variant(dated))
+
+
 class ControlledArchive:
     def __init__(self, resources=None):
         self.resources = dict(resources if resources is not None else {SEPTEMBER_URL: SEPTEMBER})
@@ -61,3 +73,25 @@ class ControlledArchive:
 
     def spreadsheet(self, url):
         return self.resources[url]
+
+
+class ScriptedArchive(ControlledArchive):
+    """Supply transient or permanent external HTTP failures before normal responses."""
+    def __init__(self, responses, resources=None):
+        super().__init__(resources)
+        self.responses = {key: iter(values) for key, values in responses.items()}
+
+    def response(self, key, normal):
+        value = next(self.responses.get(key, iter(())), normal)
+        if isinstance(value, Exception):
+            raise value
+        return value
+
+    def archive_index(self):
+        return self.response("archive", super().archive_index())
+
+    def year_index(self, year):
+        return self.response(year, super().year_index(year))
+
+    def spreadsheet(self, url):
+        return self.response(url, super().spreadsheet(url))
