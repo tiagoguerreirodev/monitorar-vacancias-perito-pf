@@ -19,7 +19,8 @@ for line in sys.stdin:
  action = json.loads(line)['action']
  with trace.open('a') as stream: stream.write(action + '\\n')
  if action == 'stage':
-  result = {'ok': True, 'runtime': '/opt/perito-uf-sandbox-'+'a'*32+'/runtime', 'tree_sha256': 'b'*64}
+  result = {'ok': True, 'runtime': '/usr/lib/perito-uf-sandbox-'+'a'*32+'/runtime', 'tree_sha256': 'b'*64}
+  if mode.startswith('runtime:'): result['runtime'] = mode.removeprefix('runtime:')
   if mode == 'collision': result = {'ok': False, 'raw': 'SECRET /private ws://token'}
   if mode == 'early_final':
    print(json.dumps({'ok': True, 'profile_removed': True, 'runtime_removed': True, 'processes_stopped': True}), flush=True)
@@ -66,6 +67,22 @@ class BoundaryTests(unittest.TestCase):
             result = api().experiment([sys.executable, str(owner), str(trace), owner_mode],
                                       [sys.executable, str(observer), str(trace), observer_mode])
             return result, trace.read_text().splitlines()
+
+    def test_only_exact_dedicated_namespace_can_reach_observation(self):
+        for runtime in (
+                '/opt/perito-uf-sandbox-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/runtime',
+                '/usr/lib/jvm/perito-uf-sandbox-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/runtime',
+                '/tmp/perito-uf-sandbox-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/runtime',
+                '/usr/lib/perito-uf-sandbox-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/runtime',
+                '/usr/lib/perito-uf-sandbox-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/runtime/extra'):
+            with self.subTest(runtime=runtime):
+                result, trace = self.run_case(owner_mode='runtime:' + runtime)
+                self.assertEqual(result['status'], 'experiment_failed')
+                self.assertIsNone(result['tree_sha256'])
+                self.assertEqual(result['phases'], {})
+                self.assertEqual(trace, ['stage', 'cleanup'])
+                self.assertTrue(all(result['cleanup'].values()))
+                self.assertNotIn(runtime, json.dumps(result))
 
     def test_early_owner_finally_receipt_is_preserved_without_advancing(self):
         result, trace = self.run_case(owner_mode='early_final')

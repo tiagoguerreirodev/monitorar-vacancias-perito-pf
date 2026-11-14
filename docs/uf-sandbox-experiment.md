@@ -55,23 +55,32 @@ Ranked falsifiable hypotheses, retained from the primary-source investigation:
   defines `--add` (collision fails), `--remove` and `-K` (no caching). The probe
   never replaces a profile, reloads a service/directory, or changes global policy.
 
-## Actual pre-stage result and bounded follow-up (#28)
+## Actual pre-stage classification and protected-parent follow-up (#30)
 
-Trusted manual-main run **43614843495**, code
-**d44b753b40e3e8e14d691bcfa2007b54d09e8ae3**, completed successfully only as
-report collection. Its independently verified artifact records `experiment_failed`,
-`tree_sha256: null`, empty phases, all three cleanup booleans true, matching
-before/after runtime receipts, seven matching code resources, and unchanged
-supporting host facts. The owner failed/refused before a successful stage receipt;
-**the cause is unknown**. No browser phase ran. A writable `/opt` ancestor is a
-hypothesis, not an observation or justification to move staging or weaken a guard.
-Other hypotheses remain source canonical/ownership/inventory/pin refusal,
-policy-list access, and another owner precondition.
+The earlier run **43614843495** did not classify its pre-stage refusal. Subsequent
+trusted manual-main run **43617881100**, code
+**6deb2f2b8ef0d7717f3b29bf69bfdcd2fa4e7137**, now independently verifies
+`experiment_failed`, `tree_sha256: null`, empty phases, all cleanup booleans true,
+matching before/after runtime receipts, seven matching code resources and unchanged
+supporting host facts. Its owner failure is exactly `stage/ancestor_unprotected`.
+Actual fixed `lstat` facts show `/`, `/opt`, `/usr`, `/usr/lib` are root-owned,
+non-symlink directories; **only `/opt` is group/world writable**. The old first
+stage guard correctly refused `/opt`. No browser phase ran: this identifies the
+pre-stage refusal, **not AppArmor startup causality or Gov qualification**.
 
-The follow-up adds no remedy, policy change, runtime change or Gov request. The
-next actual reviewed no-Gov artifact must supply classified evidence before a
-destination or production remedy is considered. Offline fixtures below do not
-establish actual Linux/root behavior or causation.
+The matching official runner-image source at immutable commit
+`fb099341ddaf44a428fb17495341cb7c2300faf2`,
+[`configure-system.sh:12–15`](https://github.com/actions/runner-images/blob/fb099341ddaf44a428fb17495341cb7c2300faf2/images/ubuntu/scripts/build/configure-system.sh#L12-L15),
+explicitly makes `/opt` writable. Its
+[`install-java-tools.sh:70–71`](https://github.com/actions/runner-images/blob/fb099341ddaf44a428fb17495341cb7c2300faf2/images/ubuntu/scripts/build/install-java-tools.sh#L70-L71)
+also makes `/usr/lib/jvm` writable. The temporary capsule therefore uses only a
+dedicated `/usr/lib/perito-uf-sandbox-<128-bit-random>` child, outside `jvm`.
+**Every job freshly checks all ancestors `/usr/lib`, `/usr`, `/` before exclusive
+creation**; recorded facts from a prior job are never authorization. If any fails,
+staging refuses with the existing fixed classification. No fallback, caller-picked
+path, existing-parent chmod/chown or protection relaxation is permitted. Actual
+browser reversals still require the coordinator's separately reviewed CI run.
+Offline fixtures below do not establish actual Linux/root behavior or causation.
 
 ## Prepared experiment and safety boundaries
 
@@ -88,7 +97,7 @@ and collector recipe remain unchanged.
 `ensure_runtime` verifies the original managed runtime. It intentionally rejects
 another owner's runtime directory, so it is **not** called as nonroot on the
 root-owned copy. Instead a separate, minimal privileged owner creates an exclusive
-`/opt/perito-uf-sandbox-<128-bit-random>/runtime` subtree. It refuses collisions,
+`/usr/lib/perito-uf-sandbox-<128-bit-random>/runtime` subtree. It refuses collisions,
 symlink/writable/non-root ancestor chains and special/setuid/setgid files. It
 compares bounded full-tree SHA256 inventories before/after copying and rechecks
 Node/Chrome against the existing executable pins. Relative internal symlinks are
@@ -181,8 +190,9 @@ owner has already exited; receipt retention never converts refusal to success.
 `candidate_ancestors` has exactly fixed labels `root`, `opt`, `usr`, `usr_lib`
 for `/`, `/opt`, `/usr`, `/usr/lib`. Each has exactly `directory`, `non_symlink`,
 `root_owned`, `group_or_world_writable`, each boolean or null on inaccessible
-metadata. These are read-only `lstat` facts, not arbitrary paths, scans, a new
-staging destination, or a complete protection proof. No ancestor is repaired.
+metadata. These remain read-only `lstat` facts, not arbitrary paths, scans, or a
+complete protection proof. The fixed staging destination is checked separately on
+every job. No ancestor is repaired.
 
 After strict whole-receipt validation the artifact's `experiment` additionally
 retains `owner_failure` (the same `failure` object) and `candidate_ancestors`.
@@ -216,6 +226,15 @@ logic are not replaced. Injected chmod/unlink syscall failures test generic secr
 redaction and actual incomplete removal. External malformed-receipt stand-ins test
 the driver's whole-receipt validation; actual four-signal ownership and collision
 regressions remain in `tests/test_sandbox_owner_signals.py`.
+
+`python3 -m unittest tests.test_sandbox_protected_parent -v` exercises real owner
+main/protocol, path selection, inventory/copy, tiny fixture executable pins, exact
+policy text creation and cleanup with filesystem/syscall adapters only. It
+reproduces the actual writable `/opt` / protected `/usr/lib` pattern (including a
+writable `jvm` sibling); the old owner refuses, the new owner stages and cleans.
+Each unsafe executable ancestor still refuses before creation, and competitor
+sentinel bytes/modes and shared-parent modes survive. This is unprivileged
+contract evidence, not installed Chrome, root, Linux or AppArmor execution proof.
 
 After the reviewed experiment, remove this workflow, the two sandbox scripts,
 their two test modules and this temporary note (or retain a separately reviewed

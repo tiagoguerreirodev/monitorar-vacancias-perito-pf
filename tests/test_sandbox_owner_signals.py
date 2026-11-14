@@ -1,6 +1,6 @@
 """Real owner lifecycle; only host/filesystem syscall boundaries are adapted.
 
-Never run the privileged helper directly: redirect /opt and /proc to temporary
+Never run the privileged helper directly: redirect /usr/lib and /proc to temporary
 unprivileged fixtures and emulate root metadata at the lstat trust boundary.
 No ownership, staging, handler, or cleanup implementation is replaced.
 """
@@ -35,10 +35,11 @@ mode = sys.argv[3]
 signum = int(sys.argv[4])
 source = root / 'source'
 source.mkdir()
-(root / 'opt').mkdir()
+(root / 'usr').mkdir()
+(root / 'usr/lib').mkdir()
 (root / 'proc').mkdir()
 if mode == 'preexisting':
-    existing = root / 'opt' / ('perito-uf-sandbox-' + 'a' * 32)
+    existing = root / 'usr/lib' / ('perito-uf-sandbox-' + 'a' * 32)
     existing.mkdir()
     (existing / 'sentinel').write_text('not owned by helper')
 owner.PROFILES = root / 'apparmor-profiles'
@@ -50,7 +51,7 @@ report = {'boundary_reached': False}
 
 def host_path(value):
     # The real helper still derives its own name and all paths from OS boundaries.
-    return {'/opt': root / 'opt', '/proc': root / 'proc'}.get(str(value), Path(value))
+    return {'/usr/lib': root / 'usr/lib', '/proc': root / 'proc'}.get(str(value), Path(value))
 
 
 def host_lstat(path, *args, **kwargs):
@@ -64,7 +65,7 @@ def host_lstat(path, *args, **kwargs):
 
 
 def mkdir_boundary(path, *args, **kwargs):
-    if path.parent != root / 'opt':
+    if path.parent != root / 'usr/lib':
         return real_mkdir(path, *args, **kwargs)
     report['boundary_reached'] = True
     if mode == 'collision':
@@ -119,7 +120,7 @@ class OwnerSignalTests(unittest.TestCase):
             with self.subTest(signal=signum), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 report = self.run_owner(root, signum)
-                self.assertEqual(list((root / 'opt').iterdir()), [],
+                self.assertEqual(list((root / 'usr/lib').iterdir()), [],
                                  'successful cleanup receipt must not hide a leaked directory')
                 self.assertTrue(report['pending_after_send'])
                 self.assertIn(signum, report['mask_at_creation'])
@@ -129,7 +130,7 @@ class OwnerSignalTests(unittest.TestCase):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 self.run_owner(root, signal.SIGTERM, mode)
-                entries = list((root / 'opt').iterdir())
+                entries = list((root / 'usr/lib').iterdir())
                 self.assertEqual(len(entries), 1)
                 self.assertEqual([path.name for path in entries[0].iterdir()], ['sentinel'])
                 self.assertEqual((entries[0] / 'sentinel').read_text(), 'not owned by helper')
