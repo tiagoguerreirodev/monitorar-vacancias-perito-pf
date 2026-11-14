@@ -113,6 +113,58 @@ def _history(observations):
 <tbody>{"".join(rows)}</tbody></table></div></section>'''
 
 
+UF_NAMES = {
+    'AC': 'Acre', 'AL': 'Alagoas', 'AM': 'Amazonas', 'AP': 'Amapá',
+    'BA': 'Bahia', 'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo',
+    'GO': 'Goiás', 'MA': 'Maranhão', 'MG': 'Minas Gerais', 'MS': 'Mato Grosso do Sul',
+    'MT': 'Mato Grosso', 'PA': 'Pará', 'PB': 'Paraíba', 'PE': 'Pernambuco',
+    'PI': 'Piauí', 'PR': 'Paraná', 'RJ': 'Rio de Janeiro', 'RN': 'Rio Grande do Norte',
+    'RO': 'Rondônia', 'RR': 'Roraima', 'RS': 'Rio Grande do Sul', 'SC': 'Santa Catarina',
+    'SE': 'Sergipe', 'SP': 'São Paulo', 'TO': 'Tocantins',
+}
+
+
+def _uf_panel(uf, status):
+    current = uf['current']
+    ranked = sorted(current['counts_by_uf'].items(), key=lambda item: (-item[1], item[0]))
+    maximum = max(1, *(count for _, count in ranked))
+    bars, rows = [], []
+    for abbreviation, count in ranked:
+        label = f'{abbreviation} — {UF_NAMES[abbreviation]}'
+        bars.append(f'<li><span class="uf-label">{label}</span>'
+                    f'<span class="uf-track" aria-hidden="true"><span style="width: {count / maximum * 100:.6f}%"></span></span>'
+                    f'<span class="uf-count">{_number(count)}<span class="sr-only"> pessoas ativas</span></span></li>')
+        rows.append(f'<tr><th scope="row">{label}</th><td>{_number(count)}</td></tr>')
+    # Rechecks can have new export bytes without changing the accepted snapshot.
+    source = status['last_export']['source']
+    checked = escape(status['last_successful_check'], quote=True)
+    retrieved = escape(source['retrieved_at'], quote=True)
+    return f'''<section id="uf-panel" class="panel" aria-labelledby="uf-title">
+<h2 id="uf-title">Pessoal ativo por UF</h2>
+<p class="reference">Referência UF: <strong><time id="uf-reference" datetime="{current['reference_month']}">{_month(current['reference_month'])}</time></strong>.
+Total: {_number(current['total'])} PCFs ativos — 27 UFs, incluindo o Distrito Federal.</p>
+<p id="uf-assumption" class="uf-assumption"><strong>Premissa do projeto (não verificada oficialmente):</strong>
+interpretamos o campo <strong>UF Servidores</strong> como UF de lotação. Esta é uma premissa do projeto, não uma definição oficial confirmada.</p>
+<p>Pessoas ativas não são cargos ocupados ou vagas estaduais. Não se inferem cargos aprovados, cargos vagos ou taxa de vacância por UF.</p>
+<p>Somente o retrato mais recente aceito, sem série histórica UF. Todas as classes PCF combinadas, população DPF / Ativo.
+Classes ausentes por UF não são zeros; ausência, supressão ou UF desconhecida não são convertidas em zero.</p>
+<figure aria-labelledby="uf-bars-title"><h3 id="uf-bars-title">Pessoas ativas por UF — ordem decrescente</h3>
+<p>Contagens exatas; empates em ordem alfabética da sigla. Barras partem de zero.</p>
+<ol id="uf-bars" class="uf-bars" role="list">{''.join(bars)}</ol>
+<figcaption>Quantidade de pessoas ativas, não postos legais. Valores também na tabela abaixo.</figcaption></figure>
+<div class="table-scroll uf-table" tabindex="0" role="region" aria-label="Tabela de pessoal ativo por UF; role horizontalmente em telas pequenas">
+<table id="uf-values"><caption>Pessoas ativas por UF — valores exatos</caption>
+<thead><tr><th scope="col">UF</th><th scope="col">Pessoas ativas</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div>
+<div class="uf-provenance"><p>Fonte UF: <a href="{escape(source['url'], quote=True)}">Painel Estatístico de Pessoal (PEP) — Servidores</a>.
+Total conferido com a própria população da fonte UF, não com os cargos legais nacionais.</p>
+<p>Última verificação UF bem-sucedida: <time id="uf-check" datetime="{checked}">{_check_time(status['last_successful_check'])}</time>.
+Exportação obtida em: <time id="uf-retrieved" datetime="{retrieved}">{_check_time(source['retrieved_at'])}</time>.
+Verificação e obtenção não são o mês de referência.</p>
+<p><a href="data/uf.json">Agregados UF em JSON</a> · <a href="data/uf-status.json">Verificação e proveniência UF em JSON</a></p>
+<details><summary>Proveniência da última exportação UF</summary><p>SHA-256 dos bytes XLSX: <code>{escape(source['sha256'])}</code>.</p>
+<p>A identidade do painel, os filtros, as classes e a evidência de coleta estão nos JSON locais.</p></details></div></section>'''
+
+
 def render_site(history, status, destination, *, uf=None, uf_status=None):
     """Build a complete artifact; never fetch sources, read a clock or mutate inputs."""
     destination = Path(destination)
@@ -135,13 +187,7 @@ def render_site(history, status, destination, *, uf=None, uf_status=None):
                      f'{_check_time(status["last_successful_check"])}</time></strong>.</p>')
     uf_content = '<section class="panel"><h2>Pessoal ativo por UF</h2><p>Indisponível — sem observação aceita; ausência não é zero.</p></section>'
     if uf is not None:
-        current_uf = uf['current']
-        uf_content = (f'<section class="panel" aria-labelledby="uf-title"><h2 id="uf-title">Pessoal ativo por UF</h2>'
-                      f'<p>Referência: {_month(current_uf["reference_month"])}. Total: {_number(current_uf["total"])} PCFs ativos.</p>'
-                      '<p>UF Servidores como UF de lotação: premissa do projeto; definição oficial não verificada.</p>'
-                      f'<p>Última verificação UF: {_check_time(uf_status["last_successful_check"])}.</p>'
-                      '<p><a href="data/uf.json">Agregados UF em JSON</a>; classes ausentes por UF não são zeros. '
-                      'Pessoas ativas não são cargos ocupados ou vagas estaduais.</p></section>')
+        uf_content = _uf_panel(uf, uf_status)
     national_links = ('<p>Dados para consulta: <a href="data/history.json">histórico em JSON</a> e '
                       '<a href="data/status.json">última verificação em JSON</a>.</p>' if status else
                       '<p>Fonte nacional indisponível; nenhum retrato nacional aceito.</p>')
@@ -155,7 +201,7 @@ def render_site(history, status, destination, *, uf=None, uf_status=None):
 <body><a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
 <header class="site-header"><div class="wrap"><p class="eyebrow">Quadro da carreira · Dados oficiais</p>
 <h1>Perito Criminal Federal — Polícia Federal</h1>
-<p>Totais nacionais, todas as classes da carreira combinadas, sem divisão por especialidade ou localização.</p></div></header>
+<p>Totais nacionais de cargos legais e retrato separado de pessoal ativo por UF; todas as classes da carreira combinadas, sem divisão por especialidade.</p></div></header>
 <main id="conteudo" class="wrap" tabindex="-1">
 {current_content}
 <aside class="context" aria-label="Como interpretar os dados">
