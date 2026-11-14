@@ -219,6 +219,43 @@ verifier's identical fixed vocabulary, then classify **one actual no-Gov CI run
 before choosing any fix**. This local change does not dispatch, close #32 or its
 parents, authorize Gov access, or establish the original A/B/A readiness proof.
 
+## Confirmed singleton path fatal and narrow temporary sibling fix (#33)
+
+Trusted no-Gov run **43623363945**, code
+**7dc62dab0f0cb1808a2d5db719356280c33f278e**, independently verified from
+artifact and API receipts, records all three B observations as early exit /
+`SIGABRT`, `crash`, `profile_fatal`, **`profile_socket_path_length`**, with no
+port or readiness. All three A1 and A2 observations retain sandbox refusal /
+`zygote_host_fatal` / `no_usable_sandbox`. Runtime pins, protected tree, host
+facts and complete cleanup matched; qualification remains false.
+
+Only the exclusively owned, caller-owned `0700` temporary sibling changes from
+`profiles` to `p`, together with the observer's `TMPDIR`. The protected executable
+path `/usr/lib/perito-uf-sandbox-<32hex>/runtime`, full 128-bit name entropy,
+root ancestors, exact policy, seven launch arguments and same-path A1/B/A2 are
+unchanged. No new path authority, fallback, mode or sandbox relaxation is added.
+
+Pinned Chromium commit `4b3d0dabb8250b6f152d2d85d79e7706e309d087`
+[`process_singleton_posix.cc:1045–1063`](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/chrome/browser/process_singleton_posix.cc#1045)
+explicitly requests an empty temporary prefix. Its Linux socket targets are
+`<TMPDIR>/org.chromium.Chromium.<random6>/SingletonSocket` or the branded
+`<TMPDIR>/com.google.Chrome.<random6>/SingletonSocket`, not a `scoped_dir` path.
+Linux `sun_path[108]` and Chromium's NUL reservation permit **107 pathname
+bytes**: the old sibling produces **113/109**, the new one **106/102** (unbranded /
+branded). The unbranded target has only one byte of headroom.
+
+Real owner main/protocol tests observe filesystem/chown arguments through the
+existing unprivileged OS adapters; external observer tests inspect the actual
+inherited environment. Independent literal budgets catch both old contracts.
+They retain safe staging, caller-owned `0700`, collisions, ancestor refusal,
+cleanup and existing four-signal/final-drain/readiness guards. These Darwin
+fixtures do **not** establish actual Linux AF_UNIX or Chrome readiness.
+Coordinator must freshly merge and review, then run **one actual no-Gov A1/B/A2**:
+all three B ready with a real DevTools port, all A1/A2 original refusal, unchanged
+pins/path/arguments/host facts, and complete cleanup. A different B failure is
+not success. Production adoption, source qualification and parent closure remain
+separate later gates; this worker does not dispatch or access Gov sources.
+
 ## Prepared experiment and safety boundaries
 
 Workflow `.github/workflows/sandbox-experiment.yml` is manual-only, exact-repo,
@@ -240,7 +277,7 @@ compares bounded full-tree SHA256 inventories before/after copying and rechecks
 Node/Chrome against the existing executable pins. Relative internal symlinks are
 preserved; escaping/absolute symlinks are rejected. Copied directories/files are
 root-owned, nonwritable to the runner; shared ancestors are never repaired.
-A separate `profiles` sibling is exclusively created and assigned to the runner
+A separate `p` sibling is exclusively created and assigned to the runner
 for Chrome's temporary directories via `TMPDIR` in all phases. It is never an
 executable ancestor and is removed with the owned subtree, including leftover
 profiles after interruption. No Node/Chrome executable is executed as root.
