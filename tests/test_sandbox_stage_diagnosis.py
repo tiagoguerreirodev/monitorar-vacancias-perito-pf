@@ -10,7 +10,7 @@ import unittest
 from tests.test_sandbox_experiment import api
 
 ROOT = Path(__file__).resolve().parents[1]
-OWNER = ROOT / '.github/scripts/sandbox-owner.py'
+OWNER = ROOT / 'perito_dashboard/collector/runtime-owner.py'
 HARNESS = r'''
 import importlib.util
 import os

@@ -1,4 +1,4 @@
-"""[DEBUG-uf-linux] Temporary trusted no-Gov startup diagnostic; not qualification."""
+"""[DEBUG-uf-linux] Retained trusted no-Gov startup diagnostic; not qualification."""
 import argparse
 import hashlib
 import json
@@ -144,6 +144,8 @@ def main():
               'resources_sha256': {name: digest(path) for name, path in {
                   'startup_helper': HELPER, 'diagnostic_driver': Path(__file__),
                   'runtime_manifest': MANIFEST, 'runtime_installer': ROOT / 'perito_dashboard/runtime.py',
+                  'capsule_client': ROOT / 'perito_dashboard/_capsule.py',
+                  'packaged_owner': ROOT / 'perito_dashboard/collector/runtime-owner.py',
                   'production_launch_recipe': ROOT / 'perito_dashboard/collector/browser-probe.mjs',
               }.items()}}
     report['provenance'] = {}

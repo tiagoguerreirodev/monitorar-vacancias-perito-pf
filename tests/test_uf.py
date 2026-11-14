@@ -329,7 +329,12 @@ class UFAcceptanceTests(unittest.TestCase):
                 def response(url, **kwargs):
                     requested.append(url)
                     return BytesIO(documents[url])
-                with patch.dict(os.environ, {'PERITO_RUNTIME_ROOT': str(runtime)}), \
+                with patch.dict(os.environ, {'PERITO_RUNTIME_ROOT': str(runtime),
+                        'GITHUB_REPOSITORY': 'tiagoguerreirodev/monitorar-vacancias-perito-pf',
+                        'GITHUB_REF': 'refs/heads/main', 'GITHUB_ACTIONS': 'true',
+                        'RUNNER_ENVIRONMENT': 'github-hosted', 'RUNNER_OS': 'Linux', 'ImageOS': 'ubuntu24',
+                        'GITHUB_EVENT_NAME': 'workflow_dispatch',
+                        'GITHUB_WORKFLOW_REF': 'tiagoguerreirodev/monitorar-vacancias-perito-pf/.github/workflows/qualify-uf.yml@refs/heads/main'}), \
                         patch('perito_dashboard.runtime.MANIFEST', manifest), \
                         patch('perito_dashboard.runtime.platform.system', return_value='Linux'), \
                         patch('perito_dashboard.runtime.platform.machine', return_value='x86_64'), \

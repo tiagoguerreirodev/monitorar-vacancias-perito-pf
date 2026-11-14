@@ -17,7 +17,8 @@ from ._collector import OfficialUF
 
 def _resources_sha256():
     root = Path(__file__).resolve().parent
-    names = ('_collector.py', '_uf.py', 'runtime.py', 'qualify.py',
+    names = ('_collector.py', '_uf.py', 'runtime.py', '_capsule.py', 'qualify.py',
+             'collector/runtime-owner.py',
              'collector/browser-probe.mjs', 'collector/collect-flow.js', 'collector/runtime.json')
     return {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in names}
 
