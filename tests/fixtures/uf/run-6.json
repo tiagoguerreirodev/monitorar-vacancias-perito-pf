@@ -1,0 +1,3777 @@
+{
+  "snapshot": {
+    "utc": "2026-11-14T05:55:38.197Z",
+    "entry": "https://pep.paineis.gov.br/extensions/pep/index.html#fvm",
+    "appId": "aec332a1-406b-4fec-a776-b1ed66735961",
+    "table": "Dwnkq",
+    "title": "Análise Dinâmica — Servidores",
+    "privileges": [
+      "read",
+      "exportdata"
+    ],
+    "latest": {
+      "qText": "Set 2026",
+      "qNum": 46266,
+      "qElemNumber": 70,
+      "qState": "O"
+    },
+    "availablePeriodCount": 124,
+    "selectionTrace": [
+      {
+        "label": "Seção",
+        "parent": "awTGsj",
+        "id": "b1113f02-b16d-4d3c-a599-baf1b5d9ea0e",
+        "fieldDefinition": [
+          "=FVM_Visao"
+        ],
+        "libraryId": "",
+        "requested": [
+          "Servidores"
+        ],
+        "selected": [
+          "Servidores"
+        ],
+        "result": true
+      },
+      {
+        "label": "Mês/Ano",
+        "parent": "CAGcXA",
+        "id": "710bbcd6-082f-4a67-9dda-7448270b9033",
+        "fieldDefinition": [],
+        "libraryId": "b5503a46-870d-45e7-878d-f1c01d1ad8d4",
+        "requested": [
+          "Set 2026"
+        ],
+        "selected": [
+          "Set 2026"
+        ],
+        "result": true
+      },
+      {
+        "label": "Grupo Situação do Vinculo",
+        "parent": "RyqDavZ",
+        "id": "5026b67e-e41f-4770-8fc7-f0c783d1257a",
+        "fieldDefinition": [
+          "=[Grupo Situação do Vinculo]"
+        ],
+        "libraryId": "",
+        "requested": [
+          "Ativo"
+        ],
+        "selected": [
+          "Ativo"
+        ],
+        "result": true
+      },
+      {
+        "label": "Orgão",
+        "parent": "utqsBV",
+        "id": "4911a34a-902f-4f2f-84d0-3264927a690b",
+        "fieldDefinition": [
+          "Órgão (Servidores)"
+        ],
+        "libraryId": "",
+        "requested": [
+          "Departamento De Policia Federal"
+        ],
+        "selected": [
+          "Departamento De Policia Federal"
+        ],
+        "result": true
+      },
+      {
+        "label": "Dimensão (mapping inspection)",
+        "parent": "GfcGEpB",
+        "id": "137cb9ea-e14f-460b-8e41-7bdaaf24f3e1",
+        "fieldDefinition": [
+          "FVM_Dimensao"
+        ],
+        "libraryId": "",
+        "requested": [
+          "Orgão"
+        ],
+        "selected": [
+          "Orgão"
+        ],
+        "result": true
+      },
+      {
+        "label": "Cargo",
+        "parent": "jAzXhRc",
+        "id": "6fd0d7c6-d145-43ad-a53c-23958f47ad61",
+        "fieldDefinition": [
+          "=[Cargo (Servidores)]"
+        ],
+        "libraryId": "",
+        "requested": [
+          "Perito Criminal Federal 1a Cla",
+          "Perito Criminal Federal 2a Cla",
+          "Perito Criminal Federal 3a Cla",
+          "Perito Criminal Federal Classe"
+        ],
+        "selected": [
+          "Perito Criminal Federal 1a Cla",
+          "Perito Criminal Federal 2a Cla",
+          "Perito Criminal Federal 3a Cla",
+          "Perito Criminal Federal Classe"
+        ],
+        "result": true
+      },
+      {
+        "label": "Dimensão",
+        "parent": "GfcGEpB",
+        "id": "137cb9ea-e14f-460b-8e41-7bdaaf24f3e1",
+        "fieldDefinition": [
+          "FVM_Dimensao"
+        ],
+        "libraryId": "",
+        "requested": [
+          "Grupo Situação do Vínculo",
+          "Nome do Cargo",
+          "Orgão",
+          "UF"
+        ],
+        "selected": [
+          "Grupo Situação do Vínculo",
+          "Nome do Cargo",
+          "Orgão",
+          "UF"
+        ],
+        "result": true
+      },
+      {
+        "label": "Métricas",
+        "parent": "wkUmCp",
+        "id": "fe82e779-25b3-4b03-ae08-65b6eb2bda7e",
+        "fieldDefinition": [
+          "FVM_Metrica"
+        ],
+        "libraryId": "",
+        "requested": [
+          "Servidores"
+        ],
+        "selected": [
+          "Servidores"
+        ],
+        "result": true
+      }
+    ],
+    "finalSelections": [
+      {
+        "label": "Seção",
+        "selected": [
+          "Servidores"
+        ]
+      },
+      {
+        "label": "Mês/Ano",
+        "selected": [
+          "Set 2026"
+        ]
+      },
+      {
+        "label": "Grupo Situação do Vinculo",
+        "selected": [
+          "Ativo"
+        ]
+      },
+      {
+        "label": "Orgão",
+        "selected": [
+          "Departamento De Policia Federal"
+        ]
+      },
+      {
+        "label": "Cargo",
+        "selected": [
+          "Perito Criminal Federal 1a Cla",
+          "Perito Criminal Federal 2a Cla",
+          "Perito Criminal Federal 3a Cla",
+          "Perito Criminal Federal Classe"
+        ]
+      },
+      {
+        "label": "Dimensão",
+        "selected": [
+          "Grupo Situação do Vínculo",
+          "Nome do Cargo",
+          "Orgão",
+          "UF"
+        ]
+      },
+      {
+        "label": "Métricas",
+        "selected": [
+          "Servidores"
+        ]
+      }
+    ],
+    "mapping": {
+      "nativeOrgaoField": "Órgão (Servidores)",
+      "nativePfLabel": "Departamento De Policia Federal",
+      "mappingExpression": "=$(='[' & Only({1<FVM_Visao={'$(=Only(FVM_Visao))'}, FVM_Dimensao={'$(=Replace(SubField(GetFieldSelections(FVM_Dimensao,'|',9999),'|',1), chr(39), chr(39)&chr(39)))'}>} FVM_CampoFisico) & ']')\r\n",
+      "physicalMapping": {
+        "field": "FVM_CampoFisico",
+        "qInfo": {
+          "qId": "MUXScj",
+          "qType": "mashup"
+        },
+        "dimension": {
+          "qFallbackTitle": "FVM_CampoFisico",
+          "qApprMaxGlyphCount": 41,
+          "qCardinal": 101,
+          "qSortIndicator": "N",
+          "qGroupFallbackTitles": [
+            "FVM_CampoFisico"
+          ],
+          "qGroupPos": 0,
+          "qStateCounts": {
+            "qLocked": 0,
+            "qSelected": 0,
+            "qOption": 1,
+            "qDeselected": 0,
+            "qAlternative": 0,
+            "qExcluded": 100,
+            "qSelectedExcluded": 0,
+            "qLockedExcluded": 0
+          },
+          "qTags": [
+            "$text"
+          ],
+          "qDimensionType": "D",
+          "qGrouping": "N",
+          "qNumFormat": {
+            "qType": "U",
+            "qnDec": 0,
+            "qUseThou": 0
+          },
+          "qIsAutoFormat": true,
+          "qGroupFieldDefs": [
+            "FVM_CampoFisico"
+          ],
+          "qMin": 0,
+          "qMax": 0,
+          "qAttrExprInfo": [],
+          "qAttrDimInfo": [],
+          "qCardinalities": {
+            "qCardinal": 101,
+            "qHypercubeCardinal": 0,
+            "qAllValuesCardinal": -1
+          }
+        },
+        "values": [
+          {
+            "qText": "Afastamento (cargo)",
+            "qNum": "NaN",
+            "qElemNumber": 97,
+            "qState": "X"
+          },
+          {
+            "qText": "Afastamento (escolaridade)",
+            "qNum": "NaN",
+            "qElemNumber": 98,
+            "qState": "X"
+          },
+          {
+            "qText": "Afastamento (tipo - agrup)",
+            "qNum": "NaN",
+            "qElemNumber": 99,
+            "qState": "X"
+          },
+          {
+            "qText": "Afastamento (tipo)",
+            "qNum": "NaN",
+            "qElemNumber": 100,
+            "qState": "X"
+          },
+          {
+            "qText": "Cargo (Aposentadoria)",
+            "qNum": "NaN",
+            "qElemNumber": 71,
+            "qState": "X"
+          },
+          {
+            "qText": "Cargo (Ingresso)",
+            "qNum": "NaN",
+            "qElemNumber": 42,
+            "qState": "X"
+          },
+          {
+            "qText": "Cargo (Servidores)",
+            "qNum": "NaN",
+            "qElemNumber": 9,
+            "qState": "X"
+          },
+          {
+            "qText": "Cargo Escolaridade (Aposentadoria)",
+            "qNum": "NaN",
+            "qElemNumber": 70,
+            "qState": "X"
+          },
+          {
+            "qText": "Cargo Escolaridade (Ingresso)",
+            "qNum": "NaN",
+            "qElemNumber": 43,
+            "qState": "X"
+          },
+          {
+            "qText": "Cargo Plano/Carreira (Afastamento)",
+            "qNum": "NaN",
+            "qElemNumber": 96,
+            "qState": "X"
+          },
+          {
+            "qText": "Cargo Plano/Carreira (Aposentadoria)",
+            "qNum": "NaN",
+            "qElemNumber": 69,
+            "qState": "X"
+          },
+          {
+            "qText": "Cargo Plano/Carreira (Desligamentos)",
+            "qNum": "NaN",
+            "qElemNumber": 84,
+            "qState": "X"
+          },
+          {
+            "qText": "Cargo Plano/Carreira (Ingresso)",
+            "qNum": "NaN",
+            "qElemNumber": 41,
+            "qState": "X"
+          },
+          {
+            "qText": "Cargo Plano/Carreira (Servidores)",
+            "qNum": "NaN",
+            "qElemNumber": 7,
+            "qState": "X"
+          },
+          {
+            "qText": "cargo_escol_sg_var",
+            "qNum": "NaN",
+            "qElemNumber": 34,
+            "qState": "X"
+          },
+          {
+            "qText": "cargo_extincao_in",
+            "qNum": "NaN",
+            "qElemNumber": 33,
+            "qState": "X"
+          },
+          {
+            "qText": "cargo_grppep1_no_var",
+            "qNum": "NaN",
+            "qElemNumber": 24,
+            "qState": "X"
+          },
+          {
+            "qText": "cargo_grppep2_no_var",
+            "qNum": "NaN",
+            "qElemNumber": 23,
+            "qState": "X"
+          },
+          {
+            "qText": "cargo_grupo_sg",
+            "qNum": "NaN",
+            "qElemNumber": 26,
+            "qState": "X"
+          },
+          {
+            "qText": "cargo_key",
+            "qNum": "NaN",
+            "qElemNumber": 29,
+            "qState": "X"
+          },
+          {
+            "qText": "cargo_no_key",
+            "qNum": "NaN",
+            "qElemNumber": 27,
+            "qState": "X"
+          },
+          {
+            "qText": "cargo_pep_no_var",
+            "qNum": "NaN",
+            "qElemNumber": 28,
+            "qState": "X"
+          },
+          {
+            "qText": "Chave_Escolaridade",
+            "qNum": "NaN",
+            "qElemNumber": 11,
+            "qState": "X"
+          },
+          {
+            "qText": "Classificação Inatividade (Aposentadoria)",
+            "qNum": "NaN",
+            "qElemNumber": 63,
+            "qState": "X"
+          },
+          {
+            "qText": "COD CARGO",
+            "qNum": "NaN",
+            "qElemNumber": 8,
+            "qState": "X"
+          },
+          {
+            "qText": "Desligamentos (agrupamento)",
+            "qNum": "NaN",
+            "qElemNumber": 90,
+            "qState": "X"
+          },
+          {
+            "qText": "Desligamentos (cargo)",
+            "qNum": "NaN",
+            "qElemNumber": 85,
+            "qState": "X"
+          },
+          {
+            "qText": "Desligamentos (escolaridade)",
+            "qNum": "NaN",
+            "qElemNumber": 86,
+            "qState": "X"
+          },
+          {
+            "qText": "Desligamentos (estabilidade)",
+            "qNum": "NaN",
+            "qElemNumber": 93,
+            "qState": "X"
+          },
+          {
+            "qText": "Desligamentos (faixa etária)",
+            "qNum": "NaN",
+            "qElemNumber": 88,
+            "qState": "X"
+          },
+          {
+            "qText": "Desligamentos (mês/ano de exclusão)",
+            "qNum": "NaN",
+            "qElemNumber": 81,
+            "qState": "X"
+          },
+          {
+            "qText": "Desligamentos (ocorrência)",
+            "qNum": "NaN",
+            "qElemNumber": 91,
+            "qState": "X"
+          },
+          {
+            "qText": "Desligamentos (orgao superior)",
+            "qNum": "NaN",
+            "qElemNumber": 82,
+            "qState": "X"
+          },
+          {
+            "qText": "Desligamentos (orgao)",
+            "qNum": "NaN",
+            "qElemNumber": 83,
+            "qState": "X"
+          },
+          {
+            "qText": "Desligamentos (sexo)",
+            "qNum": "NaN",
+            "qElemNumber": 89,
+            "qState": "X"
+          },
+          {
+            "qText": "Desligamentos (tipo)",
+            "qNum": "NaN",
+            "qElemNumber": 92,
+            "qState": "X"
+          },
+          {
+            "qText": "DPU (Cor_Deficiencia)",
+            "qNum": "NaN",
+            "qElemNumber": 76,
+            "qState": "X"
+          },
+          {
+            "qText": "Elemento de Despesa",
+            "qNum": "NaN",
+            "qElemNumber": 19,
+            "qState": "X"
+          },
+          {
+            "qText": "ESC CARGO",
+            "qNum": "NaN",
+            "qElemNumber": 10,
+            "qState": "X"
+          },
+          {
+            "qText": "Escolaridade",
+            "qNum": "NaN",
+            "qElemNumber": 60,
+            "qState": "X"
+          },
+          {
+            "qText": "Faixa Etária",
+            "qNum": "NaN",
+            "qElemNumber": 59,
+            "qState": "X"
+          },
+          {
+            "qText": "Faixa Etária (Servidores)",
+            "qNum": "NaN",
+            "qElemNumber": 14,
+            "qState": "X"
+          },
+          {
+            "qText": "Função",
+            "qNum": "NaN",
+            "qElemNumber": 53,
+            "qState": "X"
+          },
+          {
+            "qText": "Grupo Cargo (Servidores)",
+            "qNum": "NaN",
+            "qElemNumber": 6,
+            "qState": "X"
+          },
+          {
+            "qText": "Grupo do Cargo (Aposentadoria)",
+            "qNum": "NaN",
+            "qElemNumber": 72,
+            "qState": "X"
+          },
+          {
+            "qText": "Grupo do Cargo (Ingresso)",
+            "qNum": "NaN",
+            "qElemNumber": 40,
+            "qState": "X"
+          },
+          {
+            "qText": "Grupo Situação do Vinculo",
+            "qNum": "NaN",
+            "qElemNumber": 0,
+            "qState": "X"
+          },
+          {
+            "qText": "in_sub",
+            "qNum": "NaN",
+            "qElemNumber": 32,
+            "qState": "X"
+          },
+          {
+            "qText": "Mês-Ano (Cor_Deficiencia)",
+            "qNum": "NaN",
+            "qElemNumber": 74,
+            "qState": "X"
+          },
+          {
+            "qText": "Mês-Ano Aposentadoria",
+            "qNum": "NaN",
+            "qElemNumber": 62,
+            "qState": "X"
+          },
+          {
+            "qText": "Mês-Ano Cargos",
+            "qNum": "NaN",
+            "qElemNumber": 48,
+            "qState": "X"
+          },
+          {
+            "qText": "Mês-Ano Ingresso",
+            "qNum": "NaN",
+            "qElemNumber": 35,
+            "qState": "X"
+          },
+          {
+            "qText": "Natureza da Despesa Detalhada",
+            "qNum": "NaN",
+            "qElemNumber": 20,
+            "qState": "X"
+          },
+          {
+            "qText": "Natureza Jurídica",
+            "qNum": "NaN",
+            "qElemNumber": 49,
+            "qState": "X"
+          },
+          {
+            "qText": "Natureza Jurídica (Aposentadoria)",
+            "qNum": "NaN",
+            "qElemNumber": 65,
+            "qState": "X"
+          },
+          {
+            "qText": "Natureza Jurídica (Ingresso)",
+            "qNum": "NaN",
+            "qElemNumber": 36,
+            "qState": "X"
+          },
+          {
+            "qText": "Natureza Juridica (Servidores)",
+            "qNum": "NaN",
+            "qElemNumber": 2,
+            "qState": "X"
+          },
+          {
+            "qText": "Nível Função",
+            "qNum": "NaN",
+            "qElemNumber": 54,
+            "qState": "X"
+          },
+          {
+            "qText": "Nome Cor da Origem Étnica",
+            "qNum": "NaN",
+            "qElemNumber": 78,
+            "qState": "X"
+          },
+          {
+            "qText": "Nome Cor Origem Etnica",
+            "qNum": "NaN",
+            "qElemNumber": 58,
+            "qState": "X"
+          },
+          {
+            "qText": "Nome da Deficiência",
+            "qNum": "NaN",
+            "qElemNumber": 80,
+            "qState": "X"
+          },
+          {
+            "qText": "Nome do Órgão (Cor_Deficiencia)",
+            "qNum": "NaN",
+            "qElemNumber": 75,
+            "qState": "X"
+          },
+          {
+            "qText": "Órgão (Afastamento)",
+            "qNum": "NaN",
+            "qElemNumber": 95,
+            "qState": "X"
+          },
+          {
+            "qText": "Órgão (Aposentadoria)",
+            "qNum": "NaN",
+            "qElemNumber": 67,
+            "qState": "X"
+          },
+          {
+            "qText": "Orgão (Ingresso)",
+            "qNum": "NaN",
+            "qElemNumber": 38,
+            "qState": "X"
+          },
+          {
+            "qText": "Orgão Superior",
+            "qNum": "NaN",
+            "qElemNumber": 17,
+            "qState": "X"
+          },
+          {
+            "qText": "Orgão Superior (Afastamento)",
+            "qNum": "NaN",
+            "qElemNumber": 94,
+            "qState": "X"
+          },
+          {
+            "qText": "Orgão Superior (Aposentadoria)",
+            "qNum": "NaN",
+            "qElemNumber": 66,
+            "qState": "X"
+          },
+          {
+            "qText": "Orgão Superior (Ingresso)",
+            "qNum": "NaN",
+            "qElemNumber": 37,
+            "qState": "X"
+          },
+          {
+            "qText": "Orgão Vinculado",
+            "qNum": "NaN",
+            "qElemNumber": 18,
+            "qState": "X"
+          },
+          {
+            "qText": "Orgão Vinculado (Cargos e Funções)",
+            "qNum": "NaN",
+            "qElemNumber": 51,
+            "qState": "X"
+          },
+          {
+            "qText": "orgao_sup_no_var",
+            "qNum": "NaN",
+            "qElemNumber": 31,
+            "qState": "X"
+          },
+          {
+            "qText": "plano_carr_no_var",
+            "qNum": "NaN",
+            "qElemNumber": 25,
+            "qState": "X"
+          },
+          {
+            "qText": "Poder",
+            "qNum": "NaN",
+            "qElemNumber": 16,
+            "qState": "X"
+          },
+          {
+            "qText": "REG JUR",
+            "qNum": "NaN",
+            "qElemNumber": 3,
+            "qState": "X"
+          },
+          {
+            "qText": "REGIÃO",
+            "qNum": "NaN",
+            "qElemNumber": 12,
+            "qState": "X"
+          },
+          {
+            "qText": "Região",
+            "qNum": "NaN",
+            "qElemNumber": 56,
+            "qState": "X"
+          },
+          {
+            "qText": "regiao_estado",
+            "qNum": "NaN",
+            "qElemNumber": 45,
+            "qState": "X"
+          },
+          {
+            "qText": "Regime Juridico (Ingresso)",
+            "qNum": "NaN",
+            "qElemNumber": 39,
+            "qState": "X"
+          },
+          {
+            "qText": "Sexo",
+            "qNum": "NaN",
+            "qElemNumber": 61,
+            "qState": "X"
+          },
+          {
+            "qText": "Sexo (Ingresso)",
+            "qNum": "NaN",
+            "qElemNumber": 47,
+            "qState": "X"
+          },
+          {
+            "qText": "Sexo (Servidores)",
+            "qNum": "NaN",
+            "qElemNumber": 15,
+            "qState": "X"
+          },
+          {
+            "qText": "Sexo_servidor",
+            "qNum": "NaN",
+            "qElemNumber": 79,
+            "qState": "X"
+          },
+          {
+            "qText": "Sigla Orgão Superior (Cargos e Funções)",
+            "qNum": "NaN",
+            "qElemNumber": 50,
+            "qState": "X"
+          },
+          {
+            "qText": "Sigla Orgão Superior (Servidores)",
+            "qNum": "NaN",
+            "qElemNumber": 4,
+            "qState": "X"
+          },
+          {
+            "qText": "Sigla Orgão Vinculado (Servidores)",
+            "qNum": "NaN",
+            "qElemNumber": 5,
+            "qState": "O"
+          },
+          {
+            "qText": "Sigla Regime Juridico (Aposentadoria)",
+            "qNum": "NaN",
+            "qElemNumber": 68,
+            "qState": "X"
+          },
+          {
+            "qText": "sigla_orgao",
+            "qNum": "NaN",
+            "qElemNumber": 30,
+            "qState": "X"
+          },
+          {
+            "qText": "Situação do Vinculo",
+            "qNum": "NaN",
+            "qElemNumber": 21,
+            "qState": "X"
+          },
+          {
+            "qText": "Situação do Vinculo (Servidores)",
+            "qNum": "NaN",
+            "qElemNumber": 1,
+            "qState": "X"
+          },
+          {
+            "qText": "Situação Vínculo (Cor_Deficiencia)",
+            "qNum": "NaN",
+            "qElemNumber": 77,
+            "qState": "X"
+          },
+          {
+            "qText": "Subnível Função",
+            "qNum": "NaN",
+            "qElemNumber": 55,
+            "qState": "X"
+          },
+          {
+            "qText": "Tipo Administração",
+            "qNum": "NaN",
+            "qElemNumber": 22,
+            "qState": "X"
+          },
+          {
+            "qText": "Tipo de Ingresso (Ingresso)",
+            "qNum": "NaN",
+            "qElemNumber": 44,
+            "qState": "X"
+          },
+          {
+            "qText": "Tipo Função Detalhada2",
+            "qNum": "NaN",
+            "qElemNumber": 52,
+            "qState": "X"
+          },
+          {
+            "qText": "Tipo Ocorrencia (Aposentadoria)",
+            "qNum": "NaN",
+            "qElemNumber": 64,
+            "qState": "X"
+          },
+          {
+            "qText": "uf",
+            "qNum": "NaN",
+            "qElemNumber": 87,
+            "qState": "X"
+          },
+          {
+            "qText": "UF (Aposentadoria)",
+            "qNum": "NaN",
+            "qElemNumber": 73,
+            "qState": "X"
+          },
+          {
+            "qText": "UF da Organização",
+            "qNum": "NaN",
+            "qElemNumber": 57,
+            "qState": "X"
+          },
+          {
+            "qText": "UF Ingressos",
+            "qNum": "NaN",
+            "qElemNumber": 46,
+            "qState": "X"
+          },
+          {
+            "qText": "UF Servidores",
+            "qNum": "NaN",
+            "qElemNumber": 13,
+            "qState": "X"
+          }
+        ]
+      },
+      "physicalFields": [
+        "Sigla Orgão Vinculado (Servidores)"
+      ],
+      "abbreviationMapping": {
+        "field": "Sigla Orgão Vinculado (Servidores)",
+        "qInfo": {
+          "qId": "MUYYYqaB",
+          "qType": "mashup"
+        },
+        "dimension": {
+          "qFallbackTitle": "Sigla Orgão Vinculado (Servidores)",
+          "qApprMaxGlyphCount": 10,
+          "qCardinal": 333,
+          "qSortIndicator": "N",
+          "qGroupFallbackTitles": [
+            "Sigla Orgão Vinculado (Servidores)"
+          ],
+          "qGroupPos": 0,
+          "qStateCounts": {
+            "qLocked": 0,
+            "qSelected": 0,
+            "qOption": 1,
+            "qDeselected": 0,
+            "qAlternative": 0,
+            "qExcluded": 332,
+            "qSelectedExcluded": 0,
+            "qLockedExcluded": 0
+          },
+          "qTags": [
+            "$text",
+            "$ascii"
+          ],
+          "qDimensionType": "D",
+          "qGrouping": "N",
+          "qNumFormat": {
+            "qType": "A",
+            "qnDec": 0,
+            "qUseThou": 0
+          },
+          "qIsAutoFormat": true,
+          "qGroupFieldDefs": [
+            "Sigla Orgão Vinculado (Servidores)"
+          ],
+          "qMin": 0,
+          "qMax": 0,
+          "qAttrExprInfo": [],
+          "qAttrDimInfo": [],
+          "qCardinalities": {
+            "qCardinal": 333,
+            "qHypercubeCardinal": 0,
+            "qAllValuesCardinal": -1
+          }
+        },
+        "values": [
+          {
+            "qText": "ABIN",
+            "qNum": "NaN",
+            "qElemNumber": 96,
+            "qState": "X"
+          },
+          {
+            "qText": "ADA",
+            "qNum": "NaN",
+            "qElemNumber": 326,
+            "qState": "X"
+          },
+          {
+            "qText": "ADENE",
+            "qNum": "NaN",
+            "qElemNumber": 270,
+            "qState": "X"
+          },
+          {
+            "qText": "AEB",
+            "qNum": "NaN",
+            "qElemNumber": 182,
+            "qState": "X"
+          },
+          {
+            "qText": "AGLO",
+            "qNum": "NaN",
+            "qElemNumber": 269,
+            "qState": "X"
+          },
+          {
+            "qText": "AGU",
+            "qNum": "NaN",
+            "qElemNumber": 9,
+            "qState": "X"
+          },
+          {
+            "qText": "AMAZUL",
+            "qNum": "NaN",
+            "qElemNumber": 70,
+            "qState": "X"
+          },
+          {
+            "qText": "ANA",
+            "qNum": "NaN",
+            "qElemNumber": 69,
+            "qState": "X"
+          },
+          {
+            "qText": "ANAC",
+            "qNum": "NaN",
+            "qElemNumber": 31,
+            "qState": "X"
+          },
+          {
+            "qText": "ANATEL",
+            "qNum": "NaN",
+            "qElemNumber": 48,
+            "qState": "X"
+          },
+          {
+            "qText": "ANCINE",
+            "qNum": "NaN",
+            "qElemNumber": 242,
+            "qState": "X"
+          },
+          {
+            "qText": "ANEEL",
+            "qNum": "NaN",
+            "qElemNumber": 16,
+            "qState": "X"
+          },
+          {
+            "qText": "ANM",
+            "qNum": "NaN",
+            "qElemNumber": 178,
+            "qState": "X"
+          },
+          {
+            "qText": "ANP",
+            "qNum": "NaN",
+            "qElemNumber": 29,
+            "qState": "X"
+          },
+          {
+            "qText": "ANPD",
+            "qNum": "NaN",
+            "qElemNumber": 298,
+            "qState": "X"
+          },
+          {
+            "qText": "ANS",
+            "qNum": "NaN",
+            "qElemNumber": 76,
+            "qState": "X"
+          },
+          {
+            "qText": "ANTAQ",
+            "qNum": "NaN",
+            "qElemNumber": 169,
+            "qState": "X"
+          },
+          {
+            "qText": "ANTDFDEPEX",
+            "qNum": "NaN",
+            "qElemNumber": 83,
+            "qState": "X"
+          },
+          {
+            "qText": "ANTT",
+            "qNum": "NaN",
+            "qElemNumber": 99,
+            "qState": "X"
+          },
+          {
+            "qText": "ANVS",
+            "qNum": "NaN",
+            "qElemNumber": 75,
+            "qState": "X"
+          },
+          {
+            "qText": "APO",
+            "qNum": "NaN",
+            "qElemNumber": 313,
+            "qState": "X"
+          },
+          {
+            "qText": "C.AER",
+            "qNum": "NaN",
+            "qElemNumber": 67,
+            "qState": "X"
+          },
+          {
+            "qText": "C.EX",
+            "qNum": "NaN",
+            "qElemNumber": 113,
+            "qState": "X"
+          },
+          {
+            "qText": "C.PEDROII",
+            "qNum": "NaN",
+            "qElemNumber": 128,
+            "qState": "X"
+          },
+          {
+            "qText": "CADE",
+            "qNum": "NaN",
+            "qElemNumber": 214,
+            "qState": "X"
+          },
+          {
+            "qText": "CAPES",
+            "qNum": "NaN",
+            "qElemNumber": 203,
+            "qState": "X"
+          },
+          {
+            "qText": "CBMDF",
+            "qNum": "NaN",
+            "qElemNumber": 104,
+            "qState": "X"
+          },
+          {
+            "qText": "CBTU",
+            "qNum": "NaN",
+            "qElemNumber": 5,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET-BG",
+            "qNum": "NaN",
+            "qElemNumber": 288,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET-OP",
+            "qNum": "NaN",
+            "qElemNumber": 279,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/AL",
+            "qNum": "NaN",
+            "qElemNumber": 194,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/AM",
+            "qNum": "NaN",
+            "qElemNumber": 260,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/BA",
+            "qNum": "NaN",
+            "qElemNumber": 187,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/BAMB",
+            "qNum": "NaN",
+            "qElemNumber": 257,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/CAMP",
+            "qNum": "NaN",
+            "qElemNumber": 195,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/CE",
+            "qNum": "NaN",
+            "qElemNumber": 250,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/ES",
+            "qNum": "NaN",
+            "qElemNumber": 202,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/GO",
+            "qNum": "NaN",
+            "qElemNumber": 196,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/JANU",
+            "qNum": "NaN",
+            "qElemNumber": 252,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/MA",
+            "qNum": "NaN",
+            "qElemNumber": 273,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/MG",
+            "qNum": "NaN",
+            "qElemNumber": 51,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/MT",
+            "qNum": "NaN",
+            "qElemNumber": 205,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/PA",
+            "qNum": "NaN",
+            "qElemNumber": 285,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/PB",
+            "qNum": "NaN",
+            "qElemNumber": 275,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/PE",
+            "qNum": "NaN",
+            "qElemNumber": 259,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/PI",
+            "qNum": "NaN",
+            "qElemNumber": 199,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/RJ",
+            "qNum": "NaN",
+            "qElemNumber": 122,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/RN",
+            "qNum": "NaN",
+            "qElemNumber": 276,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/RPOM",
+            "qNum": "NaN",
+            "qElemNumber": 301,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/RR",
+            "qNum": "NaN",
+            "qElemNumber": 272,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/RS",
+            "qNum": "NaN",
+            "qElemNumber": 282,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/SC",
+            "qNum": "NaN",
+            "qElemNumber": 200,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/SE",
+            "qNum": "NaN",
+            "qElemNumber": 68,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/SP",
+            "qNum": "NaN",
+            "qElemNumber": 286,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/UBER",
+            "qNum": "NaN",
+            "qElemNumber": 278,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFET/URUT",
+            "qNum": "NaN",
+            "qElemNumber": 314,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFETQ-RJ",
+            "qNum": "NaN",
+            "qElemNumber": 129,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFETRIOVE",
+            "qNum": "NaN",
+            "qElemNumber": 316,
+            "qState": "X"
+          },
+          {
+            "qText": "CEFETSVS",
+            "qNum": "NaN",
+            "qElemNumber": 324,
+            "qState": "X"
+          },
+          {
+            "qText": "CEITEC",
+            "qNum": "NaN",
+            "qElemNumber": 241,
+            "qState": "X"
+          },
+          {
+            "qText": "CFETPETROL",
+            "qNum": "NaN",
+            "qElemNumber": 271,
+            "qState": "X"
+          },
+          {
+            "qText": "CFIA",
+            "qNum": "NaN",
+            "qElemNumber": 268,
+            "qState": "X"
+          },
+          {
+            "qText": "CGU",
+            "qNum": "NaN",
+            "qElemNumber": 18,
+            "qState": "X"
+          },
+          {
+            "qText": "CGU/PR",
+            "qNum": "NaN",
+            "qElemNumber": 164,
+            "qState": "X"
+          },
+          {
+            "qText": "CM",
+            "qNum": "NaN",
+            "qElemNumber": 46,
+            "qState": "X"
+          },
+          {
+            "qText": "CNEN",
+            "qNum": "NaN",
+            "qElemNumber": 23,
+            "qState": "X"
+          },
+          {
+            "qText": "CNPQ",
+            "qNum": "NaN",
+            "qElemNumber": 78,
+            "qState": "X"
+          },
+          {
+            "qText": "COAF",
+            "qNum": "NaN",
+            "qElemNumber": 284,
+            "qState": "X"
+          },
+          {
+            "qText": "CODEBAR",
+            "qNum": "NaN",
+            "qElemNumber": 330,
+            "qState": "X"
+          },
+          {
+            "qText": "CODEVASF",
+            "qNum": "NaN",
+            "qElemNumber": 140,
+            "qState": "X"
+          },
+          {
+            "qText": "COLONE",
+            "qNum": "NaN",
+            "qElemNumber": 332,
+            "qState": "X"
+          },
+          {
+            "qText": "CONAB",
+            "qNum": "NaN",
+            "qElemNumber": 3,
+            "qState": "X"
+          },
+          {
+            "qText": "CPRM",
+            "qNum": "NaN",
+            "qElemNumber": 36,
+            "qState": "X"
+          },
+          {
+            "qText": "CTI",
+            "qNum": "NaN",
+            "qElemNumber": 295,
+            "qState": "X"
+          },
+          {
+            "qText": "CVM",
+            "qNum": "NaN",
+            "qElemNumber": 72,
+            "qState": "X"
+          },
+          {
+            "qText": "DATAPREV",
+            "qNum": "NaN",
+            "qElemNumber": 292,
+            "qState": "X"
+          },
+          {
+            "qText": "DECIP/SGP",
+            "qNum": "NaN",
+            "qElemNumber": 26,
+            "qState": "X"
+          },
+          {
+            "qText": "DNER",
+            "qNum": "NaN",
+            "qElemNumber": 168,
+            "qState": "X"
+          },
+          {
+            "qText": "DNIT",
+            "qNum": "NaN",
+            "qElemNumber": 125,
+            "qState": "X"
+          },
+          {
+            "qText": "DNOCS",
+            "qNum": "NaN",
+            "qElemNumber": 88,
+            "qState": "X"
+          },
+          {
+            "qText": "DNPM",
+            "qNum": "NaN",
+            "qElemNumber": 236,
+            "qState": "X"
+          },
+          {
+            "qText": "DPF",
+            "qNum": "NaN",
+            "qElemNumber": 17,
+            "qState": "O"
+          },
+          {
+            "qText": "DPRF",
+            "qNum": "NaN",
+            "qElemNumber": 44,
+            "qState": "X"
+          },
+          {
+            "qText": "DPU",
+            "qNum": "NaN",
+            "qElemNumber": 145,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFAJT",
+            "qNum": "NaN",
+            "qElemNumber": 312,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFALEGRE",
+            "qNum": "NaN",
+            "qElemNumber": 320,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFALEGRET",
+            "qNum": "NaN",
+            "qElemNumber": 329,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFARAGUAT",
+            "qNum": "NaN",
+            "qElemNumber": 155,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFBARBACE",
+            "qNum": "NaN",
+            "qElemNumber": 261,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFBARREIR",
+            "qNum": "NaN",
+            "qElemNumber": 299,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFBJARDIM",
+            "qNum": "NaN",
+            "qElemNumber": 287,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFCACERES",
+            "qNum": "NaN",
+            "qElemNumber": 289,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFCASTANH",
+            "qNum": "NaN",
+            "qElemNumber": 280,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFCATU",
+            "qNum": "NaN",
+            "qElemNumber": 308,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFCERES",
+            "qNum": "NaN",
+            "qElemNumber": 317,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFCODO",
+            "qNum": "NaN",
+            "qElemNumber": 315,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFCOLATIN",
+            "qNum": "NaN",
+            "qElemNumber": 294,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFCOLORAD",
+            "qNum": "NaN",
+            "qElemNumber": 307,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFCONCORD",
+            "qNum": "NaN",
+            "qElemNumber": 323,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFCRATO",
+            "qNum": "NaN",
+            "qElemNumber": 283,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFEVANGEL",
+            "qNum": "NaN",
+            "qElemNumber": 327,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFIGUATU",
+            "qNum": "NaN",
+            "qElemNumber": 204,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFINCONFI",
+            "qNum": "NaN",
+            "qElemNumber": 248,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFMACHADO",
+            "qNum": "NaN",
+            "qElemNumber": 310,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFMANAUS",
+            "qNum": "NaN",
+            "qElemNumber": 251,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFMUZAMBI",
+            "qNum": "NaN",
+            "qElemNumber": 305,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFRIOSUL",
+            "qNum": "NaN",
+            "qElemNumber": 309,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFSALINAS",
+            "qNum": "NaN",
+            "qElemNumber": 319,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFSAOLUIS",
+            "qNum": "NaN",
+            "qElemNumber": 297,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFSATUBA",
+            "qNum": "NaN",
+            "qElemNumber": 296,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFSBONF",
+            "qNum": "NaN",
+            "qElemNumber": 318,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFSCRISTO",
+            "qNum": "NaN",
+            "qElemNumber": 206,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFSERTAO",
+            "qNum": "NaN",
+            "qElemNumber": 311,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFSGABRI",
+            "qNum": "NaN",
+            "qElemNumber": 306,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFSI",
+            "qNum": "NaN",
+            "qElemNumber": 328,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFSOMBRIO",
+            "qNum": "NaN",
+            "qElemNumber": 293,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFSOUSA",
+            "qNum": "NaN",
+            "qElemNumber": 300,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFSTERESA",
+            "qNum": "NaN",
+            "qElemNumber": 303,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFSTOANTA",
+            "qNum": "NaN",
+            "qElemNumber": 302,
+            "qState": "X"
+          },
+          {
+            "qText": "EAFUBERLAN",
+            "qNum": "NaN",
+            "qElemNumber": 277,
+            "qState": "X"
+          },
+          {
+            "qText": "EBC",
+            "qNum": "NaN",
+            "qElemNumber": 28,
+            "qState": "X"
+          },
+          {
+            "qText": "EBSERH",
+            "qNum": "NaN",
+            "qElemNumber": 11,
+            "qState": "X"
+          },
+          {
+            "qText": "EMBRAPA",
+            "qNum": "NaN",
+            "qElemNumber": 0,
+            "qState": "X"
+          },
+          {
+            "qText": "EMBRATUR",
+            "qNum": "NaN",
+            "qElemNumber": 245,
+            "qState": "X"
+          },
+          {
+            "qText": "ENAP",
+            "qNum": "NaN",
+            "qElemNumber": 207,
+            "qState": "X"
+          },
+          {
+            "qText": "ENASA",
+            "qNum": "NaN",
+            "qElemNumber": 325,
+            "qState": "X"
+          },
+          {
+            "qText": "EPE",
+            "qNum": "NaN",
+            "qElemNumber": 240,
+            "qState": "X"
+          },
+          {
+            "qText": "EPL",
+            "qNum": "NaN",
+            "qElemNumber": 262,
+            "qState": "X"
+          },
+          {
+            "qText": "ETF/MT",
+            "qNum": "NaN",
+            "qElemNumber": 258,
+            "qState": "X"
+          },
+          {
+            "qText": "ETF/PALMAS",
+            "qNum": "NaN",
+            "qElemNumber": 249,
+            "qState": "X"
+          },
+          {
+            "qText": "EX-TER/AC",
+            "qNum": "NaN",
+            "qElemNumber": 166,
+            "qState": "X"
+          },
+          {
+            "qText": "EX-TER/AP",
+            "qNum": "NaN",
+            "qElemNumber": 80,
+            "qState": "X"
+          },
+          {
+            "qText": "EX-TER/RO",
+            "qNum": "NaN",
+            "qElemNumber": 176,
+            "qState": "X"
+          },
+          {
+            "qText": "EX-TER/RR",
+            "qNum": "NaN",
+            "qElemNumber": 43,
+            "qState": "X"
+          },
+          {
+            "qText": "F.CENTRO",
+            "qNum": "NaN",
+            "qElemNumber": 171,
+            "qState": "X"
+          },
+          {
+            "qText": "F.OSORIO",
+            "qNum": "NaN",
+            "qElemNumber": 117,
+            "qState": "X"
+          },
+          {
+            "qText": "FAG",
+            "qNum": "NaN",
+            "qElemNumber": 253,
+            "qState": "X"
+          },
+          {
+            "qText": "FBN",
+            "qNum": "NaN",
+            "qElemNumber": 192,
+            "qState": "X"
+          },
+          {
+            "qText": "FCP",
+            "qNum": "NaN",
+            "qElemNumber": 247,
+            "qState": "X"
+          },
+          {
+            "qText": "FCRB",
+            "qNum": "NaN",
+            "qElemNumber": 148,
+            "qState": "X"
+          },
+          {
+            "qText": "FIOCRUZ",
+            "qNum": "NaN",
+            "qElemNumber": 22,
+            "qState": "X"
+          },
+          {
+            "qText": "FJN",
+            "qNum": "NaN",
+            "qElemNumber": 184,
+            "qState": "X"
+          },
+          {
+            "qText": "FNDE",
+            "qNum": "NaN",
+            "qElemNumber": 153,
+            "qState": "X"
+          },
+          {
+            "qText": "FRANAVE",
+            "qNum": "NaN",
+            "qElemNumber": 321,
+            "qState": "X"
+          },
+          {
+            "qText": "FUAM",
+            "qNum": "NaN",
+            "qElemNumber": 20,
+            "qState": "X"
+          },
+          {
+            "qText": "FUFOP",
+            "qNum": "NaN",
+            "qElemNumber": 120,
+            "qState": "X"
+          },
+          {
+            "qText": "FUFPEL",
+            "qNum": "NaN",
+            "qElemNumber": 101,
+            "qState": "X"
+          },
+          {
+            "qText": "FUFS",
+            "qNum": "NaN",
+            "qElemNumber": 82,
+            "qState": "X"
+          },
+          {
+            "qText": "FUFSCAR",
+            "qNum": "NaN",
+            "qElemNumber": 107,
+            "qState": "X"
+          },
+          {
+            "qText": "FUFT",
+            "qNum": "NaN",
+            "qElemNumber": 131,
+            "qState": "X"
+          },
+          {
+            "qText": "FUNAI",
+            "qNum": "NaN",
+            "qElemNumber": 116,
+            "qState": "X"
+          },
+          {
+            "qText": "FUNARTE",
+            "qNum": "NaN",
+            "qElemNumber": 161,
+            "qState": "X"
+          },
+          {
+            "qText": "FUNASA",
+            "qNum": "NaN",
+            "qElemNumber": 114,
+            "qState": "X"
+          },
+          {
+            "qText": "FUNPRESP",
+            "qNum": "NaN",
+            "qElemNumber": 331,
+            "qState": "X"
+          },
+          {
+            "qText": "FUNREI",
+            "qNum": "NaN",
+            "qElemNumber": 163,
+            "qState": "X"
+          },
+          {
+            "qText": "FURG",
+            "qNum": "NaN",
+            "qElemNumber": 127,
+            "qState": "X"
+          },
+          {
+            "qText": "GDF",
+            "qNum": "NaN",
+            "qElemNumber": 7,
+            "qState": "X"
+          },
+          {
+            "qText": "GEIPOT",
+            "qNum": "NaN",
+            "qElemNumber": 281,
+            "qState": "X"
+          },
+          {
+            "qText": "HCPA",
+            "qNum": "NaN",
+            "qElemNumber": 2,
+            "qState": "X"
+          },
+          {
+            "qText": "HNSC",
+            "qNum": "NaN",
+            "qElemNumber": 212,
+            "qState": "X"
+          },
+          {
+            "qText": "I.B.CONST",
+            "qNum": "NaN",
+            "qElemNumber": 193,
+            "qState": "X"
+          },
+          {
+            "qText": "IBAMA",
+            "qNum": "NaN",
+            "qElemNumber": 111,
+            "qState": "X"
+          },
+          {
+            "qText": "IBGE",
+            "qNum": "NaN",
+            "qElemNumber": 58,
+            "qState": "X"
+          },
+          {
+            "qText": "IBRAM",
+            "qNum": "NaN",
+            "qElemNumber": 191,
+            "qState": "X"
+          },
+          {
+            "qText": "ICMBIO",
+            "qNum": "NaN",
+            "qElemNumber": 89,
+            "qState": "X"
+          },
+          {
+            "qText": "IFAC",
+            "qNum": "NaN",
+            "qElemNumber": 239,
+            "qState": "X"
+          },
+          {
+            "qText": "IFAL",
+            "qNum": "NaN",
+            "qElemNumber": 108,
+            "qState": "X"
+          },
+          {
+            "qText": "IFAM",
+            "qNum": "NaN",
+            "qElemNumber": 144,
+            "qState": "X"
+          },
+          {
+            "qText": "IFAP",
+            "qNum": "NaN",
+            "qElemNumber": 219,
+            "qState": "X"
+          },
+          {
+            "qText": "IFBA",
+            "qNum": "NaN",
+            "qElemNumber": 74,
+            "qState": "X"
+          },
+          {
+            "qText": "IFBAIANO",
+            "qNum": "NaN",
+            "qElemNumber": 183,
+            "qState": "X"
+          },
+          {
+            "qText": "IFBRASILIA",
+            "qNum": "NaN",
+            "qElemNumber": 8,
+            "qState": "X"
+          },
+          {
+            "qText": "IFCATARINA",
+            "qNum": "NaN",
+            "qElemNumber": 126,
+            "qState": "X"
+          },
+          {
+            "qText": "IFCE",
+            "qNum": "NaN",
+            "qElemNumber": 158,
+            "qState": "X"
+          },
+          {
+            "qText": "IFES",
+            "qNum": "NaN",
+            "qElemNumber": 106,
+            "qState": "X"
+          },
+          {
+            "qText": "IFFARROUP",
+            "qNum": "NaN",
+            "qElemNumber": 228,
+            "qState": "X"
+          },
+          {
+            "qText": "IFFLU",
+            "qNum": "NaN",
+            "qElemNumber": 156,
+            "qState": "X"
+          },
+          {
+            "qText": "IFG",
+            "qNum": "NaN",
+            "qElemNumber": 197,
+            "qState": "X"
+          },
+          {
+            "qText": "IFGOIANO",
+            "qNum": "NaN",
+            "qElemNumber": 121,
+            "qState": "X"
+          },
+          {
+            "qText": "IFMA",
+            "qNum": "NaN",
+            "qElemNumber": 135,
+            "qState": "X"
+          },
+          {
+            "qText": "IFMG",
+            "qNum": "NaN",
+            "qElemNumber": 150,
+            "qState": "X"
+          },
+          {
+            "qText": "IFMS",
+            "qNum": "NaN",
+            "qElemNumber": 64,
+            "qState": "X"
+          },
+          {
+            "qText": "IFMT",
+            "qNum": "NaN",
+            "qElemNumber": 25,
+            "qState": "X"
+          },
+          {
+            "qText": "IFNORTEMG",
+            "qNum": "NaN",
+            "qElemNumber": 232,
+            "qState": "X"
+          },
+          {
+            "qText": "IFPA",
+            "qNum": "NaN",
+            "qElemNumber": 92,
+            "qState": "X"
+          },
+          {
+            "qText": "IFPB",
+            "qNum": "NaN",
+            "qElemNumber": 19,
+            "qState": "X"
+          },
+          {
+            "qText": "IFPE",
+            "qNum": "NaN",
+            "qElemNumber": 142,
+            "qState": "X"
+          },
+          {
+            "qText": "IFPI",
+            "qNum": "NaN",
+            "qElemNumber": 198,
+            "qState": "X"
+          },
+          {
+            "qText": "IFPR",
+            "qNum": "NaN",
+            "qElemNumber": 208,
+            "qState": "X"
+          },
+          {
+            "qText": "IFRJ",
+            "qNum": "NaN",
+            "qElemNumber": 134,
+            "qState": "X"
+          },
+          {
+            "qText": "IFRN",
+            "qNum": "NaN",
+            "qElemNumber": 124,
+            "qState": "X"
+          },
+          {
+            "qText": "IFRO",
+            "qNum": "NaN",
+            "qElemNumber": 217,
+            "qState": "X"
+          },
+          {
+            "qText": "IFRR",
+            "qNum": "NaN",
+            "qElemNumber": 42,
+            "qState": "X"
+          },
+          {
+            "qText": "IFRS",
+            "qNum": "NaN",
+            "qElemNumber": 55,
+            "qState": "X"
+          },
+          {
+            "qText": "IFSC",
+            "qNum": "NaN",
+            "qElemNumber": 86,
+            "qState": "X"
+          },
+          {
+            "qText": "IFSE",
+            "qNum": "NaN",
+            "qElemNumber": 179,
+            "qState": "X"
+          },
+          {
+            "qText": "IFSERTPE",
+            "qNum": "NaN",
+            "qElemNumber": 132,
+            "qState": "X"
+          },
+          {
+            "qText": "IFSP",
+            "qNum": "NaN",
+            "qElemNumber": 201,
+            "qState": "X"
+          },
+          {
+            "qText": "IFSRIOGRAN",
+            "qNum": "NaN",
+            "qElemNumber": 81,
+            "qState": "X"
+          },
+          {
+            "qText": "IFSUDMG",
+            "qNum": "NaN",
+            "qElemNumber": 110,
+            "qState": "X"
+          },
+          {
+            "qText": "IFSULMG",
+            "qNum": "NaN",
+            "qElemNumber": 37,
+            "qState": "X"
+          },
+          {
+            "qText": "IFTO",
+            "qNum": "NaN",
+            "qElemNumber": 154,
+            "qState": "X"
+          },
+          {
+            "qText": "IFTRIANMG",
+            "qNum": "NaN",
+            "qElemNumber": 151,
+            "qState": "X"
+          },
+          {
+            "qText": "INB",
+            "qNum": "NaN",
+            "qElemNumber": 94,
+            "qState": "X"
+          },
+          {
+            "qText": "INCRA",
+            "qNum": "NaN",
+            "qElemNumber": 138,
+            "qState": "X"
+          },
+          {
+            "qText": "INDESP",
+            "qNum": "NaN",
+            "qElemNumber": 304,
+            "qState": "X"
+          },
+          {
+            "qText": "INEP",
+            "qNum": "NaN",
+            "qElemNumber": 159,
+            "qState": "X"
+          },
+          {
+            "qText": "INES",
+            "qNum": "NaN",
+            "qElemNumber": 235,
+            "qState": "X"
+          },
+          {
+            "qText": "INMETRO",
+            "qNum": "NaN",
+            "qElemNumber": 71,
+            "qState": "X"
+          },
+          {
+            "qText": "INPI",
+            "qNum": "NaN",
+            "qElemNumber": 223,
+            "qState": "X"
+          },
+          {
+            "qText": "INSS",
+            "qNum": "NaN",
+            "qElemNumber": 35,
+            "qState": "X"
+          },
+          {
+            "qText": "IPEA",
+            "qNum": "NaN",
+            "qElemNumber": 180,
+            "qState": "X"
+          },
+          {
+            "qText": "IPHAN",
+            "qNum": "NaN",
+            "qElemNumber": 162,
+            "qState": "X"
+          },
+          {
+            "qText": "ITI",
+            "qNum": "NaN",
+            "qElemNumber": 290,
+            "qState": "X"
+          },
+          {
+            "qText": "JBRJ",
+            "qNum": "NaN",
+            "qElemNumber": 100,
+            "qState": "X"
+          },
+          {
+            "qText": "M.COMUNIC",
+            "qNum": "NaN",
+            "qElemNumber": 32,
+            "qState": "X"
+          },
+          {
+            "qText": "M.ESPORTE",
+            "qNum": "NaN",
+            "qElemNumber": 66,
+            "qState": "X"
+          },
+          {
+            "qText": "MAPA",
+            "qNum": "NaN",
+            "qElemNumber": 4,
+            "qState": "X"
+          },
+          {
+            "qText": "MARE",
+            "qNum": "NaN",
+            "qElemNumber": 274,
+            "qState": "X"
+          },
+          {
+            "qText": "MC",
+            "qNum": "NaN",
+            "qElemNumber": 224,
+            "qState": "X"
+          },
+          {
+            "qText": "MCID",
+            "qNum": "NaN",
+            "qElemNumber": 186,
+            "qState": "X"
+          },
+          {
+            "qText": "MCOM",
+            "qNum": "NaN",
+            "qElemNumber": 47,
+            "qState": "X"
+          },
+          {
+            "qText": "MCTI",
+            "qNum": "NaN",
+            "qElemNumber": 34,
+            "qState": "X"
+          },
+          {
+            "qText": "MD",
+            "qNum": "NaN",
+            "qElemNumber": 53,
+            "qState": "X"
+          },
+          {
+            "qText": "MDA",
+            "qNum": "NaN",
+            "qElemNumber": 213,
+            "qState": "X"
+          },
+          {
+            "qText": "MDHC",
+            "qNum": "NaN",
+            "qElemNumber": 244,
+            "qState": "X"
+          },
+          {
+            "qText": "MDIC",
+            "qNum": "NaN",
+            "qElemNumber": 65,
+            "qState": "X"
+          },
+          {
+            "qText": "MDR",
+            "qNum": "NaN",
+            "qElemNumber": 172,
+            "qState": "X"
+          },
+          {
+            "qText": "MDS",
+            "qNum": "NaN",
+            "qElemNumber": 123,
+            "qState": "X"
+          },
+          {
+            "qText": "ME",
+            "qNum": "NaN",
+            "qElemNumber": 1,
+            "qState": "X"
+          },
+          {
+            "qText": "MEC",
+            "qNum": "NaN",
+            "qElemNumber": 130,
+            "qState": "X"
+          },
+          {
+            "qText": "MEMP",
+            "qNum": "NaN",
+            "qElemNumber": 210,
+            "qState": "X"
+          },
+          {
+            "qText": "MESP",
+            "qNum": "NaN",
+            "qElemNumber": 256,
+            "qState": "X"
+          },
+          {
+            "qText": "MF",
+            "qNum": "NaN",
+            "qElemNumber": 21,
+            "qState": "X"
+          },
+          {
+            "qText": "MGI",
+            "qNum": "NaN",
+            "qElemNumber": 181,
+            "qState": "X"
+          },
+          {
+            "qText": "MIDR",
+            "qNum": "NaN",
+            "qElemNumber": 237,
+            "qState": "X"
+          },
+          {
+            "qText": "MINC",
+            "qNum": "NaN",
+            "qElemNumber": 141,
+            "qState": "X"
+          },
+          {
+            "qText": "MINFRA",
+            "qNum": "NaN",
+            "qElemNumber": 27,
+            "qState": "X"
+          },
+          {
+            "qText": "MIR",
+            "qNum": "NaN",
+            "qElemNumber": 264,
+            "qState": "X"
+          },
+          {
+            "qText": "MJ",
+            "qNum": "NaN",
+            "qElemNumber": 147,
+            "qState": "X"
+          },
+          {
+            "qText": "MMA",
+            "qNum": "NaN",
+            "qElemNumber": 175,
+            "qState": "X"
+          },
+          {
+            "qText": "MME",
+            "qNum": "NaN",
+            "qElemNumber": 185,
+            "qState": "X"
+          },
+          {
+            "qText": "MMFDH",
+            "qNum": "NaN",
+            "qElemNumber": 231,
+            "qState": "X"
+          },
+          {
+            "qText": "MMULHERES",
+            "qNum": "NaN",
+            "qElemNumber": 238,
+            "qState": "X"
+          },
+          {
+            "qText": "MP",
+            "qNum": "NaN",
+            "qElemNumber": 146,
+            "qState": "X"
+          },
+          {
+            "qText": "MPA",
+            "qNum": "NaN",
+            "qElemNumber": 211,
+            "qState": "X"
+          },
+          {
+            "qText": "MPI",
+            "qNum": "NaN",
+            "qElemNumber": 266,
+            "qState": "X"
+          },
+          {
+            "qText": "MPO",
+            "qNum": "NaN",
+            "qElemNumber": 265,
+            "qState": "X"
+          },
+          {
+            "qText": "MPOR",
+            "qNum": "NaN",
+            "qElemNumber": 254,
+            "qState": "X"
+          },
+          {
+            "qText": "MPS",
+            "qNum": "NaN",
+            "qElemNumber": 62,
+            "qState": "X"
+          },
+          {
+            "qText": "MRE",
+            "qNum": "NaN",
+            "qElemNumber": 57,
+            "qState": "X"
+          },
+          {
+            "qText": "MS",
+            "qNum": "NaN",
+            "qElemNumber": 50,
+            "qState": "X"
+          },
+          {
+            "qText": "MT",
+            "qNum": "NaN",
+            "qElemNumber": 170,
+            "qState": "X"
+          },
+          {
+            "qText": "MTB",
+            "qNum": "NaN",
+            "qElemNumber": 115,
+            "qState": "X"
+          },
+          {
+            "qText": "MTE",
+            "qNum": "NaN",
+            "qElemNumber": 109,
+            "qState": "X"
+          },
+          {
+            "qText": "MTP",
+            "qNum": "NaN",
+            "qElemNumber": 87,
+            "qState": "X"
+          },
+          {
+            "qText": "MTUR",
+            "qNum": "NaN",
+            "qElemNumber": 95,
+            "qState": "X"
+          },
+          {
+            "qText": "NUCLEP",
+            "qNum": "NaN",
+            "qElemNumber": 137,
+            "qState": "X"
+          },
+          {
+            "qText": "PCDF",
+            "qNum": "NaN",
+            "qElemNumber": 103,
+            "qState": "X"
+          },
+          {
+            "qText": "PMDF",
+            "qNum": "NaN",
+            "qElemNumber": 98,
+            "qState": "X"
+          },
+          {
+            "qText": "PR",
+            "qNum": "NaN",
+            "qElemNumber": 40,
+            "qState": "X"
+          },
+          {
+            "qText": "PREVIC",
+            "qNum": "NaN",
+            "qElemNumber": 263,
+            "qState": "X"
+          },
+          {
+            "qText": "RADIOBRAS",
+            "qNum": "NaN",
+            "qElemNumber": 30,
+            "qState": "X"
+          },
+          {
+            "qText": "RFB",
+            "qNum": "NaN",
+            "qElemNumber": 322,
+            "qState": "X"
+          },
+          {
+            "qText": "SUDAM",
+            "qNum": "NaN",
+            "qElemNumber": 173,
+            "qState": "X"
+          },
+          {
+            "qText": "SUDECO",
+            "qNum": "NaN",
+            "qElemNumber": 267,
+            "qState": "X"
+          },
+          {
+            "qText": "SUDENE",
+            "qNum": "NaN",
+            "qElemNumber": 152,
+            "qState": "X"
+          },
+          {
+            "qText": "SUFRAMA",
+            "qNum": "NaN",
+            "qElemNumber": 174,
+            "qState": "X"
+          },
+          {
+            "qText": "SUSEP",
+            "qNum": "NaN",
+            "qElemNumber": 160,
+            "qState": "X"
+          },
+          {
+            "qText": "TRENSURB",
+            "qNum": "NaN",
+            "qElemNumber": 136,
+            "qState": "X"
+          },
+          {
+            "qText": "UFABC",
+            "qNum": "NaN",
+            "qElemNumber": 91,
+            "qState": "X"
+          },
+          {
+            "qText": "UFAC",
+            "qNum": "NaN",
+            "qElemNumber": 49,
+            "qState": "X"
+          },
+          {
+            "qText": "UFAL",
+            "qNum": "NaN",
+            "qElemNumber": 119,
+            "qState": "X"
+          },
+          {
+            "qText": "UFAPE",
+            "qNum": "NaN",
+            "qElemNumber": 255,
+            "qState": "X"
+          },
+          {
+            "qText": "UFBA",
+            "qNum": "NaN",
+            "qElemNumber": 93,
+            "qState": "X"
+          },
+          {
+            "qText": "UFCA",
+            "qNum": "NaN",
+            "qElemNumber": 79,
+            "qState": "X"
+          },
+          {
+            "qText": "UFCAT",
+            "qNum": "NaN",
+            "qElemNumber": 234,
+            "qState": "X"
+          },
+          {
+            "qText": "UFCE",
+            "qNum": "NaN",
+            "qElemNumber": 15,
+            "qState": "X"
+          },
+          {
+            "qText": "UFCG",
+            "qNum": "NaN",
+            "qElemNumber": 60,
+            "qState": "X"
+          },
+          {
+            "qText": "UFCSPA",
+            "qNum": "NaN",
+            "qElemNumber": 139,
+            "qState": "X"
+          },
+          {
+            "qText": "UFDPAR",
+            "qNum": "NaN",
+            "qElemNumber": 291,
+            "qState": "X"
+          },
+          {
+            "qText": "UFERSA-RN",
+            "qNum": "NaN",
+            "qElemNumber": 190,
+            "qState": "X"
+          },
+          {
+            "qText": "UFES",
+            "qNum": "NaN",
+            "qElemNumber": 12,
+            "qState": "X"
+          },
+          {
+            "qText": "UFESBA",
+            "qNum": "NaN",
+            "qElemNumber": 227,
+            "qState": "X"
+          },
+          {
+            "qText": "UFF",
+            "qNum": "NaN",
+            "qElemNumber": 38,
+            "qState": "X"
+          },
+          {
+            "qText": "UFFS",
+            "qNum": "NaN",
+            "qElemNumber": 225,
+            "qState": "X"
+          },
+          {
+            "qText": "UFGD",
+            "qNum": "NaN",
+            "qElemNumber": 221,
+            "qState": "X"
+          },
+          {
+            "qText": "UFGO",
+            "qNum": "NaN",
+            "qElemNumber": 77,
+            "qState": "X"
+          },
+          {
+            "qText": "UFJ",
+            "qNum": "NaN",
+            "qElemNumber": 246,
+            "qState": "X"
+          },
+          {
+            "qText": "UFJF",
+            "qNum": "NaN",
+            "qElemNumber": 10,
+            "qState": "X"
+          },
+          {
+            "qText": "UFLA",
+            "qNum": "NaN",
+            "qElemNumber": 189,
+            "qState": "X"
+          },
+          {
+            "qText": "UFMA",
+            "qNum": "NaN",
+            "qElemNumber": 24,
+            "qState": "X"
+          },
+          {
+            "qText": "UFMG",
+            "qNum": "NaN",
+            "qElemNumber": 56,
+            "qState": "X"
+          },
+          {
+            "qText": "UFMS",
+            "qNum": "NaN",
+            "qElemNumber": 102,
+            "qState": "X"
+          },
+          {
+            "qText": "UFMT",
+            "qNum": "NaN",
+            "qElemNumber": 45,
+            "qState": "X"
+          },
+          {
+            "qText": "UFNT",
+            "qNum": "NaN",
+            "qElemNumber": 222,
+            "qState": "X"
+          },
+          {
+            "qText": "UFOB",
+            "qNum": "NaN",
+            "qElemNumber": 229,
+            "qState": "X"
+          },
+          {
+            "qText": "UFOPA",
+            "qNum": "NaN",
+            "qElemNumber": 215,
+            "qState": "X"
+          },
+          {
+            "qText": "UFPA",
+            "qNum": "NaN",
+            "qElemNumber": 41,
+            "qState": "X"
+          },
+          {
+            "qText": "UFPB",
+            "qNum": "NaN",
+            "qElemNumber": 59,
+            "qState": "X"
+          },
+          {
+            "qText": "UFPE",
+            "qNum": "NaN",
+            "qElemNumber": 39,
+            "qState": "X"
+          },
+          {
+            "qText": "UFPI",
+            "qNum": "NaN",
+            "qElemNumber": 112,
+            "qState": "X"
+          },
+          {
+            "qText": "UFPR",
+            "qNum": "NaN",
+            "qElemNumber": 63,
+            "qState": "X"
+          },
+          {
+            "qText": "UFR",
+            "qNum": "NaN",
+            "qElemNumber": 233,
+            "qState": "X"
+          },
+          {
+            "qText": "UFRA",
+            "qNum": "NaN",
+            "qElemNumber": 54,
+            "qState": "X"
+          },
+          {
+            "qText": "UFRB",
+            "qNum": "NaN",
+            "qElemNumber": 97,
+            "qState": "X"
+          },
+          {
+            "qText": "UFRGS/RS",
+            "qNum": "NaN",
+            "qElemNumber": 13,
+            "qState": "X"
+          },
+          {
+            "qText": "UFRJ",
+            "qNum": "NaN",
+            "qElemNumber": 6,
+            "qState": "X"
+          },
+          {
+            "qText": "UFRN",
+            "qNum": "NaN",
+            "qElemNumber": 14,
+            "qState": "X"
+          },
+          {
+            "qText": "UFRPE",
+            "qNum": "NaN",
+            "qElemNumber": 33,
+            "qState": "X"
+          },
+          {
+            "qText": "UFRR",
+            "qNum": "NaN",
+            "qElemNumber": 218,
+            "qState": "X"
+          },
+          {
+            "qText": "UFRRJ",
+            "qNum": "NaN",
+            "qElemNumber": 165,
+            "qState": "X"
+          },
+          {
+            "qText": "UFSC",
+            "qNum": "NaN",
+            "qElemNumber": 85,
+            "qState": "X"
+          },
+          {
+            "qText": "UFSM/RS",
+            "qNum": "NaN",
+            "qElemNumber": 84,
+            "qState": "X"
+          },
+          {
+            "qText": "UFTM",
+            "qNum": "NaN",
+            "qElemNumber": 105,
+            "qState": "X"
+          },
+          {
+            "qText": "UFU",
+            "qNum": "NaN",
+            "qElemNumber": 143,
+            "qState": "X"
+          },
+          {
+            "qText": "UFV",
+            "qNum": "NaN",
+            "qElemNumber": 52,
+            "qState": "X"
+          },
+          {
+            "qText": "UFVJM",
+            "qNum": "NaN",
+            "qElemNumber": 157,
+            "qState": "X"
+          },
+          {
+            "qText": "UNB",
+            "qNum": "NaN",
+            "qElemNumber": 73,
+            "qState": "X"
+          },
+          {
+            "qText": "UNIFAL-MG",
+            "qNum": "NaN",
+            "qElemNumber": 149,
+            "qState": "X"
+          },
+          {
+            "qText": "UNIFAP",
+            "qNum": "NaN",
+            "qElemNumber": 167,
+            "qState": "X"
+          },
+          {
+            "qText": "UNIFEI",
+            "qNum": "NaN",
+            "qElemNumber": 188,
+            "qState": "X"
+          },
+          {
+            "qText": "UNIFESP",
+            "qNum": "NaN",
+            "qElemNumber": 61,
+            "qState": "X"
+          },
+          {
+            "qText": "UNIFESSPA",
+            "qNum": "NaN",
+            "qElemNumber": 133,
+            "qState": "X"
+          },
+          {
+            "qText": "UNILA",
+            "qNum": "NaN",
+            "qElemNumber": 226,
+            "qState": "X"
+          },
+          {
+            "qText": "UNILAB",
+            "qNum": "NaN",
+            "qElemNumber": 230,
+            "qState": "X"
+          },
+          {
+            "qText": "UNIPAMPA",
+            "qNum": "NaN",
+            "qElemNumber": 216,
+            "qState": "X"
+          },
+          {
+            "qText": "UNIR",
+            "qNum": "NaN",
+            "qElemNumber": 177,
+            "qState": "X"
+          },
+          {
+            "qText": "UNIRIO",
+            "qNum": "NaN",
+            "qElemNumber": 90,
+            "qState": "X"
+          },
+          {
+            "qText": "UNIVASF",
+            "qNum": "NaN",
+            "qElemNumber": 220,
+            "qState": "X"
+          },
+          {
+            "qText": "UTFPR",
+            "qNum": "NaN",
+            "qElemNumber": 118,
+            "qState": "X"
+          },
+          {
+            "qText": "VALEC",
+            "qNum": "NaN",
+            "qElemNumber": 243,
+            "qState": "X"
+          },
+          {
+            "qText": "VPR",
+            "qNum": "NaN",
+            "qElemNumber": 209,
+            "qState": "X"
+          }
+        ]
+      },
+      "availableAbbreviations": [
+        "DPF"
+      ]
+    },
+    "qSize": {
+      "qcx": 7,
+      "qcy": 88
+    },
+    "dimensions": [
+      "Ano",
+      "Mês",
+      "Grupo Situação do Vínculo",
+      "Nome do Cargo",
+      "Orgão",
+      "UF"
+    ],
+    "qGrandTotalRow": [
+      {
+        "qText": "1.108",
+        "qNum": 1108,
+        "qElemNumber": -1,
+        "qState": "X",
+        "qIsTotalCell": true
+      }
+    ],
+    "measure": [
+      {
+        "title": "Servidores",
+        "minimum": 1,
+        "maximum": 221
+      }
+    ],
+    "visibleText": "Faça você mesmo\nMês-Ano: Set 2026\nGrupo Situação do Vinculo: Ativo\nCargo: Perito Criminal Federal Classe\nCargo: Perito Criminal Federal 2a Cla\nCargo: Perito Criminal Federal 3a Cla\nCargo: Perito Criminal Federal 1a Cla\nÓrgão: Departamento De Policia Federal\nSeção: Servidores\nDimensão: Grupo Situação do Vínculo\nDimensão: Orgão\nDimensão: Nome do Cargo\nDimensão: UF\nMétricas: Servidores\nLimpar Filtros\nComo utilizar o Faça você mesmo? Nos filtros:\nSelecione apenas 1 item da \"Seção\"\nSelecione quantos itens desejar da \"Dimensão\"\nSelecione como deseja visualizar os dados em \"Métricas\"\nCaso deseje, selecione o \"Ano\"\nCaso deseje, selecione o \"Mês/ano\"\nCaso deseje, selecione se quer incluir ou não o GDF nos resultados\nFILTROS\nFilter pane\nSeção\nFilter pane\nDimensão\nFilter pane\nMétricas\nFilter pane\nAno\nFilter pane\nMês‑Ano\nFilter pane\nInclui GDF?\nBaixar Arquivo\nTable\nAnálise Dinâmica — Servidores\nAno\n\t\t\nMês\n\t\t\nGrupo Situação do Vínculo\n\t\t\nNome do Cargo\n\t\t\nOrgão\n\t\t\nUF\n\t\t\nServidores\n\t\n\n\nTotais\n\t\n \n\t\n \n\t\n \n\t\n \n\t\n \n\t\n1.108\n\t\n \n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nAC\n\t\n1\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nAM\n\t\n2\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nCE\n\t\n3\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nDF\n\t\n34\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nGO\n\t\n2\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nMA\n\t\n1\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nMG\n\t\n6\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nMS\n\t\n1\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nPA\n\t\n1\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nPB\n\t\n4\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nPE\n\t\n1\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nPI\n\t\n1\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nPR\n\t\n11\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nRJ\n\t\n1\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nRN\n\t\n1\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nRO\n\t\n2\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nRR\n\t\n2\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nRS\n\t\n5\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nSC\n\t\n3\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nSE\n\t\n1\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nSP\n\t\n11\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 1a Cla\n\t\nDPF\n\t\nTO\n\t\n2\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 2a Cla\n\t\nDPF\n\t\nAC\n\t\n4\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 2a Cla\n\t\nDPF\n\t\nAM\n\t\n6\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 2a Cla\n\t\nDPF\n\t\nAP\n\t\n4\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 2a Cla\n\t\nDPF\n\t\nBA\n\t\n4\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 2a Cla\n\t\nDPF\n\t\nCE\n\t\n1\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 2a Cla\n\t\nDPF\n\t\nDF\n\t\n49\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 2a Cla\n\t\nDPF\n\t\nES\n\t\n1\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 2a Cla\n\t\nDPF\n\t\nGO\n\t\n1\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 2a Cla\n\t\nDPF\n\t\nMA\n\t\n2\n\t\n\n\n2026\n\t\nSet\n\t\nAtivo\n\t\nPerito Criminal Federal 2a Cla\n\t\nDPF\n\t\nMG\n\t\n1\n\t"
+  },
+  "trace": [
+    {
+      "utc": "2026-11-14T05:55:25.709Z",
+      "kind": "isolation",
+      "version": "Chrome/156.0.8078.81",
+      "cookieCountBeforeNavigation": 0
+    },
+    {
+      "utc": "2026-11-14T05:55:31.054Z",
+      "kind": "ws_handshake",
+      "requestId": "86577.179",
+      "status": 101,
+      "statusText": "Switching Protocols"
+    },
+    {
+      "utc": "2026-11-14T05:55:38.521Z",
+      "kind": "Browser.downloadWillBegin",
+      "frameId": "C2DC5FFE5D94C05FF205EF9E72D83B6E",
+      "guid": "3299eabd-f78a-4127-b459-067ef2919491",
+      "url": "https://pep.paineis.gov.br/tempcontent/1801b38c-1681-42eb-b83d-ace6f1a60217/f763006f-5265-47a3-835b-05b67f92526d.xlsx?serverNodeId=389b9161-43bb-40cf-8c3a-29e380ee0eff",
+      "suggestedFilename": "f763006f-5265-47a3-835b-05b67f92526d.xlsx"
+    },
+    {
+      "utc": "2026-11-14T05:55:38.687Z",
+      "kind": "Browser.downloadProgress",
+      "guid": "3299eabd-f78a-4127-b459-067ef2919491",
+      "totalBytes": 0,
+      "receivedBytes": 0,
+      "state": "inProgress"
+    },
+    {
+      "utc": "2026-11-14T05:55:38.688Z",
+      "kind": "Browser.downloadProgress",
+      "guid": "3299eabd-f78a-4127-b459-067ef2919491",
+      "totalBytes": 0,
+      "receivedBytes": 7915,
+      "state": "inProgress"
+    },
+    {
+      "utc": "2026-11-14T05:55:38.688Z",
+      "kind": "Browser.downloadProgress",
+      "guid": "3299eabd-f78a-4127-b459-067ef2919491",
+      "totalBytes": 0,
+      "receivedBytes": 7915,
+      "state": "inProgress"
+    },
+    {
+      "utc": "2026-11-14T05:55:38.688Z",
+      "kind": "Browser.downloadProgress",
+      "guid": "3299eabd-f78a-4127-b459-067ef2919491",
+      "totalBytes": 7915,
+      "receivedBytes": 7915,
+      "state": "inProgress"
+    },
+    {
+      "utc": "2026-11-14T05:55:38.691Z",
+      "kind": "Browser.downloadProgress",
+      "guid": "3299eabd-f78a-4127-b459-067ef2919491",
+      "totalBytes": 7915,
+      "receivedBytes": 7915,
+      "state": "inProgress"
+    },
+    {
+      "utc": "2026-11-14T05:55:38.701Z",
+      "kind": "Browser.downloadProgress",
+      "guid": "3299eabd-f78a-4127-b459-067ef2919491",
+      "totalBytes": 7915,
+      "receivedBytes": 7915,
+      "state": "completed",
+      "filePath": "/private/var/folders/6d/xn0p45kd3td2pb8zhw4zvvbh0000gn/T/perito-collector-qualification-a4fr56fh/run-6/downloads/f763006f-5265-47a3-835b-05b67f92526d.xlsx"
+    }
+  ],
+  "available_periods": [
+    {
+      "qText": "Set 2026",
+      "qNum": 46266,
+      "qElemNumber": 70,
+      "qState": "O"
+    },
+    {
+      "qText": "Ago 2026",
+      "qNum": 46235,
+      "qElemNumber": 100,
+      "qState": "O"
+    },
+    {
+      "qText": "Jul 2026",
+      "qNum": 46204,
+      "qElemNumber": 76,
+      "qState": "O"
+    },
+    {
+      "qText": "Jun 2026",
+      "qNum": 46174,
+      "qElemNumber": 77,
+      "qState": "O"
+    },
+    {
+      "qText": "Mai 2026",
+      "qNum": 46143,
+      "qElemNumber": 123,
+      "qState": "O"
+    },
+    {
+      "qText": "Abr 2026",
+      "qNum": 46113,
+      "qElemNumber": 116,
+      "qState": "O"
+    },
+    {
+      "qText": "Mar 2026",
+      "qNum": 46082,
+      "qElemNumber": 16,
+      "qState": "O"
+    },
+    {
+      "qText": "Fev 2026",
+      "qNum": 46054,
+      "qElemNumber": 67,
+      "qState": "O"
+    },
+    {
+      "qText": "Jan 2026",
+      "qNum": 46023,
+      "qElemNumber": 73,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2025",
+      "qNum": 45992,
+      "qElemNumber": 56,
+      "qState": "O"
+    },
+    {
+      "qText": "Nov 2025",
+      "qNum": 45962,
+      "qElemNumber": 81,
+      "qState": "O"
+    },
+    {
+      "qText": "Out 2025",
+      "qNum": 45931,
+      "qElemNumber": 84,
+      "qState": "O"
+    },
+    {
+      "qText": "Set 2025",
+      "qNum": 45901,
+      "qElemNumber": 104,
+      "qState": "O"
+    },
+    {
+      "qText": "Ago 2025",
+      "qNum": 45870,
+      "qElemNumber": 86,
+      "qState": "O"
+    },
+    {
+      "qText": "Jul 2025",
+      "qNum": 45839,
+      "qElemNumber": 106,
+      "qState": "O"
+    },
+    {
+      "qText": "Jun 2025",
+      "qNum": 45809,
+      "qElemNumber": 41,
+      "qState": "O"
+    },
+    {
+      "qText": "Mai 2025",
+      "qNum": 45778,
+      "qElemNumber": 15,
+      "qState": "O"
+    },
+    {
+      "qText": "Abr 2025",
+      "qNum": 45748,
+      "qElemNumber": 107,
+      "qState": "O"
+    },
+    {
+      "qText": "Mar 2025",
+      "qNum": 45717,
+      "qElemNumber": 39,
+      "qState": "O"
+    },
+    {
+      "qText": "Fev 2025",
+      "qNum": 45689,
+      "qElemNumber": 89,
+      "qState": "O"
+    },
+    {
+      "qText": "Jan 2025",
+      "qNum": 45658,
+      "qElemNumber": 98,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2024",
+      "qNum": 45627,
+      "qElemNumber": 33,
+      "qState": "O"
+    },
+    {
+      "qText": "Nov 2024",
+      "qNum": 45597,
+      "qElemNumber": 74,
+      "qState": "O"
+    },
+    {
+      "qText": "Out 2024",
+      "qNum": 45566,
+      "qElemNumber": 55,
+      "qState": "O"
+    },
+    {
+      "qText": "Set 2024",
+      "qNum": 45536,
+      "qElemNumber": 78,
+      "qState": "O"
+    },
+    {
+      "qText": "Ago 2024",
+      "qNum": 45505,
+      "qElemNumber": 96,
+      "qState": "O"
+    },
+    {
+      "qText": "Jul 2024",
+      "qNum": 45474,
+      "qElemNumber": 71,
+      "qState": "O"
+    },
+    {
+      "qText": "Jun 2024",
+      "qNum": 45444,
+      "qElemNumber": 75,
+      "qState": "O"
+    },
+    {
+      "qText": "Mai 2024",
+      "qNum": 45413,
+      "qElemNumber": 60,
+      "qState": "O"
+    },
+    {
+      "qText": "Abr 2024",
+      "qNum": 45383,
+      "qElemNumber": 118,
+      "qState": "O"
+    },
+    {
+      "qText": "Mar 2024",
+      "qNum": 45352,
+      "qElemNumber": 50,
+      "qState": "O"
+    },
+    {
+      "qText": "Fev 2024",
+      "qNum": 45323,
+      "qElemNumber": 47,
+      "qState": "O"
+    },
+    {
+      "qText": "Jan 2024",
+      "qNum": 45292,
+      "qElemNumber": 42,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2023",
+      "qNum": 45261,
+      "qElemNumber": 43,
+      "qState": "O"
+    },
+    {
+      "qText": "Nov 2023",
+      "qNum": 45231,
+      "qElemNumber": 30,
+      "qState": "O"
+    },
+    {
+      "qText": "Out 2023",
+      "qNum": 45200,
+      "qElemNumber": 20,
+      "qState": "O"
+    },
+    {
+      "qText": "Set 2023",
+      "qNum": 45170,
+      "qElemNumber": 110,
+      "qState": "O"
+    },
+    {
+      "qText": "Ago 2023",
+      "qNum": 45139,
+      "qElemNumber": 120,
+      "qState": "O"
+    },
+    {
+      "qText": "Jul 2023",
+      "qNum": 45108,
+      "qElemNumber": 112,
+      "qState": "O"
+    },
+    {
+      "qText": "Jun 2023",
+      "qNum": 45078,
+      "qElemNumber": 90,
+      "qState": "O"
+    },
+    {
+      "qText": "Mai 2023",
+      "qNum": 45047,
+      "qElemNumber": 0,
+      "qState": "O"
+    },
+    {
+      "qText": "Abr 2023",
+      "qNum": 45017,
+      "qElemNumber": 103,
+      "qState": "O"
+    },
+    {
+      "qText": "Mar 2023",
+      "qNum": 44986,
+      "qElemNumber": 35,
+      "qState": "O"
+    },
+    {
+      "qText": "Fev 2023",
+      "qNum": 44958,
+      "qElemNumber": 93,
+      "qState": "O"
+    },
+    {
+      "qText": "Jan 2023",
+      "qNum": 44927,
+      "qElemNumber": 68,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2022",
+      "qNum": 44896,
+      "qElemNumber": 99,
+      "qState": "O"
+    },
+    {
+      "qText": "Nov 2022",
+      "qNum": 44866,
+      "qElemNumber": 85,
+      "qState": "O"
+    },
+    {
+      "qText": "Out 2022",
+      "qNum": 44835,
+      "qElemNumber": 121,
+      "qState": "O"
+    },
+    {
+      "qText": "Set 2022",
+      "qNum": 44805,
+      "qElemNumber": 115,
+      "qState": "O"
+    },
+    {
+      "qText": "Ago 2022",
+      "qNum": 44774,
+      "qElemNumber": 4,
+      "qState": "O"
+    },
+    {
+      "qText": "Jul 2022",
+      "qNum": 44743,
+      "qElemNumber": 114,
+      "qState": "O"
+    },
+    {
+      "qText": "Jun 2022",
+      "qNum": 44713,
+      "qElemNumber": 61,
+      "qState": "O"
+    },
+    {
+      "qText": "Mai 2022",
+      "qNum": 44682,
+      "qElemNumber": 32,
+      "qState": "O"
+    },
+    {
+      "qText": "Abr 2022",
+      "qNum": 44652,
+      "qElemNumber": 105,
+      "qState": "O"
+    },
+    {
+      "qText": "Mar 2022",
+      "qNum": 44621,
+      "qElemNumber": 109,
+      "qState": "O"
+    },
+    {
+      "qText": "Fev 2022",
+      "qNum": 44593,
+      "qElemNumber": 9,
+      "qState": "O"
+    },
+    {
+      "qText": "Jan 2022",
+      "qNum": 44562,
+      "qElemNumber": 122,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2021",
+      "qNum": 44531,
+      "qElemNumber": 82,
+      "qState": "O"
+    },
+    {
+      "qText": "Nov 2021",
+      "qNum": 44501,
+      "qElemNumber": 79,
+      "qState": "O"
+    },
+    {
+      "qText": "Out 2021",
+      "qNum": 44470,
+      "qElemNumber": 29,
+      "qState": "O"
+    },
+    {
+      "qText": "Set 2021",
+      "qNum": 44440,
+      "qElemNumber": 97,
+      "qState": "O"
+    },
+    {
+      "qText": "Ago 2021",
+      "qNum": 44409,
+      "qElemNumber": 38,
+      "qState": "O"
+    },
+    {
+      "qText": "Jul 2021",
+      "qNum": 44378,
+      "qElemNumber": 23,
+      "qState": "O"
+    },
+    {
+      "qText": "Jun 2021",
+      "qNum": 44348,
+      "qElemNumber": 13,
+      "qState": "O"
+    },
+    {
+      "qText": "Mai 2021",
+      "qNum": 44317,
+      "qElemNumber": 53,
+      "qState": "O"
+    },
+    {
+      "qText": "Abr 2021",
+      "qNum": 44287,
+      "qElemNumber": 69,
+      "qState": "O"
+    },
+    {
+      "qText": "Mar 2021",
+      "qNum": 44256,
+      "qElemNumber": 95,
+      "qState": "O"
+    },
+    {
+      "qText": "Fev 2021",
+      "qNum": 44228,
+      "qElemNumber": 40,
+      "qState": "O"
+    },
+    {
+      "qText": "Jan 2021",
+      "qNum": 44197,
+      "qElemNumber": 6,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2020",
+      "qNum": 44166,
+      "qElemNumber": 37,
+      "qState": "O"
+    },
+    {
+      "qText": "Nov 2020",
+      "qNum": 44136,
+      "qElemNumber": 34,
+      "qState": "O"
+    },
+    {
+      "qText": "Out 2020",
+      "qNum": 44105,
+      "qElemNumber": 17,
+      "qState": "O"
+    },
+    {
+      "qText": "Set 2020",
+      "qNum": 44075,
+      "qElemNumber": 59,
+      "qState": "O"
+    },
+    {
+      "qText": "Ago 2020",
+      "qNum": 44044,
+      "qElemNumber": 51,
+      "qState": "O"
+    },
+    {
+      "qText": "Jul 2020",
+      "qNum": 44013,
+      "qElemNumber": 25,
+      "qState": "O"
+    },
+    {
+      "qText": "Jun 2020",
+      "qNum": 43983,
+      "qElemNumber": 57,
+      "qState": "O"
+    },
+    {
+      "qText": "Mai 2020",
+      "qNum": 43952,
+      "qElemNumber": 52,
+      "qState": "O"
+    },
+    {
+      "qText": "Abr 2020",
+      "qNum": 43922,
+      "qElemNumber": 108,
+      "qState": "O"
+    },
+    {
+      "qText": "Mar 2020",
+      "qNum": 43891,
+      "qElemNumber": 49,
+      "qState": "O"
+    },
+    {
+      "qText": "Fev 2020",
+      "qNum": 43862,
+      "qElemNumber": 83,
+      "qState": "O"
+    },
+    {
+      "qText": "Jan 2020",
+      "qNum": 43831,
+      "qElemNumber": 45,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2019",
+      "qNum": 43800,
+      "qElemNumber": 91,
+      "qState": "O"
+    },
+    {
+      "qText": "Nov 2019",
+      "qNum": 43770,
+      "qElemNumber": 46,
+      "qState": "O"
+    },
+    {
+      "qText": "Out 2019",
+      "qNum": 43739,
+      "qElemNumber": 87,
+      "qState": "O"
+    },
+    {
+      "qText": "Set 2019",
+      "qNum": 43709,
+      "qElemNumber": 88,
+      "qState": "O"
+    },
+    {
+      "qText": "Ago 2019",
+      "qNum": 43678,
+      "qElemNumber": 65,
+      "qState": "O"
+    },
+    {
+      "qText": "Jul 2019",
+      "qNum": 43647,
+      "qElemNumber": 102,
+      "qState": "O"
+    },
+    {
+      "qText": "Jun 2019",
+      "qNum": 43617,
+      "qElemNumber": 66,
+      "qState": "O"
+    },
+    {
+      "qText": "Mai 2019",
+      "qNum": 43586,
+      "qElemNumber": 1,
+      "qState": "O"
+    },
+    {
+      "qText": "Abr 2019",
+      "qNum": 43556,
+      "qElemNumber": 44,
+      "qState": "O"
+    },
+    {
+      "qText": "Mar 2019",
+      "qNum": 43525,
+      "qElemNumber": 113,
+      "qState": "O"
+    },
+    {
+      "qText": "Fev 2019",
+      "qNum": 43497,
+      "qElemNumber": 48,
+      "qState": "O"
+    },
+    {
+      "qText": "Jan 2019",
+      "qNum": 43466,
+      "qElemNumber": 2,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2018",
+      "qNum": 43435,
+      "qElemNumber": 3,
+      "qState": "O"
+    },
+    {
+      "qText": "Nov 2018",
+      "qNum": 43405,
+      "qElemNumber": 58,
+      "qState": "O"
+    },
+    {
+      "qText": "Out 2018",
+      "qNum": 43374,
+      "qElemNumber": 28,
+      "qState": "O"
+    },
+    {
+      "qText": "Set 2018",
+      "qNum": 43344,
+      "qElemNumber": 8,
+      "qState": "O"
+    },
+    {
+      "qText": "Ago 2018",
+      "qNum": 43313,
+      "qElemNumber": 10,
+      "qState": "O"
+    },
+    {
+      "qText": "Jul 2018",
+      "qNum": 43282,
+      "qElemNumber": 63,
+      "qState": "O"
+    },
+    {
+      "qText": "Jun 2018",
+      "qNum": 43252,
+      "qElemNumber": 92,
+      "qState": "O"
+    },
+    {
+      "qText": "Mai 2018",
+      "qNum": 43221,
+      "qElemNumber": 117,
+      "qState": "O"
+    },
+    {
+      "qText": "Abr 2018",
+      "qNum": 43191,
+      "qElemNumber": 80,
+      "qState": "O"
+    },
+    {
+      "qText": "Mar 2018",
+      "qNum": 43160,
+      "qElemNumber": 7,
+      "qState": "O"
+    },
+    {
+      "qText": "Fev 2018",
+      "qNum": 43132,
+      "qElemNumber": 31,
+      "qState": "O"
+    },
+    {
+      "qText": "Jan 2018",
+      "qNum": 43101,
+      "qElemNumber": 27,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2017",
+      "qNum": 43070,
+      "qElemNumber": 94,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2016",
+      "qNum": 42705,
+      "qElemNumber": 101,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2015",
+      "qNum": 42339,
+      "qElemNumber": 36,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2014",
+      "qNum": 41974,
+      "qElemNumber": 12,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2013",
+      "qNum": 41609,
+      "qElemNumber": 11,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2012",
+      "qNum": 41244,
+      "qElemNumber": 14,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2011",
+      "qNum": 40878,
+      "qElemNumber": 5,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2010",
+      "qNum": 40513,
+      "qElemNumber": 111,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2009",
+      "qNum": 40148,
+      "qElemNumber": 72,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2008",
+      "qNum": 39783,
+      "qElemNumber": 21,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2007",
+      "qNum": 39417,
+      "qElemNumber": 64,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2006",
+      "qNum": 39052,
+      "qElemNumber": 22,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2005",
+      "qNum": 38687,
+      "qElemNumber": 26,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2004",
+      "qNum": 38322,
+      "qElemNumber": 19,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2003",
+      "qNum": 37956,
+      "qElemNumber": 18,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2002",
+      "qNum": 37591,
+      "qElemNumber": 54,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2001",
+      "qNum": 37226,
+      "qElemNumber": 62,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 2000",
+      "qNum": 36861,
+      "qElemNumber": 24,
+      "qState": "O"
+    },
+    {
+      "qText": "Dez 1999",
+      "qNum": 36495,
+      "qElemNumber": 119,
+      "qState": "O"
+    }
+  ]
+}

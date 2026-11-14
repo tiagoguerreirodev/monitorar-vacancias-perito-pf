@@ -13,11 +13,12 @@ def main():
     parser.add_argument("--site-dir", default="site", help="Dedicated generated artifact directory (default: site)")
     args = parser.parse_args()
     try:
-        refresh_and_build(args.data_dir, args.site_dir)
+        result = refresh_and_build(args.data_dir, args.site_dir)
     except (ValueError, OSError, BadZipFile, ParseError, KeyError) as exc:
         print(f"Refresh/build failed; no candidate published: {exc}", file=sys.stderr)
         return 1
-    print(f"Refresh/build succeeded: aggregates in {args.data_dir}; static artifact in {args.site_dir}")
+    summary = '; '.join(f'{key}={value}' for key, value in result.items())
+    print(f"Refresh/build succeeded ({summary}): aggregates in {args.data_dir}; static artifact in {args.site_dir}")
     return 0
 
 

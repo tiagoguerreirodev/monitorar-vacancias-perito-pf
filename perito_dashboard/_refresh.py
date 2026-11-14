@@ -22,6 +22,8 @@ from zipfile import BadZipFile, ZipFile
 
 from ._render import render_site
 from ._shared import CUTOFF, PF_ORGANIZATION, write_json
+from ._uf import accept_export, load_saved
+from ._collector import OfficialUF, UFBlocked
 
 ARCHIVE_URL = "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/"
 CLASSES = {
@@ -33,6 +35,10 @@ CLASSES = {
 TABLE = "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}"
 OFFICE = "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}"
 TEXT = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
+
+
+class _StaleRefresh(ValueError):
+    """A time consistency failure invalidates the entire composed transaction."""
 
 
 class _OfficialArchive:
@@ -294,11 +300,13 @@ def _output_lock(target):
             fcntl.flock(handle, fcntl.LOCK_UN)
 
 
-def refresh_and_build(data_dir, site_dir, *, source=None, clock=None):
+def refresh_and_build(data_dir, site_dir, *, source=None, uf_source=None, clock=None):
     """Reconcile official responses, save aggregate history, build a static site.
 
-    source and clock substitute external boundaries for deterministic acceptance
-    tests. Production callers normally supply only the two output directories.
+    source, uf_source and clock substitute independent external boundaries.
+    Supplying a national source never disables the UF collector. Production
+    callers normally supply only the two output directories. Returns per-feed
+    updated/unchanged/failed/blocked and complete/partial publication outcomes.
     POSIX advisory locks refuse overlapping writers sharing either output path.
     """
     data_dir, site_dir = Path(data_dir).resolve(), Path(site_dir).resolve()
@@ -310,7 +318,9 @@ def refresh_and_build(data_dir, site_dir, *, source=None, clock=None):
     with ExitStack() as stack:
         for target in sorted((data_dir, site_dir)):
             stack.enter_context(_output_lock(target))
-        _refresh_locked(data_dir, site_dir, source if source is not None else _OfficialArchive(), clock)
+        return _refresh_locked(data_dir, site_dir,
+                               source if source is not None else _OfficialArchive(),
+                               uf_source if uf_source is not None else OfficialUF(), clock)
 
 
 def _output_state(target):
@@ -405,15 +415,7 @@ def _saved_history(data_dir):
         raise ValueError(f"Invalid saved aggregate data in {data_dir}: {exc}") from exc
 
 
-def _refresh_locked(data_dir, site_dir, source, clock):
-    before = (_output_state(data_dir), _output_state(site_dir))
-    now = clock() if clock is not None else datetime.now(timezone.utc)
-    if not isinstance(now, datetime) or now.utcoffset() is None:
-        raise ValueError("Execution clock must provide a timezone-aware datetime")
-    checked_at = now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
-    history, successful_check = _saved_history(data_dir)
-    if successful_check is not None and now < successful_check:
-        raise ValueError("Stale refresh: clock predates the last successful check")
+def _national_candidate(history, source, checked_at):
     accepted = {row["reference_month"]: row for row in history["observations"]}
     for month, url in _discover(source):
         content = _request(lambda: source.spreadsheet(url), url)
@@ -434,7 +436,62 @@ def _refresh_locked(data_dir, site_dir, source, clock):
     if not observations:
         raise ValueError(f"No eligible official observations at or after {CUTOFF}; nothing published")
     history["observations"] = observations
-    status = {"schema_version": 1, "last_successful_check": checked_at}
+    return history, {"schema_version": 1, "last_successful_check": checked_at}
+
+
+def _refresh_locked(data_dir, site_dir, source, uf_source, clock):
+    from copy import deepcopy
+    before = (_output_state(data_dir), _output_state(site_dir))
+    now = clock() if clock is not None else datetime.now(timezone.utc)
+    if not isinstance(now, datetime) or now.utcoffset() is None:
+        raise ValueError("Execution clock must provide a timezone-aware datetime")
+    checked_at = now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    history, successful_check = _saved_history(data_dir)
+    uf, uf_status = load_saved(data_dir, _timestamp)
+    for check in (successful_check, _timestamp(uf_status['last_successful_check']) if uf_status else None):
+        if check is not None and now < check:
+            raise ValueError("Stale refresh: clock predates the last successful check")
+    allowed = {'history.json', 'status.json', 'uf.json', 'uf-status.json'}
+    if data_dir.exists() and any(p.name not in allowed or not p.is_file() or p.is_symlink() for p in data_dir.iterdir()):
+        raise ValueError('Unknown saved data files; nothing published')
+    status = json.loads((data_dir / 'status.json').read_text()) if successful_check else None
+    outcomes, errors = {}, []
+    documents = {}
+    try:
+        candidate_history, candidate_status = _national_candidate(deepcopy(history), source, checked_at)
+        outcomes['national'] = 'unchanged' if candidate_history == history else 'updated'
+        history, status = candidate_history, candidate_status
+        documents.update({'history.json': history, 'status.json': status})
+    except (ValueError, OSError) as exc:
+        outcomes['national'] = 'failed'
+        errors.append(str(exc))
+    try:
+        export = uf_source.latest_export()
+        uf_now = clock() if clock is not None else datetime.now(timezone.utc)
+        if not isinstance(uf_now, datetime) or uf_now.utcoffset() is None or uf_now < now:
+            raise _StaleRefresh('Stale UF collection clock moved backward or lost timezone')
+        uf_checked_at = uf_now.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z')
+        current = accept_export(export, uf_checked_at)
+        if uf and current['reference_month'] < uf['current']['reference_month']:
+            raise ValueError('UF source reference month is older than accepted latest')
+        changed = uf is None or current['semantic_identity'] != uf['current']['semantic_identity']
+        if changed:
+            corrections = []
+            if uf and current['reference_month'] == uf['current']['reference_month']:
+                corrections = uf['corrections'] + [{'superseded': uf['current'], 'corrected_at': uf_checked_at}]
+            uf = {'schema_version': 1, 'current': current, 'corrections': corrections}
+            documents['uf.json'] = uf
+        uf_status = {'schema_version': 1, 'last_successful_check': uf_checked_at, 'last_export': current}
+        documents['uf-status.json'] = uf_status
+        outcomes['uf'] = 'updated' if changed else 'unchanged'
+    except (ValueError, OSError, TimeoutError) as exc:
+        if isinstance(exc, _StaleRefresh):
+            raise
+        outcomes['uf'] = 'blocked' if isinstance(exc, UFBlocked) else 'failed'
+        errors.append(str(exc))
+    if all(value in ('failed', 'blocked') for value in outcomes.values()):
+        raise ValueError('; '.join(errors))
+    outcomes['publication'] = 'partial' if any(v in ('failed', 'blocked') for v in outcomes.values()) else 'complete'
     with ExitStack() as stack:
         staged = []
         for target in (data_dir, site_dir):
@@ -445,9 +502,17 @@ def _refresh_locked(data_dir, site_dir, source, clock):
             candidate = work / "candidate"
             candidate.mkdir()
             staged.append((candidate, target))
-        write_json(staged[0][0] / "history.json", history)
-        write_json(staged[0][0] / "status.json", status)
-        render_site(history, status, staged[1][0])
+        for name in allowed:
+            if name in documents:
+                write_json(staged[0][0] / name, documents[name])
+            elif (data_dir / name).exists():
+                shutil.copyfile(data_dir / name, staged[0][0] / name)
+        render_site(history if status else None, status, staged[1][0], uf=uf, uf_status=uf_status)
+        # Rendered JSON is the exact accepted byte representation, including a failed feed.
+        for name in allowed:
+            if (staged[0][0] / name).exists():
+                shutil.copyfile(staged[0][0] / name, staged[1][0] / 'data' / name)
         if before != (_output_state(data_dir), _output_state(site_dir)):
             raise ValueError("Stale refresh: accepted outputs changed during refresh; nothing promoted")
         _promote(staged)
+    return outcomes

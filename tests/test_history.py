@@ -17,7 +17,7 @@ from zipfile import ZipFile
 
 from perito_dashboard import refresh_and_build
 from tests.sources import (
-    ARCHIVE_URL, CHECK_TIME, ControlledArchive, OFFICE, SEPTEMBER_URL, ScriptedArchive, TABLE,
+    ARCHIVE_URL, CHECK_TIME, ControlledArchive, OFFICE, SEPTEMBER_URL, ScriptedArchive, TABLE, UnavailableUF,
     TEXT, directory_index, monthly_resource, national_resources, pf_classes, set_cell, variant,
 )
 
@@ -33,7 +33,7 @@ class HistoryTests(unittest.TestCase):
     def refresh(self, source=None, instant=CHECK_TIME):
         refresh_and_build(self.data, self.site,
                           source=source if source is not None else ControlledArchive(),
-                          clock=lambda: instant)
+                          uf_source=UnavailableUF(), clock=lambda: instant)
 
     def history(self):
         saved = json.loads((self.data / "history.json").read_text())
@@ -335,7 +335,7 @@ class HistoryTests(unittest.TestCase):
                                (self.root / "other-data", self.site)):
                 with self.subTest(shared_outputs=(data, site)):
                     with self.assertRaisesRegex(ValueError, "[Cc]oncurrent|locked"):
-                        refresh_and_build(data, site, source=ControlledArchive(),
+                        refresh_and_build(data, site, source=ControlledArchive(), uf_source=UnavailableUF(),
                                           clock=lambda: CHECK_TIME + timedelta(days=2))
                     self.assertEqual(self.output_bytes(), before)
                     self.assertFalse((self.root / "other-data").exists())

@@ -15,6 +15,12 @@ SEPTEMBER = Path(__file__).parent.joinpath("fixtures/september-2026.ods").read_b
 CHECK_TIME = datetime(2026, 11, 13, 12, 0, tzinfo=timezone.utc)
 
 
+class UnavailableUF:
+    """Explicit second-feed outage; national-only tests never launch a browser."""
+    def latest_export(self):
+        raise ValueError('controlled UF source unavailable')
+
+
 def variant(edit, content=SEPTEMBER):
     """Edit a copy of official source XML, never application/parser internals."""
     with ZipFile(BytesIO(content)) as archive:
