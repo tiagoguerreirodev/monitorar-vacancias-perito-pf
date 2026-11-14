@@ -45,6 +45,10 @@ def set_cell(row, header, name, value):
     ET.SubElement(cell, TEXT + "p").text = str(value)
 
 
+def resource_url(month):
+    return ARCHIVE_URL + month[:4] + "/CargosVagosVacancias_" + month.replace("-", "") + ".ods"
+
+
 def monthly_resource(month, edit=None):
     """A dated official-format response, optionally with changed aggregate cells."""
     def dated(table, header):
@@ -53,8 +57,16 @@ def monthly_resource(month, edit=None):
                 set_cell(row, header, "ANO_MES", month.replace("-", ""))
         if edit is not None:
             edit(table, header)
-    return (ARCHIVE_URL + month[:4] + "/CargosVagosVacancias_" + month.replace("-", "") + ".ods",
-            variant(dated))
+    return resource_url(month), variant(dated)
+
+
+def directory_index(directory, names):
+    """Controlled nginx-style listing, including an empty official directory."""
+    path = "/segrt/cargos vagos e vacancia/" + directory
+    links = "".join(f'<a href="{name}">{name}</a>\n' for name in names)
+    return (f"<html><head><title>Index of {path}</title></head><body>"
+            f'<h1>Index of {path}</h1><hr><pre><a href="../">../</a>\n'
+            f"{links}</pre><hr></body></html>")
 
 
 class ControlledArchive:
@@ -63,13 +75,12 @@ class ControlledArchive:
 
     def archive_index(self):
         years = sorted({url.split("/")[-2] for url in self.resources})
-        return "".join(f'<a href="{year}/">{year}/</a>' for year in years)
+        return directory_index("", [year + "/" for year in years])
 
     def year_index(self, year):
-        return "".join(
-            f'<a href="{url.rsplit("/", 1)[1]}">ODS</a>'
-            for url in self.resources if url.split("/")[-2] == year
-        )
+        return directory_index(year + "/", [
+            url.rsplit("/", 1)[1] for url in self.resources if url.split("/")[-2] == year
+        ])
 
     def spreadsheet(self, url):
         return self.resources[url]

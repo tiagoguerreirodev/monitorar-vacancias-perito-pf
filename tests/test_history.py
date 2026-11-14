@@ -18,7 +18,7 @@ from zipfile import ZipFile
 from perito_dashboard import refresh_and_build
 from tests.sources import (
     ARCHIVE_URL, CHECK_TIME, ControlledArchive, OFFICE, SEPTEMBER_URL, ScriptedArchive, TABLE,
-    TEXT, monthly_resource, pf_classes, set_cell, variant,
+    TEXT, directory_index, monthly_resource, pf_classes, set_cell, variant,
 )
 
 
@@ -189,6 +189,59 @@ class HistoryTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "[Ii]ndex|format|resource"):
                     self.refresh(ScriptedArchive({key: [response]}), CHECK_TIME + timedelta(days=1))
                 self.assertEqual(self.output_bytes(), before)
+
+    def test_linked_archive_maintenance_page_preserves_every_accepted_output(self):
+        self.refresh()
+        before = self.output_bytes()
+        # A decoded HTTP-200 body, not a network exception or an empty listing.
+        maintenance = '<html><h1>Maintenance</h1><a href="/">Home</a></html>'
+        with self.assertRaisesRegex(ValueError, "Unexpected source index format") as failure:
+            self.refresh(ScriptedArchive({"archive": [maintenance]}),
+                         CHECK_TIME + timedelta(days=1))
+        self.assertIn(ARCHIVE_URL, str(failure.exception))
+        self.assertEqual(self.output_bytes(), before)
+        self.assertEqual(json.loads((self.data / "status.json").read_text()), {
+            "schema_version": 1, "last_successful_check": "2026-11-13T12:00:00Z",
+        })
+        self.history()
+
+    def test_linked_year_maintenance_page_preserves_every_accepted_output(self):
+        self.refresh()
+        before = self.output_bytes()
+        maintenance = '<html><h1>Maintenance</h1><a href="/">Home</a></html>'
+        for year, resources in (("2026", None), ("2027", dict([monthly_resource("2027-01")]))):
+            with self.subTest(year=year):
+                with self.assertRaisesRegex(ValueError, "Unexpected source index format") as failure:
+                    self.refresh(ScriptedArchive({year: [maintenance]}, resources),
+                                 CHECK_TIME + timedelta(days=1))
+                self.assertIn(ARCHIVE_URL + year + "/", str(failure.exception))
+                self.assertEqual(self.output_bytes(), before)
+                self.assertEqual(json.loads((self.data / "status.json").read_text()), {
+                    "schema_version": 1, "last_successful_check": "2026-11-13T12:00:00Z",
+                })
+                self.history()
+
+    def test_official_empty_new_year_index_is_a_successful_check_without_new_observations(self):
+        self.refresh()
+        before = (self.data / "history.json").read_bytes()
+        for names in ([], ["Dicionario_CargosVagosVacancias.pdf"]):
+            with self.subTest(new_year_entries=names):
+                source = ScriptedArchive({
+                    "archive": [directory_index("", ["2026/", "2027/",
+                                                     "Dicionario_CargosVagosVacancias.pdf"])],
+                    "2027": [directory_index("2027/", names)],
+                })
+                self.refresh(source, CHECK_TIME + timedelta(days=1))
+                self.assertEqual((self.data / "history.json").read_bytes(), before)
+                self.assertEqual([row["reference_month"] for row in self.history()["observations"]],
+                                 ["2026-09"])
+                self.assertEqual(json.loads((self.data / "status.json").read_text()), {
+                    "schema_version": 1, "last_successful_check": "2026-11-14T12:00:00Z",
+                })
+                html = (self.site / "index.html").read_text()
+                self.assertIn('datetime="2026-11-14T12:00:00Z"', html)
+                self.assertIn("setembro de 2026", html)
+                self.assertNotIn("janeiro de 2027", html)
 
     def test_zero_counts_are_observations_and_distributed_is_not_authorized(self):
         def supporting_metadata(table, header):
