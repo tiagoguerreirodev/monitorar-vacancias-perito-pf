@@ -6,9 +6,8 @@ O histórico começa em **setembro de 2026**, inclusive. São retratos mensais d
 cargos aprovados, ocupados e vagos, não vagas de concurso nem dados em tempo real.
 Somente agregados e proveniência são publicados; não há backend nem login.
 
-Endereço previsto **após um deploy bem-sucedido**:
+Painel **publicado no GitHub Pages**:
 https://tiagoguerreirodev.github.io/monitorar-vacancias-perito-pf/.
-Configurar Pages não comprova que o painel já esteja publicado.
 
 ## Executar localmente
 
@@ -68,9 +67,9 @@ um dos caminhos de saída resolvidos. Há detecção de alterações durante o b
 mas não atomicidade contra crash nem transação entre filesystem, Git e Pages.
 Veja os limites exatos em [operação](docs/operations.md).
 
-**#3 e #4 estão implementados**; os testes integrados de **#6** não substituem a
-aceitação real de Actions/Pages, ainda pendente de publicação pelo coordenador
-após a revisão final.
+**#3 e #4 estão implementados**; a publicação inicial de **#6/#1** foi confirmada
+em **14/11/2026 (UTC)** no [run de Pages](https://github.com/tiagoguerreirodev/monitorar-vacancias-perito-pf/actions/runs/43535722958).
+Veja a [aceitação e seus limites](docs/operations.md#aceitação-inicial-de-pages-6-e-1).
 
 ## Automação e operação
 
@@ -89,4 +88,4 @@ publicar antes do dia 28; uma publicação tardia pode esperar até o próximo m
 ou uma execução manual. Não há SLA nem notificações customizadas.
 
 Veja [operação, recuperação e verificação de Pages](docs/operations.md), incluindo
-permissões, limites de falha e os checks reais ainda necessários.
+permissões, limites de falha e checklist para futuras publicações.
