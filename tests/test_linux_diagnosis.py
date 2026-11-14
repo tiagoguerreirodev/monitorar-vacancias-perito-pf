@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+import runpy
 import shutil
 import select
 import signal
@@ -16,6 +17,25 @@ HELPER = ROOT / '.github/scripts/uf-linux-startup.mjs'
 
 
 class DiagnosticWorkflowTests(unittest.TestCase):
+    def test_streamed_digest_and_runtime_receipt_keep_exact_byte_identity(self):
+        api = runpy.run_path(str(ROOT / '.github/scripts/diagnose-uf-linux.py'))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'runtime-bytes'
+            for content, expected in [
+                (b'', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+                (b'abc', 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'),
+                (b'a' * (1024 * 1024 + 1), '4a3f0c0c213adea174f9a3d4c13177315b588bdb2e9c1012d3d0bf0453ca0f6a'),
+            ]:
+                with self.subTest(size=len(content)):
+                    path.write_bytes(content)
+                    self.assertEqual(api['digest'](str(path)), expected)
+                    self.assertEqual(api['receipt']({'python': str(path)}, {
+                        'python': {'executable_sha256': expected, 'version': sys.version.split()[0]}}),
+                        {'python': {'sha256': expected, 'version': sys.version.split()[0]}})
+                    with self.assertRaisesRegex(ValueError, '^integrity$'):
+                        api['receipt']({'python': str(path)}, {
+                            'python': {'executable_sha256': '0' * 64, 'version': sys.version.split()[0]}})
+
     def test_manual_main_repository_guard_read_only_and_single_sanitized_artifact(self):
         config = json.loads((ROOT / '.github/workflows/diagnose-uf-linux.yml').read_text())
         self.assertEqual(config['on'], {'workflow_dispatch': {}})

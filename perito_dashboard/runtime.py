@@ -3,7 +3,6 @@
 No package manager, global browser policy change, or fallback to runner Chrome.
 The runner label is not a frozen OS image; actual compatibility requires proof.
 """
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -15,6 +14,8 @@ import time
 from http.client import HTTPException
 from urllib.request import urlopen
 from zipfile import BadZipFile, ZipFile
+
+from ._shared import file_digest as _digest
 
 MANIFEST = Path(__file__).resolve().with_name('collector') / 'runtime.json'
 
@@ -29,14 +30,6 @@ class UFRuntimeError(ValueError):
 
 class UFRuntimeIntegrityError(UFRuntimeError):
     """Pinned archive/executable bytes or version did not match."""
-
-
-def _digest(path):
-    digest = hashlib.sha256()
-    with path.open('rb') as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b''):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def _download(spec, path, deadline):

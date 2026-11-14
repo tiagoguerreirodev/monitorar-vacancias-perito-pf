@@ -1,5 +1,7 @@
-"""Internal policy values and aggregate JSON serialization shared by refresh/build."""
+"""Unprivileged shared policy, serialization and file-byte identity helpers."""
+import hashlib
 import json
+from pathlib import Path
 
 
 CUTOFF = "2025-06"
@@ -8,6 +10,15 @@ PF_ORGANIZATION = {
     "name": "DEPARTAMENTO DE POLICIA FEDERAL",
     "abbreviation": "DPF",
 }
+
+
+def file_digest(path):
+    """Return the SHA256 of a file without loading the whole file into memory."""
+    digest = hashlib.sha256()
+    with Path(path).open('rb') as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def write_json(path, value):

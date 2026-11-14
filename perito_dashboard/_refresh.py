@@ -20,6 +20,7 @@ from urllib.parse import unquote, urlsplit
 from urllib.request import urlopen
 from xml.etree import ElementTree as ET
 from zipfile import BadZipFile, ZipFile
+import zlib
 
 from ._render import render_site
 from ._shared import CUTOFF, PF_ORGANIZATION, write_json
@@ -224,7 +225,17 @@ def _count(value, field):
 
 def _snapshot(content, month, url, checked_at):
     with ZipFile(BytesIO(content)) as archive:
-        root = ET.fromstring(archive.read("content.xml"))
+        try:
+            document = archive.read("content.xml")
+        except (zlib.error, NotImplementedError) as exc:
+            raise ValueError("Invalid or unsupported ODS archive member") from exc
+        except RuntimeError as exc:
+            # zipfile requires a password for encrypted members. Unrelated
+            # runtime failures must still escape, not become source outages.
+            if not archive.getinfo("content.xml").flag_bits & 1:
+                raise
+            raise ValueError("Encrypted ODS archive member") from exc
+        root = ET.fromstring(document)
     snapshot = None
     for table in root.iter(TABLE + "table"):
         rows = iter(table.iter(TABLE + "table-row"))
