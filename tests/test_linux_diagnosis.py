@@ -120,7 +120,9 @@ while True:
                   'suid_helper_fatal', 'zygote_host_fatal', 'namespace_fatal',
                   'credentials_fatal', 'seccomp_fatal', 'crashpad_fatal',
                   'profile_fatal', 'resource_fatal', 'suid_bad_configuration',
-                  'suid_missing', 'no_usable_sandbox']
+                  'suid_missing', 'no_usable_sandbox', 'other', 'none',
+                  'profile_socket_create', 'profile_socket_path_length',
+                  'profile_socket_dir_check', 'profile_listen', 'profile_peer_reply']
         record = {
             'outcome': 'early_exit', 'launched': True, 'port_file_seen': False,
             'port_alive': False, 'readiness': False, 'stderr_classes': labels,
@@ -131,7 +133,8 @@ while True:
         self.assertEqual(code, 0, stderr)
         self.assertEqual(json.loads(stdout), [record])
         for invalid in (labels + ['SECRET'], ['credentials.cc'], ['credentials_fatal'] * 2,
-                        ['seccomp_fatal', 1], ['unlisted_fatal']):
+                        ['seccomp_fatal', 1], ['unlisted_fatal'], ['profile_other'],
+                        [], labels + ['profile_listen'], ['profile_listen', {}]):
             with self.subTest(labels=invalid):
                 (stdout, stderr), code = self.shutdown_report(json.dumps([{**record, 'stderr_classes': invalid}]))
                 self.assertNotEqual(code, 0)
@@ -151,7 +154,9 @@ while True:
             json.dumps([record]) + ' ' * 16384,
         ]
         for changes in (
-            {'raw_output': 'SECRET'}, {'outcome': 'SECRET'}, {'signal': 'SECRET'},
+            {'raw_output': 'SECRET'}, {'sourceLine': 314}, {'filename': 'SECRET'},
+            {'message': 'SECRET'}, {'errno': 1}, {'path': 'SECRET'},
+            {'outcome': 'SECRET'}, {'signal': 'SECRET'},
             {'stderr_classes': ['SECRET']}, {'stderr_classes': ['none'] * 5},
             {'cleanup': {**record['cleanup'], 'path': 'SECRET'}},
             {'cleanup': {'process_group_stopped': 1, 'owned_directory_removed': True}},
@@ -223,8 +228,10 @@ process.exit(23);
             ('sandbox_bpf.cc', 'Kernel refuses to enable no-new-privs', ['crash', 'seccomp_fatal']),
             ('sandbox_bpf.cc', 'Kernel refuses to turn on BPF filters', ['crash', 'seccomp_fatal']),
             ('crashpad_linux.cc', 'client.StartHandler(', ['crash', 'crashpad_fatal']),
-            ('process_singleton_posix.cc', 'Socket path too long:', ['crash', 'profile_fatal']),
-            ('process_singleton_posix.cc', 'Temp directory mode is not 700:', ['crash', 'profile_fatal']),
+            ('process_singleton_posix.cc', 'Socket path too long: ',
+             ['crash', 'profile_fatal', 'profile_socket_path_length']),
+            ('process_singleton_posix.cc', 'Temp directory mode is not 700: ',
+             ['crash', 'profile_fatal', 'profile_socket_dir_check']),
             ('resource_bundle.cc', 'failed to load pak file', ['crash', 'resource_fatal']),
         ]
         for site, literal, expected in cases:
@@ -237,6 +244,95 @@ process.exit(23);
                 self.assertTrue(all(observation['cleanup'].values()))
                 for forbidden in (site, literal, 'SECRET', '/private', '123:456'):
                     self.assertNotIn(forbidden, text)
+
+    def test_public_process_classifies_five_profile_literals(self):
+        # Public pinned literals only; no actual Chromium cause is asserted.
+        cases = [
+            ('socket() failed', 'profile_socket_create'),
+            ('Socket path too long: ', 'profile_socket_path_length'),
+            ('Temp directory mode is not 700: ', 'profile_socket_dir_check'),
+            ('listen failed: ', 'profile_listen'),
+            ('The other process returned unknown message: ', 'profile_peer_reply'),
+        ]
+        for literal, label in cases:
+            with self.subTest(label=label):
+                message = f'[FATAL:chrome/browser/process_singleton_posix.cc:999] {literal}SECRET /private/token\n'
+                observation, text = self.observe(f'process.stderr.write({json.dumps(message)}); process.exit(23);')
+                self.assertEqual(observation['stderr_classes'], ['crash', 'profile_fatal', label])
+                self.assertFalse(observation['readiness'])
+                self.assertTrue(all(observation['cleanup'].values()))
+                for forbidden in ('SECRET', '/private', '.cc', literal):
+                    self.assertNotIn(forbidden, text)
+
+    def test_public_process_profile_pinned_line_fallback(self):
+        cases = [
+            (297, 'profile_socket_create'),
+            (314, 'profile_socket_path_length'), (315, 'profile_socket_path_length'),
+            (1052, 'profile_socket_dir_check'), (1053, 'profile_socket_dir_check'),
+            (1054, 'profile_socket_dir_check'),
+            (1088, 'profile_listen'), (1089, 'profile_listen'),
+            (936, 'profile_peer_reply'), (937, 'profile_peer_reply'),
+        ]
+        for line, label in cases:
+            for location in (f':{line}', f'({line})'):
+                with self.subTest(location=location):
+                    message = f'[FATAL:process_singleton_posix.cc{location}] Check failed: SECRET\n'
+                    observation, text = self.observe(f'process.stderr.write({json.dumps(message)}); process.exit(23);')
+                    self.assertEqual(observation['stderr_classes'], ['crash', 'profile_fatal', label])
+                    self.assertTrue(all(observation['cleanup'].values()))
+                    self.assertFalse(observation['readiness'])
+                    self.assertNotIn('SECRET', text)
+                    self.assertNotIn('.cc', text)
+
+    def test_public_process_profile_gates_precedence_order_and_bound(self):
+        literals = ['socket() failed', 'Socket path too long: ',
+                    'Temp directory mode is not 700: ', 'listen failed: ',
+                    'The other process returned unknown message: ']
+        for literal in literals:
+            cases = [
+                (f'[FATAL:unknown.cc:314] {literal}SECRET', ['crash']),
+                (f'[fatal:process_singleton_posix.cc:314] {literal}SECRET', ['crash']),
+                (f'[FATAL:process_singleton_posix.cc:999] {literal.upper()}SECRET',
+                 ['crash', 'profile_fatal']),
+                (f'[FATAL:process_singleton_posix.cc:999] SECRET\n{literal}',
+                 ['crash', 'profile_fatal']),
+                (f'[FATAL:secret_process_singleton_posix.cc:314] {literal}SECRET', ['crash']),
+            ]
+            for message, expected in cases:
+                with self.subTest(message=message):
+                    observation, text = self.observe(f'process.stderr.write({json.dumps(message)}); process.exit(23);')
+                    self.assertEqual(observation['stderr_classes'], expected)
+                    self.assertTrue(all(observation['cleanup'].values()))
+                    self.assertNotIn('SECRET', text)
+                    self.assertNotIn('.cc', text)
+        cases = [
+            # A known literal wins over a conflicting pinned line on that record.
+            ('[FATAL:process_singleton_posix.cc:314] listen failed: SECRET',
+             ['crash', 'profile_fatal', 'profile_listen']),
+            # Fallback is per record, not suppressed by a literal on another line.
+            ('[FATAL:process_singleton_posix.cc:314] SECRET\n'
+             '[FATAL:process_singleton_posix.cc:999] listen failed: SECRET',
+             ['crash', 'profile_fatal', 'profile_socket_path_length', 'profile_listen']),
+            ('[FATAL:process_singleton_posix.cc:999] SECRET', ['crash', 'profile_fatal']),
+        ]
+        for message, expected in cases:
+            with self.subTest(message=message):
+                observation, text = self.observe(f'process.stderr.write({json.dumps(message)}); process.exit(23);')
+                self.assertEqual(observation['stderr_classes'], expected)
+                self.assertNotIn('SECRET', text)
+        message = ''.join(f'[FATAL:process_singleton_posix.cc:999] {literal}SECRET\n'
+                          for literal in reversed(literals)) * 2
+        observation, text = self.observe(f'process.stderr.write({json.dumps(message)}); process.exit(23);')
+        self.assertEqual(observation['stderr_classes'], [
+            'crash', 'profile_fatal', 'profile_socket_create', 'profile_socket_path_length',
+            'profile_socket_dir_check', 'profile_listen', 'profile_peer_reply'])
+        self.assertNotIn('SECRET', text)
+        observation, text = self.observe(
+            "process.stderr.write('x'.repeat(65536) + " + json.dumps(message) + ", () => process.exit(23));")
+        self.assertEqual(observation['stderr_classes'], ['other'])
+        self.assertTrue(observation['stderr_truncated'])
+        self.assertTrue(all(observation['cleanup'].values()))
+        self.assertNotIn('SECRET', text)
 
     def test_public_process_fatal_site_fallback_is_fixed_deduplicated_and_ordered(self):
         sites = ['resource_bundle.cc', 'process_singleton_posix.cc', 'crashpad_linux.cc',
