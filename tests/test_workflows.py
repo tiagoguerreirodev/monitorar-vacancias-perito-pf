@@ -34,7 +34,8 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(steps[1]["uses"], "actions/setup-python@v7")
         self.assertEqual(steps[1]["with"]["python-version"], "3.13")
         self.assertEqual([step["run"] for step in steps if "run" in step],
-                         ["python3 -m unittest discover -v"])
+                         ["python3 -m unittest discover -v",
+                          "node --check perito_dashboard/assets/inspection.js"])
         self.assertFalse(any("secrets" in str(step) for step in steps))
 
     def test_only_serialized_trusted_monthly_or_manual_runs_build_and_deploy(self):

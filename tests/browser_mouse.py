@@ -7,11 +7,13 @@ itself must be caused by `orca mouse move`, never synthetic events or handlers.
 See docs/operations.md for the local recipe.
 """
 import argparse
+from hashlib import sha256
 import json
 from pathlib import Path
 import shutil
 import subprocess
 from urllib.parse import urlsplit
+from urllib.request import urlopen
 
 from perito_dashboard import refresh_and_build
 from tests.sources import CHECK_TIME, ControlledArchive, national_resources, resource_url
@@ -78,6 +80,42 @@ class Browser:
         assert observed == expected, (expected, observed, point)
         print(f"PASS mouse ({point['x']:.2f}, {point['y']:.2f}): {observed}")
 
+    def content(self):
+        return self.evaluate("""(() => {
+          const chart = document.querySelector('#history-chart');
+          return {count: document.querySelector('#vacant-count').textContent,
+                  rate: document.querySelector('#vacancy-rate').textContent,
+                  reference: document.querySelector('.reference time').getAttribute('datetime'),
+                  checked: document.querySelector('.context time').getAttribute('datetime'),
+                  checkedText: document.querySelector('.context time').textContent,
+                  context: document.querySelector('#current-values').textContent,
+                  explanation: document.querySelector('main').textContent,
+                  ticks: Array.from(chart.querySelectorAll('text[text-anchor="end"]'))
+                    .map(node => node.textContent),
+                  rows: Array.from(document.querySelector('#history-values').tBodies[0].rows)
+                    .map(row => Array.from(row.cells).map(cell => cell.textContent)),
+                  sources: Array.from(document.querySelectorAll('main a[href]'))
+                    .map(link => link.getAttribute('href')),
+                  markers: chart.querySelectorAll('.vacant-point').length,
+                  lines: chart.querySelectorAll('polyline').length,
+                  pageWidth: document.documentElement.scrollWidth, width: innerWidth};
+        })()""")
+
+    def guide(self, fraction):
+        geometry = self.evaluate("""(() => {
+          const guide = document.querySelector('.inspection-guide');
+          const grid = document.querySelector('#history-chart .grid-line');
+          return {visible: getComputedStyle(guide).display !== 'none',
+                  x: guide.x1.baseVal.value, x2: guide.x2.baseVal.value,
+                  left: grid.x1.baseVal.value, right: grid.x2.baseVal.value,
+                  top: guide.y1.baseVal.value, bottom: guide.y2.baseVal.value};
+        })()""")
+        expected = geometry['left'] + fraction * (geometry['right'] - geometry['left'])
+        assert geometry['visible'] and abs(geometry['x'] - expected) < .01, geometry
+        assert geometry['x'] == geometry['x2'], geometry
+        assert (geometry['top'], geometry['bottom']) == (30, 270), geometry
+        print("PASS visible calendar guide", geometry)
+
     def contained(self):
         geometry = self.evaluate("""(() => {
           const tip = document.querySelector('[role="tooltip"]').getBoundingClientRect();
@@ -85,8 +123,12 @@ class Browser:
           return {left: tip.left, right: tip.right, top: tip.top, bottom: tip.bottom,
                   clipLeft: Math.max(0, clip.left),
                   clipRight: Math.min(innerWidth, clip.right), height: innerHeight,
-                  pageWidth: document.documentElement.scrollWidth, width: innerWidth};
+                  pageWidth: document.documentElement.scrollWidth, width: innerWidth,
+                  fontSize: parseFloat(getComputedStyle(document.querySelector('[role="tooltip"]')).fontSize),
+                  textFits: document.querySelector('[role="tooltip"]').scrollWidth <=
+                            document.querySelector('[role="tooltip"]').clientWidth};
         })()""")
+        assert geometry["fontSize"] >= 16 and geometry["textFits"], geometry
         assert geometry["left"] >= geometry["clipLeft"], geometry
         assert geometry["right"] <= geometry["clipRight"], geometry
         assert 0 <= geometry["top"] <= geometry["bottom"] <= geometry["height"], geometry
@@ -101,7 +143,8 @@ class Browser:
         })()""")
         self.move(point["x"], point["y"])
         assert self.tooltip() is None, ("Stale inspection after leaving plot", self.tooltip())
-        print("PASS leaving plot clears inspection")
+        assert self.evaluate("getComputedStyle(document.querySelector('.inspection-guide')).display") == 'none'
+        print("PASS leaving plot clears inspection and guide")
 
 
 def main():
@@ -114,7 +157,8 @@ def main():
     check.add_argument("--page", required=True, help="Your explicitly owned browser page ID")
     check.add_argument("--base-url", required=True, help="Local preview root, ending in /")
     check.add_argument("--case", choices=["nearest", "gap", "leave", "clamp", "scroll", "resize",
-                                         "edges", "zero", "narrow", "formatted", "fallback", "allzero"],
+                                         "edges", "zero", "narrow", "formatted", "fallback", "allzero",
+                                         "summary", "single", "sparse"],
                        default="nearest")
     args = parser.parse_args()
     if args.command == "prepare":
@@ -137,6 +181,14 @@ def main():
                           source=ControlledArchive({resource_url(month): monthly_resource(month, 0, 0)
                                                     for month in ("2025-06", "2025-08", "2025-09")}),
                           clock=lambda: CHECK_TIME)
+        for name, values in (("single", (("2025-06", 108, 12),)),
+                             ("sparse", (("2025-06", 108, 12), ("2025-09", 120, 0),
+                                         ("2027-02", 95, 25)))):
+            refresh_and_build(args.root / f"data-{name}",
+                              args.root / f"www/{name}/monitorar-vacancias-perito-pf",
+                              source=ControlledArchive({resource_url(month): monthly_resource(month, occupied, vacant)
+                                                        for month, occupied, vacant in values}),
+                              clock=lambda: CHECK_TIME)
         fallback = args.root / "www/fallback/monitorar-vacancias-perito-pf"
         shutil.copytree(args.root / "www/national/monitorar-vacancias-perito-pf",
                         fallback, dirs_exist_ok=True)
@@ -145,11 +197,77 @@ def main():
         return
     assert urlsplit(args.base_url).hostname in {"127.0.0.1", "localhost"}, "Local preview only"
     assert args.page != "fff658ce-af08-4721-b944-f11fa526a5c0", "Protected user page"
-    fixture = args.case if args.case in {"zero", "formatted", "fallback", "allzero"} else "national"
+    fixture = args.case if args.case in {"zero", "formatted", "fallback", "allzero", "single", "sparse"} else "national"
     url = args.base_url.rstrip("/") + f"/{fixture}/monitorar-vacancias-perito-pf/"
     browser = Browser(args.orca, args.page, url)
     browser.setup(width=320 if args.case == "narrow" else 1440,
                   height=800 if args.case == "narrow" else 1000)
+    if args.case == "summary":
+        for width in (1440, 320):
+            browser.command("viewport", "--width", str(width), "--height", "1000")
+            content = browser.content()
+            assert (content['count'], content['rate'], content['reference']) == ('87', '7,3%', '2026-09'), content
+            assert content['checked'] == '2026-11-13T12:00:00Z', content
+            assert content['checkedText'] == '13/11/2026 às 09:00 (Brasília, UTC−03:00)', content
+            assert '1.108' in content['context'] and '1.195' in content['context'], content
+            assert content['ticks'] == ['0', '40', '80', '120', '160'], content
+            assert (content['markers'], content['lines']) == (15, 1), content
+            assert [row[2] if len(row) == 5 else None for row in content['rows']] == [
+                '79', None, '84', '87', '93', '94', '99', '101', '105', '106', '110',
+                '112', '112', '121', '128', '87'], content
+            assert content['pageWidth'] == width, content
+            assert 'não representam vagas de concurso' in content['explanation'], content
+            assert 'A data da verificação não é a referência dos cargos.' in content['explanation'], content
+            assert 'data/history.json' in content['sources'] and 'data/status.json' in content['sources'], content
+            assert ('https://www.gov.br/servidor/pt-br/observatorio-de-pessoal-govbr/'
+                    'gestao-de-pessoas-executivo-federal-cargos-vagos') in content['sources'], content
+        # Read the public local bytes, not application state; digest the external document.
+        with urlopen(url + 'data/history.json') as response:
+            history = json.load(response)
+        with urlopen(url + 'data/status.json') as response:
+            status = json.load(response)
+        current = history['observations'][-1]
+        source = 'https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2026/CargosVagosVacancias_202609.ods'
+        assert (current['reference_month'], current['occupied'], current['vacant'], current['authorized']) == (
+            '2026-09', 1108, 87, 1195), current
+        assert current['source']['url'] == source and source in content['sources'], current
+        assert current['source']['sha256'] == sha256(national_resources()[source]).hexdigest(), current
+        assert current['source']['retrieved_at'] == status['last_successful_check'] == '2026-11-13T12:00:00Z'
+        print('PASS desktop/320px header, same-reference rate/context, vacancy axis/table, check vs reference and source bytes')
+        return
+    if args.case == "single":
+        content = browser.content()
+        assert (content['count'], content['rate'], content['reference']) == ('12', '10,0%', '2025-06'), content
+        assert content['ticks'] == ['0', '3', '6', '9', '12'], content
+        assert (content['markers'], content['lines']) == (1, 0), content
+        assert content['rows'][0][:4] == ['junho de 2025', '108', '12', '120'], content
+        assert 'um único ponto de cargos vagos, sem tendência' in content['explanation'], content
+        for fraction, height in ((0, .08), (.5, .92), (1, .08)):
+            browser.inspect(fraction, height, 'junho de 2025 — Cargos vagos: 12')
+            browser.guide(.5)
+            browser.contained()
+        browser.leave()
+        print('PASS single positive observation without invented trend')
+        return
+    if args.case == "sparse":
+        content = browser.content()
+        assert (content['markers'], content['lines'], len(content['rows'])) == (3, 0, 21), content
+        assert content['ticks'] == ['0', '7', '14', '21', '28'], content
+        for fraction, expected in ((1 / 20, 'julho de 2025 — dados indisponíveis'),
+                                   (2 / 20, 'agosto de 2025 — dados indisponíveis'),
+                                   (3 / 20, 'setembro de 2025 — Cargos vagos: 0')):
+            browser.inspect(fraction, .08, expected)
+            browser.inspect(fraction, .92, expected)
+            browser.guide(fraction)
+        browser.evaluate("document.querySelector('.chart-scroll').scrollLeft = 99999")
+        browser.inspect(19 / 20, .08, 'janeiro de 2027 — dados indisponíveis')
+        browser.guide(19 / 20)
+        browser.inspect(1, .92, 'fevereiro de 2027 — Cargos vagos: 25')
+        browser.guide(1)
+        browser.contained()
+        browser.leave()
+        print('PASS consecutive/new-year gaps never bridge or fabricate zero')
+        return
     if args.case == "narrow":
         browser.inspect(0, .08, "junho de 2025 — Cargos vagos: 79")
         browser.inspect(1 / 15 - .002, .92, "julho de 2025 — dados indisponíveis")
@@ -185,11 +303,30 @@ def main():
         assert "julho de 2025: indisponível" in static["descriptions"], static
         assert "setembro de 2026" in static["table"] and "87" in static["table"], static
         assert static["scrollers"] == [0, 0], static
-        print("PASS unavailable JS leaves useful static chart, equivalent table and scroll regions")
+        browser.setup(width=320, height=800)
+        point = browser.point(0, .08)
+        browser.move(point['x'], point['y'])
+        assert browser.tooltip() is None, 'No enhancement should appear on mobile either'
+        scroll = browser.evaluate("""(() => {
+          const regions = Array.from(document.querySelectorAll('[role="region"]'));
+          regions.forEach(region => { region.scrollLeft = 99999; });
+          return {offsets: regions.map(region => region.scrollLeft),
+                  names: regions.map(region => region.getAttribute('aria-label')),
+                  pageWidth: document.documentElement.scrollWidth, pageX: scrollX};
+        })()""")
+        assert all(offset > 0 for offset in scroll['offsets']), scroll
+        assert all(scroll['names']) and scroll['pageWidth'] == 320 and scroll['pageX'] == 0, scroll
+        print("PASS unavailable JS leaves useful static chart, equivalent table and named tab stops; independent 320px scrollers", scroll)
         return
     if args.case == "allzero":
+        content = browser.content()
+        assert (content['count'], content['rate'], content['reference']) == ('0', '—', '2025-09'), content
+        assert 'Taxa indisponível: total aprovado igual a zero.' in content['explanation'], content
+        assert content['ticks'] == ['0', '1', '2', '3', '4'], content
+        assert (content['markers'], content['lines']) == (3, 1), content
         browser.inspect(0, .08, "junho de 2025 — Cargos vagos: 0")
         browser.inspect(1 / 3, .92, "julho de 2025 — dados indisponíveis")
+        browser.guide(1 / 3)
         browser.inspect(2 / 3, .08, "agosto de 2025 — Cargos vagos: 0")
         browser.inspect(1, .92, "setembro de 2025 — Cargos vagos: 0")
         browser.contained()
@@ -217,6 +354,7 @@ def main():
     if args.case == "gap":
         browser.inspect(1 / 15, .08, "julho de 2025 — dados indisponíveis")
         browser.inspect(1 / 15, .92, "julho de 2025 — dados indisponíveis")
+        browser.guide(1 / 15)
         browser.inspect(2 / 15, .92, "agosto de 2025 — Cargos vagos: 84")
     if args.case == "leave":
         browser.leave()
