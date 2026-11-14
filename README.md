@@ -40,6 +40,10 @@ carreiras e organizações. O total aprovado usa **APROVADA**, não DISTRIBUIDA;
 valida **aprovados = ocupados + vagos** e rejeita dados incompletos/inconsistentes.
 Veja também o [dicionário oficial](https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/Dicionario_CargosVagosVacancias.pdf).
 
+O [contrato da fonte de pessoal ativo por UF](docs/uf-source.md) documenta a
+premissa geográfica, a evidência local e os gates restantes; não habilita coleta
+ou publicação UF nesta entrega.
+
 O histórico guarda mês `YYYY-MM`, totais, identificadores, URL, SHA-256 dos bytes
 do ODS e instante de coleta UTC. `status.json` guarda separadamente a última
 verificação bem-sucedida. Não se inventam meses nem valores para preencher
