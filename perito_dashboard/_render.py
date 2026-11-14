@@ -1,10 +1,11 @@
 """Internal, local-only dashboard renderer for accepted aggregate observations."""
 from datetime import datetime, timedelta, timezone
 from html import escape
-import json
 import math
 from pathlib import Path
 import shutil
+
+from ._shared import CUTOFF, PF_ORGANIZATION, write_json
 
 
 MONTHS = ("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
@@ -94,8 +95,9 @@ def _history(observations):
     ceiling = step * 4
     by_month = {row["reference_month"]: row for row in observations}
     year, month = map(int, observations[-1]["reference_month"].split("-"))
+    start_year, start_month = map(int, CUTOFF.split("-"))
     months = [f"{index // 12:04d}-{index % 12 + 1:02d}"
-              for index in range(2026 * 12 + 8, year * 12 + month)]
+              for index in range(start_year * 12 + start_month - 1, year * 12 + month)]
     width = max(940, len(months) * 80 + 170)
     right = width - 85
     graphics, points, rows, missing = [], [], [], []
@@ -161,9 +163,7 @@ def render_site(history, status, destination):
     destination = Path(destination)
     (destination / "data").mkdir(parents=True, exist_ok=True)
     for name, value in (("history", history), ("status", status)):
-        (destination / "data" / f"{name}.json").write_text(
-            json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
-        )
+        write_json(destination / "data" / f"{name}.json", value)
     shutil.copytree(Path(__file__).with_name("assets"), destination / "assets", dirs_exist_ok=True)
     observations = sorted(history["observations"], key=lambda row: row["reference_month"])
     current_content = (_current(observations[-1]) if observations else
@@ -191,8 +191,8 @@ def render_site(history, status, destination):
 {history_content}
 <section class="sources" aria-labelledby="sources-title"><h2 id="sources-title">Fontes e escopo</h2>
 <p><a href="{DATASET_URL}">Cargos Vagos e Vacâncias — conjunto de dados oficial</a>.</p>
-<p>Somente Polícia Federal (órgão 20115), cargo Perito Criminal Federal, somando Classe Especial, 1ª, 2ª e 3ª classes. Outras carreiras e organizações não estão incluídas.</p>
-<p>Histórico a partir de setembro de 2026. Dados agregados, sem registros pessoais.</p>
+<p>Somente Polícia Federal (órgão {PF_ORGANIZATION["code"]}), cargo Perito Criminal Federal, somando Classe Especial, 1ª, 2ª e 3ª classes. Outras carreiras e organizações não estão incluídas.</p>
+<p>Histórico a partir de {_month(CUTOFF)}. Dados agregados, sem registros pessoais.</p>
 <p>Dados para consulta: <a href="data/history.json">histórico em JSON</a> e <a href="data/status.json">última verificação em JSON</a>.</p></section>
 </main><footer class="wrap"><p>Fonte mensal oficial. Sem estimativas de efetivo ou previsões de concurso.</p></footer></body></html>
 '''

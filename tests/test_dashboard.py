@@ -15,26 +15,19 @@ from urllib.request import urlopen
 
 from perito_dashboard import refresh_and_build
 from tests.sources import (
-    ARCHIVE_URL, CHECK_TIME, ControlledArchive, SEPTEMBER, SEPTEMBER_URL, ScriptedArchive, TABLE,
-    pf_classes, set_cell, variant,
+    CHECK_TIME, ControlledArchive, SEPTEMBER, SEPTEMBER_URL, ScriptedArchive,
+    monthly_resource as dated_resource, pf_classes, resource_url, set_cell, variant,
 )
 
 
 def monthly_resource(month, occupied, vacant):
     """A controlled publication using the official sheet structure and identities."""
     def edit(table, header):
-        for row in table.findall(TABLE + "table-row")[1:]:
-            if "".join(row[header.index("ANO_MES")].itertext()).strip():
-                set_cell(row, header, "ANO_MES", month.replace("-", ""))
         for index, row in enumerate(pf_classes(table, header)):
             for field, count in (("APROVADA", occupied + vacant), ("DISTRIBUIDA", occupied + vacant),
                                  ("OCUPADA", occupied), ("VAGA", vacant)):
                 set_cell(row, header, field, count if index == 0 else 0)
-    return variant(edit)
-
-
-def resource_url(month):
-    return ARCHIVE_URL + month[:4] + "/CargosVagosVacancias_" + month.replace("-", "") + ".ods"
+    return dated_resource(month, edit)[1]
 
 
 class Page(HTMLParser):

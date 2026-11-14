@@ -15,14 +15,15 @@ import shutil
 import tempfile
 import time
 from urllib.error import HTTPError, URLError
+from urllib.parse import unquote, urlsplit
 from urllib.request import urlopen
 from xml.etree import ElementTree as ET
 from zipfile import BadZipFile, ZipFile
 
 from ._render import render_site
+from ._shared import CUTOFF, PF_ORGANIZATION, write_json
 
 ARCHIVE_URL = "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/"
-CUTOFF = "2026-09"
 CLASSES = {
     901004: "PERITO CRIMINAL FEDERAL CLASSE ESPECIAL",
     901005: "PERITO CRIMINAL FEDERAL 1A CLASSE",
@@ -63,23 +64,44 @@ def _request(fetch, url):
             raise ValueError(f"Invalid source index encoding for {url}: {exc}") from exc
 
 
-class _Links(HTMLParser):
+class _DirectoryIndex(HTMLParser):
     def __init__(self, html):
         super().__init__()
+        self.heading = ""
         self.links = []
+        self.has_parent = False
+        self.in_heading = self.in_listing = False
         self.feed(html)
 
     def handle_starttag(self, tag, attrs):
-        if tag == "a":
+        if tag == "h1":
+            self.in_heading = True
+        elif tag == "pre":
+            self.in_listing = True
+        elif tag == "a":
             self.links.extend(value for key, value in attrs if key == "href" and value)
+            if self.in_listing and ("href", "../") in attrs:
+                self.has_parent = True
+
+    def handle_endtag(self, tag):
+        if tag == "h1":
+            self.in_heading = False
+        elif tag == "pre":
+            self.in_listing = False
+
+    def handle_data(self, data):
+        if self.in_heading:
+            self.heading += data
 
 
 def _index(fetch, url):
-    content = _request(fetch, url)
-    links = _Links(content).links
-    if content.strip() and not links:
+    listing = _DirectoryIndex(_request(fetch, url))
+    expected_heading = "Index of " + unquote(urlsplit(url).path)
+    # Official nginx indexes identify their path and include a parent entry in
+    # a preformatted listing, even when a newly created year has no resources.
+    if listing.heading.strip() != expected_heading or not listing.has_parent:
         raise ValueError(f"Unexpected source index format: {url}")
-    return sorted(set(links))
+    return sorted(set(listing.links))
 
 
 def _discover(source):
@@ -193,10 +215,10 @@ def _snapshot(content, month, url, checked_at):
                 raise ValueError("Missing required fields in source row")
             if _count(item["ANO_MES"], "reference period") != int(month.replace("-", "")):
                 raise ValueError(f"Source reference period does not match resource month {month}")
-            if _count(item["ORGAO"], "ORGAO") != 20115:
+            if _count(item["ORGAO"], "ORGAO") != PF_ORGANIZATION["code"]:
                 continue
-            if (item["NOME_ORGAO"] != "DEPARTAMENTO DE POLICIA FEDERAL"
-                    or item["SIGLA_ORGAO"] != "DPF"):
+            if (item["NOME_ORGAO"] != PF_ORGANIZATION["name"]
+                    or item["SIGLA_ORGAO"] != PF_ORGANIZATION["abbreviation"]):
                 raise ValueError("PF organization identity mismatch")
             code = _count(item["CARGO"], "CARGO")
             if code not in CLASSES:
@@ -223,17 +245,13 @@ def _snapshot(content, month, url, checked_at):
             "distributed": sum(row["DISTRIBUIDA"] for row in selected),
             "occupied": sum(row["OCUPADA"] for row in selected),
             "vacant": sum(row["VAGA"] for row in selected),
-            "organization": {"code": 20115, "name": "DEPARTAMENTO DE POLICIA FEDERAL", "abbreviation": "DPF"},
+            "organization": PF_ORGANIZATION.copy(),
             "class_codes": sorted(CLASSES),
             "source": {"url": url, "sha256": hashlib.sha256(content).hexdigest(), "retrieved_at": checked_at},
         }
     if snapshot is None:
         raise ValueError("Missing per-organization/per-cargo table")
     return snapshot
-
-
-def _json(path, value):
-    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def _promote(staged):
@@ -340,7 +358,7 @@ def _validate_observation(row, successful_check):
             raise ValueError(f"Invalid saved aggregate count: {field}")
     if row["authorized"] != row["occupied"] + row["vacant"]:
         raise ValueError("Saved aggregate counts do not reconcile")
-    if row["organization"] != {"code": 20115, "name": "DEPARTAMENTO DE POLICIA FEDERAL", "abbreviation": "DPF"}:
+    if row["organization"] != PF_ORGANIZATION:
         raise ValueError("Invalid saved PF organization identity")
     if row["class_codes"] != sorted(CLASSES):
         raise ValueError("Invalid saved PCF class identifiers")
@@ -422,8 +440,8 @@ def _refresh_locked(data_dir, site_dir, source, clock):
             candidate = work / "candidate"
             candidate.mkdir()
             staged.append((candidate, target))
-        _json(staged[0][0] / "history.json", history)
-        _json(staged[0][0] / "status.json", status)
+        write_json(staged[0][0] / "history.json", history)
+        write_json(staged[0][0] / "status.json", status)
         render_site(history, status, staged[1][0])
         if before != (_output_state(data_dir), _output_state(site_dir)):
             raise ValueError("Stale refresh: accepted outputs changed during refresh; nothing promoted")
