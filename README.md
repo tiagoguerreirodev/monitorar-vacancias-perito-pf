@@ -48,12 +48,29 @@ lacunas; a primeira importação sem observação válida desde setembro de 2026
 A origem da planilha oficial reduzida usada pelos testes está em
 [`tests/fixtures/README.md`](tests/fixtures/README.md).
 
-A política final de retenção, idempotência e correções auditáveis pertence a
-**#4 de #1**. Neste ponto de integração, ela ainda está em implementação: a
-coleta inicial reconstrói observações dos recursos descobertos e renova seus
-instantes de coleta. Não confundir testes da automação com aceitação dessa
-política. O painel completo/gráficos pertence a **#3**; a aceitação integrada e
-real de Actions/Pages, a **#6**.
+O histórico aceito é retido mesmo se um recurso desaparecer da listagem. Uma
+verificação inalterada atualiza apenas o status: não duplica pontos nem renova a
+proveniência. Novos meses e backfills entram em ordem cronológica; a referência
+atual é sempre a maior. Mudança nos bytes da planilha canônica do mesmo mês
+registra uma correção, com valores/proveniência supersedidos em `corrections`,
+mesmo se os totais não mudarem. Recursos concorrentes não canônicos são recusados
+para revisão humana, sem escolher uma versão arbitrariamente.
+
+O painel inclui pizza com proporções, histórico de ocupados/vagos, tabelas e
+descrições acessíveis em pt-BR, pistas além da cor e layout mobile. Um único mês
+é mostrado como pontos, sem tendência; lacunas interrompem as linhas. Todos os
+ativos e JSON são locais, com caminhos relativos ao subcaminho de Pages.
+
+A coleta usa timeout de 30 s por tentativa e até três tentativas por requisição
+em falhas transitórias (esperas de 0,1 e 0,2 s); erros de validação não são
+retentados. Locks consultivos POSIX recusam escritores que compartilhem qualquer
+um dos caminhos de saída resolvidos. Há detecção de alterações durante o build,
+mas não atomicidade contra crash nem transação entre filesystem, Git e Pages.
+Veja os limites exatos em [operação](docs/operations.md).
+
+**#3 e #4 estão implementados**; os testes integrados de **#6** não substituem a
+aceitação real de Actions/Pages, ainda pendente de publicação pelo coordenador
+após a revisão final.
 
 ## Automação e operação
 
