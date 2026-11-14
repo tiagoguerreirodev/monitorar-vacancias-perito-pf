@@ -197,7 +197,7 @@ def experiment(privileged_command, observer_command):
         with tempfile.TemporaryFile() as output:
             active = subprocess.Popen([*observer_command, runtime], stdout=output,
                                       stderr=subprocess.DEVNULL, start_new_session=True,
-                                      env={**os.environ, 'TMPDIR': str(Path(runtime).parent / 'profiles')})
+                                      env={**os.environ, 'TMPDIR': str(Path(runtime).parent / 'p')})
             try:
                 active.wait(timeout=105)
                 if active.returncode:

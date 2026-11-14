@@ -128,7 +128,7 @@ class Owner:
         self.base = Path(SANDBOX_PARENT) / self.name
         self.runtime = self.base / 'runtime'
         self.policy = self.base / 'profile'
-        self.profiles = self.base / 'profiles'
+        self.profiles = self.base / 'p'
         self.created = False
         self.policy_owned = False
         self.tree_hash = None
