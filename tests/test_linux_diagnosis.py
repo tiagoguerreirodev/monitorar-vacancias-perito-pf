@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import select
 import signal
 import subprocess
 import sys
@@ -461,14 +462,46 @@ setInterval(() => {}, 1000);
         self.assertNotIn('SECRET', text)
 
     def test_live_tcp_port_without_http_is_not_browser_readiness(self):
-        observation, _ = self.observe('''
+        # Listener startup is outside observeStartup's bounded deadline. Keep
+        # both server and accepted sockets alive until explicit parent teardown.
+        server = subprocess.Popen(['node', '-e', '''
+const sockets = new Set();
+const server = require('node:net').createServer(socket => {
+  sockets.add(socket);
+  socket.on('error', () => {});
+  socket.on('close', () => sockets.delete(socket));
+});
+server.listen(0, '127.0.0.1', () => console.log(server.address().port));
+process.stdin.once('data', () => {
+  for (const socket of sockets) socket.destroy();
+  server.close(() => process.exit(0));
+});
+'''], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            self.assertTrue(select.select([server.stdout], [], [], 5)[0], 'TCP listener acknowledgement missing')
+            port = int(server.stdout.readline())
+            self.assertGreater(port, 0)
+            observation, _ = self.observe('''
 const fs = require('node:fs');
 const profile = process.argv.find(x => x.startsWith('--user-data-dir=')).split('=')[1];
-const server = require('node:net').createServer(socket => socket.destroy());
-server.listen(0, '127.0.0.1', () => {
-  fs.writeFileSync(profile + '/DevToolsActivePort', server.address().port + '\\n/SECRET');
-});
+fs.writeFileSync(profile + '/DevToolsActivePort', ''' + json.dumps(str(port) + '\n/SECRET') + ''');
+setInterval(() => {}, 1000);
 ''')
+            self.assertIsNone(server.poll(), 'TCP-only listener ended before explicit teardown')
+        finally:
+            if server.poll() is None:
+                try:
+                    server.communicate('stop\\n', timeout=5)
+                except subprocess.TimeoutExpired:
+                    server.terminate()
+                    try:
+                        server.communicate(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        server.kill()
+                        server.communicate()
+            else:
+                server.communicate()
+        self.assertEqual(server.returncode, 0)
         self.assertTrue(observation['port_alive'])
         self.assertFalse(observation['readiness'])
         self.assertEqual(observation['outcome'], 'startup_timeout')

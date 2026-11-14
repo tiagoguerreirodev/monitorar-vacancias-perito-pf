@@ -247,20 +247,40 @@ def _check_pins(receipt):
 def open_capsule():
     client = None
     previous = {}
+    previous_mask = None
+    handled = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGALRM)
     cleaning = False
+    acquiring = False
+    interrupted = False
     try:
         if os.environ.get('PERITO_RUNTIME_ROOT'):
             if not trusted_runtime_context():
                 raise UFRuntimeError('UF protected runtime requires trusted hosted Ubuntu main workflow')
+            def interrupt(_signum, _frame):
+                nonlocal interrupted
+                if not cleaning:
+                    if acquiring:
+                        interrupted = True
+                    else:
+                        raise UFRuntimeError('UF protected runtime interrupted')
+            # Register/restore handlers atomically, but never spawn with our
+            # temporary blocked mask: the owner and its children need signals.
+            previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, handled)
+            for signum in handled:
+                previous[signum] = signal.signal(signum, interrupt)
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
             source = Path(os.environ['PERITO_RUNTIME_ROOT']).absolute()
             ensure_runtime(source)
-            client = OwnerClient(['/usr/bin/sudo', '-n', '/usr/bin/python3', '-I', str(OWNER),
-                                  str(source), str(os.getuid()), str(os.getgid())])
-            def interrupt(_signum, _frame):
-                if not cleaning:
-                    raise UFRuntimeError('UF protected runtime interrupted')
-            for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGALRM):
-                previous[signum] = signal.signal(signum, interrupt)
+            # Defer interruption until Popen AND ownership assignment finish.
+            # Unlike blocking here, this does not leak a blocked mask to sudo.
+            acquiring = True
+            try:
+                client = OwnerClient(['/usr/bin/sudo', '-n', '/usr/bin/python3', '-I', str(OWNER),
+                                      str(source), str(os.getuid()), str(os.getgid())])
+            finally:
+                acquiring = False
+            if interrupted:
+                raise UFRuntimeError('UF protected runtime interrupted')
             staged = client.request('stage')
             runtime, tree = staged.get('runtime'), staged.get('tree_sha256')
             if (set(staged) != {'ok', 'runtime', 'tree_sha256'} or not isinstance(runtime, str)
@@ -307,5 +327,10 @@ def open_capsule():
             if client is not None:
                 client.finish()
         finally:
-            for signum, handler in previous.items():
-                signal.signal(signum, handler)
+            if previous_mask is not None:
+                signal.pthread_sigmask(signal.SIG_BLOCK, handled)
+                try:
+                    for signum, handler in previous.items():
+                        signal.signal(signum, handler)
+                finally:
+                    signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
