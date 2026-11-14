@@ -14,6 +14,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -35,7 +36,7 @@ TRUSTED = {
 
 
 @contextmanager
-def external_capsule(root, documents, failure=''):
+def external_capsule(root, documents, failure='', interruption=None):
     """Map protected OS paths to private test files; never run sudo or a browser."""
     env = install_offline_runtime(root, documents)
     source, mirror = root / 'source', root / 'protected'
@@ -48,6 +49,14 @@ def external_capsule(root, documents, failure=''):
     chrome.write_text('#!' + sys.executable + '\nprint("Google Chrome for Testing 157.0.8103.78")\n')
     for path in (node, chrome):
         path.chmod(0o700)
+    if interruption and interruption[0] == 'setup':
+        original = node.read_text()
+        node.write_text(original.replace('import runpy,sys',
+            'import runpy,sys,os,time\n'
+            'if sys.argv[1:]==["--version"]:\n'
+            ' open(' + repr(str(root / 'version-pid')) + ',"w").write(str(os.getpid()))\n'
+            ' os.kill(os.getppid(),' + str(int(interruption[1])) + ')\n'
+            ' time.sleep(20)\n'))
     pins = json.loads(runtime.MANIFEST.read_text())
     pins['python']['version'] = platform.python_version()
     pins['python']['executable_sha256'] = hashlib.sha256(Path(sys.executable).resolve().read_bytes()).hexdigest()
@@ -75,11 +84,22 @@ for line in sys.stdin:
  print(json.dumps(response),flush=True)
  if action=='cleanup': sys.exit(3 if failure=='exit' else 0)
 ''')
+    if interruption and interruption[0] == 'acquire':
+        owner.write_text(owner.read_text().replace('for line in sys.stdin:', '''import signal
+Path(mirror).mkdir()
+(Path(mirror)/'p').mkdir(mode=0o700)
+(Path(mirror)/'runtime').mkdir()
+Path(log+'.pid').write_text(str(os.getpid()))
+Path(log+'.mask').write_text(json.dumps(sorted(map(int,signal.pthread_sigmask(signal.SIG_BLOCK, [])))))
+os.kill(os.getppid(), ''' + str(int(interruption[1])) + ''')
+Path(log+'.sent').write_text('sent')
+for line in sys.stdin:'''))
     original_open, original_stat = Path.open, Path.stat
     original_symlink, original_read = Path.is_symlink, Path.read_text
     original_popen, original_run = subprocess.Popen, subprocess.run
     original_temp = tempfile.TemporaryDirectory
     commands = []
+    owners = []
 
     def mapped(path):
         text = str(path)
@@ -87,13 +107,23 @@ for line in sys.stdin:
 
     def popen(command, *args, **kwargs):
         commands.append((list(command), kwargs.get('env')))
-        if command[0] == '/usr/bin/sudo':
+        acquiring = command[0] == '/usr/bin/sudo'
+        if acquiring:
             if failure == 'privilege':
                 raise PermissionError('controlled external privilege refusal')
             command = [sys.executable, str(owner), str(source), str(mirror), str(log), failure]
         else:
             command = [str(mapped(value)) if isinstance(value, (str, Path)) else value for value in command]
-        return original_popen(command, *args, **kwargs)
+        process = original_popen(command, *args, **kwargs)
+        if acquiring:
+            owners.append(process)
+            if interruption and interruption[0] == 'acquire':
+                deadline = time.monotonic() + 5
+                while not Path(str(log) + '.sent').exists():
+                    if time.monotonic() > deadline:
+                        raise AssertionError('external acquisition barrier not reached')
+                    time.sleep(0.005)
+        return process
 
     def run(command, *args, **kwargs):
         return original_run([str(mapped(value)) for value in command], *args, **kwargs)
@@ -123,7 +153,66 @@ for line in sys.stdin:
         stack.enter_context(patch('subprocess.Popen', side_effect=popen))
         stack.enter_context(patch('subprocess.run', side_effect=run))
         stack.enter_context(patch('tempfile.TemporaryDirectory', Temporary))
-        yield {'mirror': mirror, 'events': log, 'commands': commands, 'sequence': Path(env['PERITO_TEST_EXPORT_SEQUENCE'])}
+        try:
+            yield {'mirror': mirror, 'events': log, 'commands': commands, 'owners': owners,
+                   'sequence': Path(env['PERITO_TEST_EXPORT_SEQUENCE'])}
+        finally:
+            # Test failure must not leave an external stand-in behind.
+            for process in owners:
+                if process.poll() is None:
+                    process.stdin.close()
+                    try:
+                        process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
+                process.stdout.close()
+
+
+def early_signal_acceptance(phase, signum):
+    """Isolated real signal/process exercise of the public publication seam."""
+    def prior_handler(_signum, _frame):
+        raise RuntimeError('prior handler escaped UF setup')
+
+    handled = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGALRM)
+    for item in handled:
+        signal.signal(item, prior_handler)
+    signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGUSR1})
+    mask = signal.pthread_sigmask(signal.SIG_BLOCK, [])
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        data, site = root / 'data', root / 'site'
+        refresh_and_build(data, site, source=ControlledArchive(), uf_source=ExportSource(), clock=lambda: NOW)
+        before = {name: (data / name).read_bytes() for name in ('uf.json', 'uf-status.json')}
+        with external_capsule(root, ProductionCapsuleTests().documents(), interruption=(phase, signum)) as boundary:
+            result = refresh_and_build(data, site, source=ControlledArchive(dict([monthly_resource('2026-10')])),
+                                       clock=lambda: NOW + timedelta(days=1))
+            assert result == {'national': 'updated', 'uf': 'failed', 'publication': 'partial'}, result
+            assert json.loads((data / 'history.json').read_text())['observations'][-1]['reference_month'] == '2026-10'
+            for name, content in before.items():
+                assert (data / name).read_bytes() == content
+                assert (site / 'data' / name).read_bytes() == content
+            assert all(signal.getsignal(item) is prior_handler for item in handled)
+            assert signal.pthread_sigmask(signal.SIG_BLOCK, []) == mask
+            assert not boundary['mirror'].exists()
+            assert not list(root.glob('.perito-runtime-*'))
+            assert not list(root.rglob('p-*'))
+            if phase == 'setup':
+                pid = int((root / 'version-pid').read_text())
+                try:
+                    os.kill(pid, 0)
+                except ProcessLookupError:
+                    pass
+                else:
+                    raise AssertionError('installation version subprocess survived')
+                assert not boundary['owners']
+            else:
+                assert boundary['events'].read_text().splitlines() == ['cleanup']
+                assert len(boundary['owners']) == 1
+                assert boundary['owners'][0].pid == int(Path(str(boundary['events']) + '.pid').read_text())
+                assert boundary['owners'][0].poll() == 0
+                child_mask = json.loads(Path(str(boundary['events']) + '.mask').read_text())
+                assert child_mask == sorted(map(int, mask)), child_mask
 
 
 class ProductionCapsuleTests(unittest.TestCase):
@@ -180,13 +269,32 @@ class ProductionCapsuleTests(unittest.TestCase):
     def test_all_four_signals_restore_handlers_and_cleanup_before_escape(self):
         for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGALRM):
             with self.subTest(signal=signum), tempfile.TemporaryDirectory() as directory:
-                previous = signal.getsignal(signum)
+                handled = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGALRM)
+                previous = {item: signal.getsignal(item) for item in handled}
+                mask = signal.pthread_sigmask(signal.SIG_BLOCK, [])
                 with external_capsule(Path(directory), self.documents()) as os_boundary:
                     with self.assertRaises(runtime.UFRuntimeError):
                         with runtime.runtime_capsule():
                             os.kill(os.getpid(), signum)
                     self.assertFalse(os_boundary['mirror'].exists())
-                    self.assertIs(signal.getsignal(signum), previous)
+                    for item, handler in previous.items():
+                        self.assertIs(signal.getsignal(item), handler)
+                    self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, []), mask)
+
+    def test_setup_signals_are_uf_local_and_national_still_advances(self):
+        self.check_early_signals('setup')
+
+    def test_acquisition_signals_register_owner_before_cleanup_and_preserve_child_mask(self):
+        self.check_early_signals('acquire')
+
+    def check_early_signals(self, phase):
+        for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGALRM):
+            with self.subTest(phase=phase, signal=signum):
+                result = subprocess.run([sys.executable, '-c',
+                    'from tests.test_production_capsule import early_signal_acceptance; '
+                    'early_signal_acceptance(' + repr(phase) + ',' + str(int(signum)) + ')'],
+                    capture_output=True, text=True, timeout=25)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_privilege_and_malformed_stage_failures_are_uf_local(self):
         for failure in ('privilege', 'malformed', 'cleanup'):
