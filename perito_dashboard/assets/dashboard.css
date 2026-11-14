@@ -24,12 +24,13 @@ main { padding-top: 2rem; }
 .reference { font-size: 1.1rem; }
 .current-layout { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 2rem; align-items: center; }
 figure { margin: 0; min-width: 0; }
-.pie svg { display: block; width: min(100%, 20rem); margin: auto; }
+.vacancy-summary { display: flex; flex-wrap: wrap; gap: 1rem 2rem; margin: 1rem 0; }
+.vacancy-summary dt { font-weight: 650; }
+.vacancy-summary dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 750; line-height: 1.2; }
+#vacant-count { font-size: clamp(3rem, 8vw, 4.5rem); }
+#vacancy-rate { font-size: 2rem; padding-top: .5rem; }
 figcaption { text-align: center; margin-top: .7rem; }
 .legend-item { display: inline-flex; align-items: center; gap: .4rem; margin: .25rem .5rem; }
-.swatch { display: inline-block; width: 1rem; height: 1rem; border: 1px solid #182d3b; flex-shrink: 0; }
-.occupied { background: #145b79; }
-.vacant { background: repeating-linear-gradient(135deg, #fff2ca 0 4px, #795517 4px 6px); }
 table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 caption { font-weight: 650; text-align: left; padding: .5rem 0; }
 th, td { padding: .75rem .6rem; text-align: right; border-bottom: 1px solid #cad7df; }
@@ -40,8 +41,9 @@ thead { background: #edf3f6; }
 .chart-scroll svg { display: block; width: 100%; min-width: 38rem; font-size: 15px; fill: #182d3b; }
 .table-scroll table { min-width: 36rem; }
 .grid-line { stroke: #cad7df; stroke-width: 1; }
-.occupied-point { fill: #145b79; stroke: #fff; stroke-width: 1.5; }
 .vacant-point { fill: #fff2ca; stroke: #795517; stroke-width: 2; }
+.inspection-guide { stroke: #182d3b; stroke-width: 2; stroke-dasharray: 3 3; pointer-events: none; }
+.inspection-tooltip { position: fixed; z-index: 2; pointer-events: none; background: #12394c; color: #fff; border: 2px solid #fff; border-radius: .4rem; padding: .5rem .75rem; font-size: 1rem; }
 .context { border-left: 4px solid #145b79; padding: .1rem 1.25rem; margin: 1.8rem 0; }
 .sources { padding: .5rem 0; max-width: 85ch; }
 footer { font-size: .9rem; color: #435c6c; padding-block: 1rem; }

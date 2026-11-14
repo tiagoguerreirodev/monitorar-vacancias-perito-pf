@@ -66,6 +66,11 @@ class Page(HTMLParser):
     def text(self, tag=None, **attrs):
         return " ".join(self.one(tag, **attrs)["text"].split())
 
+    def axis_labels(self):
+        chart = self.one("svg", id="history-chart")
+        return [node["text"] for node in self.matching("text", **{"text-anchor": "end"})
+                if chart in node["parents"]]
+
 
 class DashboardTests(unittest.TestCase):
     def setUp(self):
@@ -87,7 +92,7 @@ class DashboardTests(unittest.TestCase):
         self.assertTrue(all("Indisponível" in row["text"] for row in rows[:15]))
         return rows[15:]
 
-    def test_current_pie_explains_official_counts_proportions_and_dates(self):
+    def test_vacancy_headline_explains_official_counts_rate_and_distinct_dates(self):
         page = self.refresh()
         self.assertEqual(page.one("html")["attrs"]["lang"], "pt-BR")
         self.assertEqual(page.text("h1"), "Perito Criminal Federal — Polícia Federal")
@@ -97,21 +102,18 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(page.text("time", datetime="2026-11-13T12:00:00Z"),
                          "13/11/2026 às 09:00 (Brasília, UTC−03:00)")
         self.assertIn("Última verificação bem-sucedida", page.text("body"))
-        table = page.text("table", id="current-values")
-        for expected in ("Ocupados", "1.108", "92,7%", "Vagos", "87", "7,3%",
-                         "Total de cargos aprovados", "1.195"):
-            self.assertIn(expected, table)
-        pie = page.one("svg", id="current-pie")
-        self.assertEqual(pie["attrs"]["role"], "img")
-        self.assertIn("current-pie-description", pie["attrs"]["aria-labelledby"])
-        self.assertIn("Ocupados: 1.108 (92,7%)", pie["text"])
-        self.assertIn("Vagos: 87 (7,3%)", pie["text"])
-        # Two nonempty sectors, not a decorative chart unrelated to the data.
-        sectors = [node for node in page.matching("path")
-                   if pie in node["parents"] and "fill" in node["attrs"]]
-        self.assertEqual(len(sectors), 2)
-        self.assertNotEqual(sectors[0]["attrs"]["fill"], sectors[1]["attrs"]["fill"])
-        self.assertTrue(page.matching("pattern"), "Vacancy pattern provides a non-color cue")
+        self.assertEqual(page.text("h2", id="current-title"), "Cargos vagos")
+        self.assertEqual(page.text("dd", id="vacant-count"), "87")
+        self.assertEqual(page.text("dd", id="vacancy-rate"), "7,3%")
+        self.assertEqual([node["text"] for node in page.matching("dt")],
+                         ["Cargos vagos", "Taxa de vacância"])
+        table = page.one("table", id="current-values")
+        self.assertEqual([n["text"] for n in page.matching("td") if table in n["parents"]],
+                         ["1.108", "1.195"])
+        self.assertIn("Ocupados", table["text"])
+        self.assertIn("Total de cargos aprovados", table["text"])
+        self.assertFalse(page.matching("svg", id="current-pie"))
+        self.assertIn("aprovados em lei e não ocupados", page.text("body"))
         self.assertIn("não dados em tempo real", page.text("body"))
         self.assertIn("não representam vagas de concurso", page.text("body"))
         self.assertTrue(page.matching("a", href=SEPTEMBER_URL))
@@ -122,17 +124,33 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(json.loads((self.site / "data/history.json").read_text()),
                          json.loads((self.data / "history.json").read_text()))
 
-    def test_one_official_month_is_two_single_points_not_an_invented_trend(self):
+    def test_headline_rate_uses_same_month_approved_total_not_distributed_posts(self):
+        def different_distribution(table, header):
+            for index, row in enumerate(pf_classes(table, header)):
+                set_cell(row, header, "DISTRIBUIDA", 500 if index == 0 else 0)
+        publication = variant(different_distribution, monthly_resource("2025-06", 900, 100))
+        page = self.refresh(ControlledArchive({resource_url("2025-06"): publication}))
+        self.assertEqual(page.text("time", datetime="2025-06"), "junho de 2025")
+        self.assertEqual(page.text("dd", id="vacant-count"), "100")
+        self.assertEqual(page.text("dd", id="vacancy-rate"), "10,0%")
+        table = page.one("table", id="current-values")
+        self.assertEqual([n["text"] for n in page.matching("td") if table in n["parents"]],
+                         ["900", "1.000"])
+        self.assertEqual(json.loads((self.site / "data/history.json").read_text())[
+            "observations"][0]["distributed"], 500)
+
+    def test_one_official_month_is_a_vacancy_point_on_its_own_zero_based_count_axis(self):
         page = self.refresh()
         chart = page.one("svg", id="history-chart")
         self.assertEqual(chart["attrs"]["role"], "img")
         self.assertIn("history-description", chart["attrs"]["aria-labelledby"])
         self.assertIn("Mês de referência oficial", chart["text"])
-        self.assertIn("Cargos (quantidade)", chart["text"])
+        self.assertIn("Cargos vagos (quantidade)", chart["text"])
         self.assertIn("set/2026", chart["text"])
-        self.assertIn("Ocupados: 1.108 — setembro de 2026", chart["text"])
+        self.assertNotIn("Ocupados", chart["text"])
         self.assertIn("Vagos: 87 — setembro de 2026", chart["text"])
-        self.assertEqual(len([n for n in page.matching("circle") if chart in n["parents"]]), 1)
+        self.assertEqual(page.axis_labels(), ["0", "30", "60", "90", "120"])
+        self.assertFalse([n for n in page.matching("circle") if chart in n["parents"]])
         self.assertEqual(len([n for n in page.matching("rect") if chart in n["parents"]]), 1)
         self.assertFalse([n for n in page.matching("polyline") if chart in n["parents"]])
         self.assertIn("Apenas um mês disponível", page.text("body"))
@@ -143,7 +161,26 @@ class DashboardTests(unittest.TestCase):
         self.assertTrue(all(n["attrs"].get("scope") in ("col", "row")
                             for n in page.matching("th")))
 
-    def test_history_uses_monthly_axis_and_breaks_both_lines_at_missing_months(self):
+    def test_only_calendar_month_is_a_centered_zero_point_without_an_invented_line(self):
+        page = self.refresh(ControlledArchive({
+            resource_url("2025-06"): monthly_resource("2025-06", 1195, 0),
+        }))
+        self.assertEqual(page.text("dd", id="vacant-count"), "0")
+        self.assertEqual(page.text("dd", id="vacancy-rate"), "0,0%")
+        chart = page.one("svg", id="history-chart")
+        self.assertIn("Apenas um mês disponível", chart["text"])
+        points = [n for n in page.matching("rect") if chart in n["parents"]]
+        self.assertEqual(len(points), 1)
+        self.assertEqual(float(points[0]["attrs"]["x"]) + 4, 470)
+        self.assertEqual(float(points[0]["attrs"]["y"]) + 4, 270)
+        self.assertIn("Vagos: 0 — junho de 2025", points[0]["text"])
+        self.assertFalse([n for n in page.matching("polyline") if chart in n["parents"]])
+        self.assertNotIn("indisponível", chart["text"])
+        table = page.one("table", id="history-values")
+        self.assertEqual([n["text"] for n in page.matching("td") if table in n["parents"]],
+                         ["1.195", "0", "1.195", "Planilha oficial (ODS) — junho de 2025"])
+
+    def test_history_uses_monthly_axis_and_breaks_the_vacancy_line_at_missing_months(self):
         source = ControlledArchive({
             resource_url("2027-01"): monthly_resource("2027-01", 1130, 65),
             resource_url("2026-12"): monthly_resource("2026-12", 1120, 75),
@@ -164,20 +201,17 @@ class DashboardTests(unittest.TestCase):
             self.assertIn(label, row["text"])
         self.assertIn("Indisponível", rows[2]["text"])
         self.assertNotIn("0", rows[2]["text"].replace("novembro de 2026", ""))
-        circles = [n for n in page.matching("circle") if chart in n["parents"]]
         squares = [n for n in page.matching("rect") if chart in n["parents"]]
-        self.assertEqual(len(circles), 4)
         self.assertEqual(len(squares), 4)
         # Equal month spacing, including the missing November slot (not compressed away).
-        xs = [float(n["attrs"]["cx"]) for n in circles]
+        xs = [float(n["attrs"]["x"]) + 4 for n in squares]
         self.assertAlmostEqual(xs[1] - xs[0], xs[3] - xs[2])
         self.assertAlmostEqual(xs[2] - xs[1], 2 * (xs[1] - xs[0]))
-        for series in ("Ocupados", "Vagos"):
-            lines = [n for n in page.matching("polyline", **{"aria-label": series})
-                     if chart in n["parents"]]
-            self.assertEqual(len(lines), 2)
-            self.assertTrue(all(len(n["attrs"]["points"].split()) == 2 for n in lines))
-            self.assertEqual(bool(lines[0]["attrs"].get("stroke-dasharray")), series == "Vagos")
+        lines = [n for n in page.matching("polyline", **{"aria-label": "Vagos"})
+                 if chart in n["parents"]]
+        self.assertEqual(len(lines), 2)
+        self.assertTrue(all(len(n["attrs"]["points"].split()) == 2 for n in lines))
+        self.assertTrue(lines[0]["attrs"].get("stroke-dasharray"))
         for month in ("2026-09", "2026-10", "2026-12", "2027-01"):
             self.assertTrue(page.matching("a", href=resource_url(month)))
         history = json.loads((self.data / "history.json").read_text())
@@ -200,7 +234,6 @@ class DashboardTests(unittest.TestCase):
                          "14/11/2026 às 09:00 (Brasília, UTC−03:00)")
         self.assertEqual(page.text("time", datetime="2026-11"), "novembro de 2026")
         chart = page.one("svg", id="history-chart")
-        self.assertEqual(len([n for n in page.matching("circle") if chart in n["parents"]]), 2)
         self.assertEqual(len([n for n in page.matching("rect") if chart in n["parents"]]), 2)
         self.assertIn("outubro de 2026: indisponível", chart["text"])
         self.assertFalse([n for n in page.matching("polyline") if chart in n["parents"]])
@@ -220,8 +253,7 @@ class DashboardTests(unittest.TestCase):
             },
         }])
         self.assertEqual(page.text("time", datetime="2026-11"), "novembro de 2026")
-        self.assertIn("Ocupados: 1.109 — setembro de 2026",
-                      page.text("svg", id="history-chart"))
+        self.assertIn("1.109", page.text("table", id="history-values"))
         self.assertIn("Vagos: 86 — setembro de 2026", page.text("svg", id="history-chart"))
         self.assertNotIn("1.108", page.text("table", id="history-values"))
 
@@ -244,10 +276,10 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(page.text("time", datetime="2026-11-16T12:00:00Z"),
                          "16/11/2026 às 09:00 (Brasília, UTC−03:00)")
         current = page.text("table", id="current-values")
-        for value in ("1.130", "65", "1.195", "94,6%", "5,4%"):
+        for value in ("1.130", "1.195"):
             self.assertIn(value, current)
-        self.assertIn("Ocupados: 1.130 (94,6%)", page.text("svg", id="current-pie"))
-        self.assertIn("Vagos: 65 (5,4%)", page.text("svg", id="current-pie"))
+        self.assertEqual(page.text("dd", id="vacant-count"), "65")
+        self.assertEqual(page.text("dd", id="vacancy-rate"), "5,4%")
         chart = page.one("svg", id="history-chart")
         table = page.one("table", id="history-values")
         rows = [n for n in page.matching("tr") if table in n["parents"]][1:]
@@ -262,18 +294,16 @@ class DashboardTests(unittest.TestCase):
             cells = [n["text"] for n in page.nodes
                      if n["tag"] in ("th", "td") and rows[index] in n["parents"]]
             self.assertEqual(cells[:4], [label, occupied, vacant, "1.195"])
-            self.assertIn(f"Ocupados: {occupied} — {label}", chart["text"])
             self.assertIn(f"Vagos: {vacant} — {label}", chart["text"])
             self.assertTrue([n for n in page.matching("a", href=resource_url(month))
                              if rows[index] in n["parents"]])
         self.assertIn("dezembro de 2026", rows[3]["text"])
         self.assertIn("Indisponível", rows[3]["text"])
         self.assertIn("dezembro de 2026: indisponível", chart["text"])
-        for series in ("Ocupados", "Vagos"):
-            lines = [n for n in page.matching("polyline", **{"aria-label": series})
-                     if chart in n["parents"]]
-            self.assertEqual(len(lines), 1)
-            self.assertEqual(len(lines[0]["attrs"]["points"].split()), 3)
+        lines = [n for n in page.matching("polyline", **{"aria-label": "Vagos"})
+                 if chart in n["parents"]]
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(len(lines[0]["attrs"]["points"].split()), 3)
         self.assertEqual(json.loads((self.site / "data/history.json").read_text()), history)
         self.assertEqual((self.site / "data/status.json").read_bytes(),
                          (self.data / "status.json").read_bytes())
@@ -337,30 +367,27 @@ class DashboardTests(unittest.TestCase):
                      if n["tag"] in ("th", "td") and row in n["parents"]]
             occupied = f"{counts[3]:,}".replace(",", ".")
             self.assertEqual(cells[:4], [label, occupied, str(counts[4]), "1.195"])
-            self.assertIn(f"Ocupados: {occupied} — {label}", chart["text"])
             self.assertIn(f"Vagos: {counts[4]} — {label}", chart["text"])
             url = observation["source"]["url"]
             self.assertIn(url, resources, "Source casing must remain as actually published")
             self.assertTrue([n for n in page.matching("a", href=url) if row in n["parents"]])
             self.assertEqual(observation["source"]["sha256"], hashlib.sha256(resources[url]).hexdigest())
-        circles = [n for n in page.matching("circle") if chart in n["parents"]]
+        self.assertNotIn("Ocupados", chart["text"])
+        self.assertEqual(page.axis_labels(), ["0", "40", "80", "120", "160"])
         squares = [n for n in page.matching("rect") if chart in n["parents"]]
-        self.assertEqual((len(circles), len(squares)), (15, 15))
-        xs = [float(n["attrs"]["cx"]) for n in circles]
+        self.assertEqual(len(squares), 15)
+        xs = [float(n["attrs"]["x"]) + 4 for n in squares]
         self.assertAlmostEqual(xs[1] - xs[0], 2 * (xs[2] - xs[1]))
-        for series in ("Ocupados", "Vagos"):
-            lines = [n for n in page.matching("polyline", **{"aria-label": series})
-                     if chart in n["parents"]]
-            self.assertEqual(len(lines), 1)
-            vertices = [tuple(map(float, point.split(",")))
-                        for point in lines[0]["attrs"]["points"].split()]
-            markers = ([(float(n["attrs"]["cx"]), float(n["attrs"]["cy"])) for n in circles]
-                       if series == "Ocupados" else
-                       [(float(n["attrs"]["x"]) + 4, float(n["attrs"]["y"]) + 4) for n in squares])
-            self.assertEqual(len(vertices), 14, "The isolated June point must not connect across July")
-            for vertex, marker in zip(vertices, markers[1:]):
-                self.assertAlmostEqual(vertex[0], marker[0])
-                self.assertAlmostEqual(vertex[1], marker[1])
+        lines = [n for n in page.matching("polyline", **{"aria-label": "Vagos"})
+                 if chart in n["parents"]]
+        self.assertEqual(len(lines), 1)
+        vertices = [tuple(map(float, point.split(",")))
+                    for point in lines[0]["attrs"]["points"].split()]
+        markers = [(float(n["attrs"]["x"]) + 4, float(n["attrs"]["y"]) + 4) for n in squares]
+        self.assertEqual(len(vertices), 14, "The isolated June point must not connect across July")
+        for vertex, marker in zip(vertices, markers[1:]):
+            self.assertAlmostEqual(vertex[0], marker[0])
+            self.assertAlmostEqual(vertex[1], marker[1])
         before = (self.data / "history.json").read_bytes()
         self.refresh(ControlledArchive(resources), clock=lambda: CHECK_TIME + timedelta(days=2))
         self.assertEqual((self.data / "history.json").read_bytes(), before)
@@ -370,36 +397,58 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(json.loads((self.data / "status.json").read_text())[
             "last_successful_check"], "2026-11-15T12:00:00Z")
 
-    def test_zero_counts_and_zero_total_do_not_invent_proportions_or_sectors(self):
-        for occupied, vacant in ((0, 0), (1195, 0), (0, 1195)):
+    def test_all_zero_vacancy_history_keeps_a_legible_axis_and_distinguishes_the_gap(self):
+        page = self.refresh(ControlledArchive({
+            resource_url("2025-06"): monthly_resource("2025-06", 1195, 0),
+            resource_url("2025-08"): monthly_resource("2025-08", 1195, 0),
+            resource_url("2025-09"): monthly_resource("2025-09", 1195, 0),
+        }))
+        chart = page.one("svg", id="history-chart")
+        self.assertEqual(page.axis_labels(), ["0", "1", "2", "3", "4"])
+        points = [n for n in page.matching("rect") if chart in n["parents"]]
+        self.assertEqual(len(points), 3)
+        self.assertEqual([float(n["attrs"]["y"]) + 4 for n in points], [270, 270, 270])
+        lines = [n for n in page.matching("polyline") if chart in n["parents"]]
+        self.assertEqual(len(lines), 1)
+        vertices = [tuple(map(float, point.split(",")))
+                    for point in lines[0]["attrs"]["points"].split()]
+        self.assertEqual(len(vertices), 2, "June must stay isolated across the unavailable July slot")
+        for vertex, marker in zip(vertices, points[1:]):
+            self.assertAlmostEqual(vertex[0], float(marker["attrs"]["x"]) + 4)
+            self.assertEqual(vertex[1], 270)
+        table = page.one("table", id="history-values")
+        rows = [n for n in page.matching("tr") if table in n["parents"]][1:]
+        self.assertEqual(len(rows), 4)
+        self.assertIn("julho de 2025", rows[1]["text"])
+        self.assertIn("Indisponível", rows[1]["text"])
+        self.assertFalse([n for n in page.matching("td")
+                          if rows[1] in n["parents"] and n["text"].strip() == "0"])
+        self.assertEqual(page.text("dd", id="vacant-count"), "0")
+        self.assertEqual(page.text("dd", id="vacancy-rate"), "0,0%")
+
+    def test_zero_counts_and_zero_total_keep_true_zero_and_an_honest_headline_rate(self):
+        for occupied, vacant, rate in ((0, 0, "—"), (1195, 0, "0,0%"), (0, 1195, "100,0%")):
             with self.subTest(occupied=occupied, vacant=vacant):
                 content = monthly_resource("2026-09", occupied, vacant)
                 page = self.refresh(ControlledArchive({SEPTEMBER_URL: content}))
-                table = page.text("table", id="current-values")
-                self.assertIn("Ocupados", table)
-                self.assertIn("Vagos", table)
+                self.assertEqual(page.text("dd", id="vacant-count"), "1.195" if vacant else "0")
+                self.assertEqual(page.text("dd", id="vacancy-rate"), rate)
+                table = page.one("table", id="current-values")
+                self.assertIn("Ocupados", table["text"])
+                self.assertEqual([n["text"] for n in page.matching("td") if table in n["parents"]],
+                                 ["1.195" if occupied else "0", "1.195" if occupied or vacant else "0"])
+                self.assertFalse(page.matching("svg", id="current-pie"))
                 self.assertNotIn("nan", page.text("body").lower())
                 self.assertNotIn("infinity", page.text("body").lower())
                 if occupied + vacant == 0:
-                    self.assertIn("Proporção indisponível: total aprovado igual a zero", page.text("body"))
-                    self.assertFalse(page.matching("svg", id="current-pie"))
-                    self.assertNotIn("%", table)
-                    current_table = page.one("table", id="current-values")
-                    self.assertEqual([n["text"] for n in page.matching("td")
-                                      if current_table in n["parents"]],
-                                     ["0", "—", "0", "—", "0", "—"])
-                else:
-                    self.assertIn("0,0%", table)
-                    self.assertIn("100,0%", table)
-                    pie = page.one("svg", id="current-pie")
-                    disks = [n for n in page.matching("circle") if pie in n["parents"]]
-                    self.assertEqual(len(disks), 1, "A 100% category must be a complete disk")
-                    sectors = [n for n in page.matching("path")
-                               if pie in n["parents"] and "fill" in n["attrs"]]
-                    self.assertFalse(sectors, "Zero categories must not get a fake sector")
+                    self.assertIn("Taxa indisponível: total aprovado igual a zero", page.text("body"))
+                    self.assertNotIn("%", page.one("section", **{"aria-labelledby": "current-title"})["text"])
                 chart = page.one("svg", id="history-chart")
-                self.assertIn(f"Ocupados: {'1.195' if occupied else '0'} — setembro de 2026", chart["text"])
                 self.assertIn(f"Vagos: {'1.195' if vacant else '0'} — setembro de 2026", chart["text"])
+                if not vacant:
+                    point = [n for n in page.matching("rect") if chart in n["parents"]][0]
+                    self.assertEqual(float(point["attrs"]["y"]) + 4, 270)
+                    self.assertEqual(page.axis_labels(), ["0", "1", "2", "3", "4"])
 
     def test_empty_first_import_and_later_invalid_source_never_publish_fake_data(self):
         with self.assertRaisesRegex(ValueError, "eligible|observation"):
@@ -451,7 +500,9 @@ class DashboardTests(unittest.TestCase):
                 self.assertEqual(page.text("time", datetime="2026-09"), "setembro de 2026")
                 self.assertEqual(page.text("time", datetime="2026-11-13T12:00:00Z"),
                                  "13/11/2026 às 09:00 (Brasília, UTC−03:00)")
-                self.assertIn("Ocupados: 1.108 (92,7%)", page.text("svg", id="current-pie"))
+                self.assertIn("1.108", page.text("table", id="current-values"))
+                self.assertEqual(page.text("dd", id="vacant-count"), "87")
+                self.assertEqual(page.text("dd", id="vacancy-rate"), "7,3%")
                 self.assertIn("Vagos: 87 — setembro de 2026", page.text("svg", id="history-chart"))
 
         # Recovery uses the accepted history; no deletion or manual data repair.
@@ -460,7 +511,9 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(page.text("time", datetime="2026-10"), "outubro de 2026")
         self.assertEqual(page.text("time", datetime="2026-11-15T12:00:00Z"),
                          "15/11/2026 às 09:00 (Brasília, UTC−03:00)")
-        self.assertIn("Ocupados: 1.110 (92,9%)", page.text("svg", id="current-pie"))
+        self.assertIn("1.110", page.text("table", id="current-values"))
+        self.assertEqual(page.text("dd", id="vacant-count"), "85")
+        self.assertEqual(page.text("dd", id="vacancy-rate"), "7,1%")
         history = json.loads((self.site / "data/history.json").read_text())
         self.assertEqual([row["reference_month"] for row in history["observations"]],
                          [row["reference_month"] for row in accepted_history] + ["2026-10"])
@@ -489,7 +542,7 @@ class DashboardTests(unittest.TestCase):
         base = f"http://127.0.0.1:{server.server_port}/monitorar-vacancias-perito-pf/"
         with urlopen(base) as response:
             self.assertEqual(response.status, 200)
-            self.assertIn("current-pie", response.read().decode())
+            self.assertIn("vacant-count", response.read().decode())
         for node in page.nodes:
             for attr in ("href", "src"):
                 value = node["attrs"].get(attr)

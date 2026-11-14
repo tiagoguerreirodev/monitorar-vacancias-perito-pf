@@ -9,7 +9,8 @@
       "steps": [
         {"uses": "actions/checkout@v7", "with": {"persist-credentials": false}},
         {"uses": "actions/setup-python@v7", "with": {"python-version": "3.13"}},
-        {"name": "Run deterministic acceptance tests", "run": "python3 -m unittest discover -v"}
+        {"name": "Run deterministic acceptance tests", "run": "python3 -m unittest discover -v"},
+        {"name": "Check optional browser JavaScript syntax", "run": "node --check perito_dashboard/assets/inspection.js"}
       ]
     }
   }
