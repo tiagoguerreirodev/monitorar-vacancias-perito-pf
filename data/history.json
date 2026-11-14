@@ -2,6 +2,328 @@
   "schema_version": 1,
   "observations": [
     {
+      "reference_month": "2025-06",
+      "authorized": 1195,
+      "distributed": 1195,
+      "occupied": 1116,
+      "vacant": 79,
+      "organization": {
+        "code": 20115,
+        "name": "DEPARTAMENTO DE POLICIA FEDERAL",
+        "abbreviation": "DPF"
+      },
+      "class_codes": [
+        901004,
+        901005,
+        901006,
+        901011
+      ],
+      "source": {
+        "url": "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2025/CargosVagosVacancias_202506.ods",
+        "sha256": "c8dc2d8375b17a3963f4937e3588572a5ed5da27cf816b8b39bc55e54dd93035",
+        "retrieved_at": "2026-11-14T04:16:31.754541Z"
+      }
+    },
+    {
+      "reference_month": "2025-08",
+      "authorized": 1195,
+      "distributed": 1195,
+      "occupied": 1111,
+      "vacant": 84,
+      "organization": {
+        "code": 20115,
+        "name": "DEPARTAMENTO DE POLICIA FEDERAL",
+        "abbreviation": "DPF"
+      },
+      "class_codes": [
+        901004,
+        901005,
+        901006,
+        901011
+      ],
+      "source": {
+        "url": "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2025/cargosvagosvacancias_202508.ods",
+        "sha256": "ae2160baf26ca53743355bcf955a00b106800af243ad13d0be1024a4e99063d4",
+        "retrieved_at": "2026-11-14T04:16:31.754541Z"
+      }
+    },
+    {
+      "reference_month": "2025-09",
+      "authorized": 1195,
+      "distributed": 1195,
+      "occupied": 1108,
+      "vacant": 87,
+      "organization": {
+        "code": 20115,
+        "name": "DEPARTAMENTO DE POLICIA FEDERAL",
+        "abbreviation": "DPF"
+      },
+      "class_codes": [
+        901004,
+        901005,
+        901006,
+        901011
+      ],
+      "source": {
+        "url": "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2025/cargosvagosvacancias_202509.ods",
+        "sha256": "87514503b072ee4ec494250f24313e593fe4176915ce259a7409ed97ad8347ab",
+        "retrieved_at": "2026-11-14T04:16:31.754541Z"
+      }
+    },
+    {
+      "reference_month": "2025-10",
+      "authorized": 1195,
+      "distributed": 1195,
+      "occupied": 1102,
+      "vacant": 93,
+      "organization": {
+        "code": 20115,
+        "name": "DEPARTAMENTO DE POLICIA FEDERAL",
+        "abbreviation": "DPF"
+      },
+      "class_codes": [
+        901004,
+        901005,
+        901006,
+        901011
+      ],
+      "source": {
+        "url": "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2025/cargosvagosvacancias_202510.ods",
+        "sha256": "a228708ca3d45b2ae8245c4925d8dbca944d8ba1c9bc7e517aa0c857f7e7837d",
+        "retrieved_at": "2026-11-14T04:16:31.754541Z"
+      }
+    },
+    {
+      "reference_month": "2025-11",
+      "authorized": 1195,
+      "distributed": 1195,
+      "occupied": 1101,
+      "vacant": 94,
+      "organization": {
+        "code": 20115,
+        "name": "DEPARTAMENTO DE POLICIA FEDERAL",
+        "abbreviation": "DPF"
+      },
+      "class_codes": [
+        901004,
+        901005,
+        901006,
+        901011
+      ],
+      "source": {
+        "url": "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2025/CargosVagosVacancias_202511.ods",
+        "sha256": "25b88fa0c19f645ee656d4a78702a527dd749ec042e49de30945a91f1f3351e2",
+        "retrieved_at": "2026-11-14T04:16:31.754541Z"
+      }
+    },
+    {
+      "reference_month": "2025-12",
+      "authorized": 1195,
+      "distributed": 1195,
+      "occupied": 1096,
+      "vacant": 99,
+      "organization": {
+        "code": 20115,
+        "name": "DEPARTAMENTO DE POLICIA FEDERAL",
+        "abbreviation": "DPF"
+      },
+      "class_codes": [
+        901004,
+        901005,
+        901006,
+        901011
+      ],
+      "source": {
+        "url": "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2025/cargosvagosvacancias_202512.ods",
+        "sha256": "5b31bdf991aa730d67c9f5cbd12ea208bfa45bf862bfd2dd3906a0ea4cfd882a",
+        "retrieved_at": "2026-11-14T04:16:31.754541Z"
+      }
+    },
+    {
+      "reference_month": "2026-01",
+      "authorized": 1195,
+      "distributed": 1195,
+      "occupied": 1094,
+      "vacant": 101,
+      "organization": {
+        "code": 20115,
+        "name": "DEPARTAMENTO DE POLICIA FEDERAL",
+        "abbreviation": "DPF"
+      },
+      "class_codes": [
+        901004,
+        901005,
+        901006,
+        901011
+      ],
+      "source": {
+        "url": "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2026/CargosVagosVacancias_202601.ods",
+        "sha256": "1013e58a40c5ac9e39cb749ad811900058e6ef7e0421f12ee6f15e2ffcf8248c",
+        "retrieved_at": "2026-11-14T04:16:31.754541Z"
+      }
+    },
+    {
+      "reference_month": "2026-02",
+      "authorized": 1195,
+      "distributed": 1195,
+      "occupied": 1090,
+      "vacant": 105,
+      "organization": {
+        "code": 20115,
+        "name": "DEPARTAMENTO DE POLICIA FEDERAL",
+        "abbreviation": "DPF"
+      },
+      "class_codes": [
+        901004,
+        901005,
+        901006,
+        901011
+      ],
+      "source": {
+        "url": "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2026/CargosVagosVacancias_202602.ods",
+        "sha256": "768b4db2324215266c793749e4b138831fa0196d61dc34d828019950b3c3cd2b",
+        "retrieved_at": "2026-11-14T04:16:31.754541Z"
+      }
+    },
+    {
+      "reference_month": "2026-03",
+      "authorized": 1195,
+      "distributed": 1195,
+      "occupied": 1089,
+      "vacant": 106,
+      "organization": {
+        "code": 20115,
+        "name": "DEPARTAMENTO DE POLICIA FEDERAL",
+        "abbreviation": "DPF"
+      },
+      "class_codes": [
+        901004,
+        901005,
+        901006,
+        901011
+      ],
+      "source": {
+        "url": "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2026/CargosVagosVacancias_202603.ods",
+        "sha256": "d5b444a57d0e47347f40b990c245d6e5a8d3d6710bb4df74008322112fc581e1",
+        "retrieved_at": "2026-11-14T04:16:31.754541Z"
+      }
+    },
+    {
+      "reference_month": "2026-04",
+      "authorized": 1195,
+      "distributed": 1195,
+      "occupied": 1085,
+      "vacant": 110,
+      "organization": {
+        "code": 20115,
+        "name": "DEPARTAMENTO DE POLICIA FEDERAL",
+        "abbreviation": "DPF"
+      },
+      "class_codes": [
+        901004,
+        901005,
+        901006,
+        901011
+      ],
+      "source": {
+        "url": "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2026/CargosVagosVacancias_202604.ods",
+        "sha256": "9856df7d2c19e506887b113fb7989d0dbad7c968a48f33aa28f2b58cf5684990",
+        "retrieved_at": "2026-11-14T04:16:31.754541Z"
+      }
+    },
+    {
+      "reference_month": "2026-05",
+      "authorized": 1195,
+      "distributed": 1195,
+      "occupied": 1083,
+      "vacant": 112,
+      "organization": {
+        "code": 20115,
+        "name": "DEPARTAMENTO DE POLICIA FEDERAL",
+        "abbreviation": "DPF"
+      },
+      "class_codes": [
+        901004,
+        901005,
+        901006,
+        901011
+      ],
+      "source": {
+        "url": "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2026/CargosVagosVacancias_202605.ods",
+        "sha256": "bd8df5eb4eb059c6f3b836d31a01455d3c1b703b13e38253b8ffea2dd4c6a145",
+        "retrieved_at": "2026-11-14T04:16:31.754541Z"
+      }
+    },
+    {
+      "reference_month": "2026-06",
+      "authorized": 1195,
+      "distributed": 1195,
+      "occupied": 1083,
+      "vacant": 112,
+      "organization": {
+        "code": 20115,
+        "name": "DEPARTAMENTO DE POLICIA FEDERAL",
+        "abbreviation": "DPF"
+      },
+      "class_codes": [
+        901004,
+        901005,
+        901006,
+        901011
+      ],
+      "source": {
+        "url": "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2026/CargosVagosVacancias_202606.ods",
+        "sha256": "7742913d4a7a8de6f20c9f6898ff5b908acff4d4cab773ae8713507e4bb06abd",
+        "retrieved_at": "2026-11-14T04:16:31.754541Z"
+      }
+    },
+    {
+      "reference_month": "2026-07",
+      "authorized": 1195,
+      "distributed": 1195,
+      "occupied": 1074,
+      "vacant": 121,
+      "organization": {
+        "code": 20115,
+        "name": "DEPARTAMENTO DE POLICIA FEDERAL",
+        "abbreviation": "DPF"
+      },
+      "class_codes": [
+        901004,
+        901005,
+        901006,
+        901011
+      ],
+      "source": {
+        "url": "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2026/CargosVagosVacancias_202607.ods",
+        "sha256": "ca4527d13ed18e262f623a080bdf3389ef13350ae3a3432b7ddaa0b2309fa446",
+        "retrieved_at": "2026-11-14T04:16:31.754541Z"
+      }
+    },
+    {
+      "reference_month": "2026-08",
+      "authorized": 1195,
+      "distributed": 1195,
+      "occupied": 1067,
+      "vacant": 128,
+      "organization": {
+        "code": 20115,
+        "name": "DEPARTAMENTO DE POLICIA FEDERAL",
+        "abbreviation": "DPF"
+      },
+      "class_codes": [
+        901004,
+        901005,
+        901006,
+        901011
+      ],
+      "source": {
+        "url": "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2026/CargosVagosVacancias_202608.ods",
+        "sha256": "b7dccdbc6db7875ed65da5343f96dda8a1c1ecce55d16039c50ddf4179830222",
+        "retrieved_at": "2026-11-14T04:16:31.754541Z"
+      }
+    },
+    {
       "reference_month": "2026-09",
       "authorized": 1195,
       "distributed": 1195,
