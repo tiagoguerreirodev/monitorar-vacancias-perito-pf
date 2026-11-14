@@ -80,6 +80,13 @@ class DashboardTests(unittest.TestCase):
                           source=source if source is not None else ControlledArchive(), clock=clock)
         return Page((self.site / "index.html").read_text(encoding="utf-8"))
 
+    def _after_leading_unavailable_gap(self, rows):
+        self.assertEqual(len(rows), 20)
+        self.assertIn("junho de 2025", rows[0]["text"])
+        self.assertIn("agosto de 2026", rows[14]["text"])
+        self.assertTrue(all("Indisponível" in row["text"] for row in rows[:15]))
+        return rows[15:]
+
     def test_current_pie_explains_official_counts_proportions_and_dates(self):
         page = self.refresh()
         self.assertEqual(page.one("html")["attrs"]["lang"], "pt-BR")
@@ -150,11 +157,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("novembro de 2026: indisponível", chart["text"])
         table = page.one("table", id="history-values")
         rows = [n for n in page.matching("tr") if table in n["parents"]][1:]
-        self.assertEqual(len(rows), 20)
-        self.assertIn("junho de 2025", rows[0]["text"])
-        self.assertIn("agosto de 2026", rows[14]["text"])
-        self.assertTrue(all("Indisponível" in row["text"] for row in rows[:15]))
-        rows = rows[15:]
+        rows = self._after_leading_unavailable_gap(rows)
         self.assertEqual(len(rows), 5)
         for row, label in zip(rows, ("setembro de 2026", "outubro de 2026", "novembro de 2026",
                                      "dezembro de 2026", "janeiro de 2027")):
@@ -248,11 +251,7 @@ class DashboardTests(unittest.TestCase):
         chart = page.one("svg", id="history-chart")
         table = page.one("table", id="history-values")
         rows = [n for n in page.matching("tr") if table in n["parents"]][1:]
-        self.assertEqual(len(rows), 20)
-        self.assertIn("junho de 2025", rows[0]["text"])
-        self.assertIn("agosto de 2026", rows[14]["text"])
-        self.assertTrue(all("Indisponível" in row["text"] for row in rows[:15]))
-        rows = rows[15:]
+        rows = self._after_leading_unavailable_gap(rows)
         self.assertEqual(len(rows), 5)
         for index, month, label, occupied, vacant in (
             (0, "2026-09", "setembro de 2026", "1.109", "86"),
