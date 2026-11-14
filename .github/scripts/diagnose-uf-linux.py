@@ -11,8 +11,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from perito_dashboard.runtime import MANIFEST, ensure_runtime  # noqa: E402
-from perito_dashboard._shared import file_digest as digest  # noqa: E402
+from perito_dashboard.runtime import MANIFEST, ensure_runtime, file_digest as digest  # noqa: E402
 
 HELPER = Path(__file__).with_name('uf-linux-startup.mjs')
 
