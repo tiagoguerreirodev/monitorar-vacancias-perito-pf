@@ -29,12 +29,26 @@ const fatalLiterals = [
   ['setuid_sandbox_host.cc', 'The SUID sandbox helper binary is missing:', 'suid_missing'],
   ['zygote_host_impl_linux.cc', 'No usable sandbox!', 'no_usable_sandbox'],
 ];
+// Chromium 4b3d0dabb8250b6f152d2d85d79e7706e309d087 singleton literals.
+const profileFatals = [
+  ['socket() failed', 'profile_socket_create', [297]],
+  ['Socket path too long: ', 'profile_socket_path_length', [314, 315]],
+  ['Temp directory mode is not 700: ', 'profile_socket_dir_check', [1052, 1053, 1054]],
+  ['listen failed: ', 'profile_listen', [1088, 1089]],
+  ['The other process returned unknown message: ', 'profile_peer_reply', [936, 937]],
+];
 function fatalClasses(stderr) {
-  const matches = [...stderr.matchAll(/\bFATAL:(?:[A-Za-z0-9_.-]+\/)*([A-Za-z0-9_.-]+\.cc)(?::[0-9]+|\([0-9]+\))\]([^\r\n]*)/g)];
+  const matches = [...stderr.matchAll(/\bFATAL:(?:[A-Za-z0-9_.-]+\/)*([A-Za-z0-9_.-]+\.cc)(?::([0-9]+)|\(([0-9]+)\))\]([^\r\n]*)/g)]
+    .map(match => ({site: match[1], line: Number(match[2] ?? match[3]), message: match[4]}));
+  const profiles = matches.filter(match => match.site === 'process_singleton_posix.cc');
   return [
-    ...fatalSites.filter(([site]) => matches.some(match => match[1] === site)).map(([, label]) => label),
-    ...fatalLiterals.filter(([site, literal]) => matches.some(match => match[1] === site && match[2].includes(literal)))
+    ...fatalSites.filter(([site]) => matches.some(match => match.site === site)).map(([, label]) => label),
+    ...fatalLiterals.filter(([site, literal]) => matches.some(match => match.site === site && match.message.includes(literal)))
       .map(([, , label]) => label),
+    ...profileFatals.filter(([literal, , lines]) => profiles.some(match =>
+      match.message.includes(literal) ||
+      (!profileFatals.some(([known]) => match.message.includes(known)) && lines.includes(match.line))))
+      .map(([, label]) => label),
   ];
 }
 function groupAlive(pid) {
