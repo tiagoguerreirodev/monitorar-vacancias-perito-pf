@@ -196,19 +196,45 @@ gh api "repos/$R/environments/github-pages/deployment-branch-policies" \
   --jq '.branch_policies | map({name,type})'
 ```
 
-## Aceitação real pendente (#6)
+## Aceitação inicial de Pages (#6 e #1)
 
-Os testes locais validam refresh/build integrado, equivalência dos gráficos e
-tabelas após rechecks/correção/backfill, preservação e recuperação de falhas,
-contrato de workflow, Git real em repos temporários e a guarda de revisão com
-respostas GitHub controladas. Coleta oficial e browser local sob o subcaminho
-não comprovam Actions/Pages live. Após integração e duas revisões finais frescas,
-cabe somente ao coordenador executar o manual confiável e verificar:
+Publicação real confirmada em **14/11/2026 (UTC)**, não apenas configuração de Pages:
+
+- [Run de Pages 43535722958](https://github.com/tiagoguerreirodev/monitorar-vacancias-perito-pf/actions/runs/43535722958)
+  com refresh e deploy bem-sucedidos; deployment **7779964992**, estado `success`,
+  no ambiente `github-pages`.
+- `build.json`: código [4378cce](https://github.com/tiagoguerreirodev/monitorar-vacancias-perito-pf/commit/4378cceeb87affd4e16052ed06ab99b460f765e5),
+  dados [244b746](https://github.com/tiagoguerreirodev/monitorar-vacancias-perito-pf/commit/244b746c2caef62c2e85fb942d99499ce505550a).
+  Os cinco arquivos públicos (`index.html`, `assets/dashboard.css`,
+  `data/history.json`, `data/status.json` e `build.json`) retornaram HTTP 200 em
+  https://tiagoguerreirodev.github.io/monitorar-vacancias-perito-pf/ e eram
+  idênticos, byte a byte, ao artefato desse run.
+- Browser live desktop/mobile: gráficos e tabelas conferidos com setembro de
+  2026 (1.195 aprovados, 1.108 ocupados e 87 vagos), proveniência e última
+  verificação distintas, ativos locais e sem overflow da página a 320 px;
+  regiões roláveis com `tabindex="0"`. Não se afirma validação do anel de foco
+  nativo nem certificação WCAG.
+- Timeout e recurso malformado foram simulados **em cópias do artefato aceito**:
+  todos os bytes e a última verificação foram preservados; os bytes HTTP live
+  permaneceram iguais. **Não foi induzida falha real nem indisponibilidade em
+  produção**; isso não comprova recuperação de uma falha real de Actions/Pages.
+- [Validate pós-publicação 43536197860](https://github.com/tiagoguerreirodev/monitorar-vacancias-perito-pf/actions/runs/43536197860):
+  **44 testes** bem-sucedidos no runner hospedado.
+
+## Checklist para futuras publicações
+
+A suíte determinística cobre refresh/build, gráficos/tabelas, histórico,
+preservação/recuperação, contrato de workflow e guardas de Git com respostas
+controladas. Testes locais ou browser local não substituem a verificação live.
+A cada publicação, o mantenedor deve conferir:
 
 - Actions verde, commit restrito aos JSON, artefato e deployment do mesmo run.
-- URL pública, `build.json`, dados/ativos locais e navegação sob o subcaminho.
-- Valores/timestamps/proveniência e painel acessível, inclusive mobile.
-- Falha posterior de coleta controlada sem substituir site/dados live anteriores.
+- URL pública, `build.json` e correspondência dos dados/ativos com o artefato,
+  inclusive navegação sob o subcaminho.
+- Valores/timestamps/proveniência e painel acessível, inclusive mobile/teclado.
+- Em testes de falha controlada, usar cópias isoladas dos dados/site aceitos e
+  conferir a preservação dos bytes e da última verificação, sem provocar outage
+  em produção nem confundir simulação com falha real.
 - Permissões/ambiente e recusa de publicação de refs não confiáveis.
 
 Referências oficiais: [cron/timezone](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onschedule),
