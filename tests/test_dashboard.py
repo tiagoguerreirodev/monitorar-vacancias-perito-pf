@@ -1,6 +1,8 @@
 """Dashboard acceptance through the complete refresh/build operation."""
+from copy import deepcopy
 from datetime import timedelta
 from functools import partial
+import hashlib
 from html.parser import HTMLParser
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -13,7 +15,7 @@ from urllib.request import urlopen
 
 from perito_dashboard import refresh_and_build
 from tests.sources import (
-    ARCHIVE_URL, CHECK_TIME, ControlledArchive, SEPTEMBER, SEPTEMBER_URL, TABLE,
+    ARCHIVE_URL, CHECK_TIME, ControlledArchive, SEPTEMBER, SEPTEMBER_URL, ScriptedArchive, TABLE,
     pf_classes, set_cell, variant,
 )
 
@@ -180,6 +182,100 @@ class DashboardTests(unittest.TestCase):
         history = json.loads((self.data / "history.json").read_text())
         self.assertEqual(len(history["observations"]), 4)
 
+    def test_reconciled_history_and_dashboard_agree_after_rechecks_correction_and_backfill(self):
+        november_url = resource_url("2026-11")
+        november = monthly_resource("2026-11", 1120, 75)
+        resources = {november_url: november, SEPTEMBER_URL: SEPTEMBER}
+        self.refresh(ControlledArchive(resources))
+        original = json.loads((self.data / "history.json").read_text())
+        original_bytes = (self.data / "history.json").read_bytes()
+        september = deepcopy(original["observations"][0])
+
+        # An unchanged check advances operational metadata, not provenance or points.
+        page = self.refresh(ControlledArchive(resources),
+                            clock=lambda: CHECK_TIME + timedelta(days=1))
+        self.assertEqual((self.data / "history.json").read_bytes(), original_bytes)
+        self.assertEqual(page.text("time", datetime="2026-11-14T12:00:00Z"),
+                         "14/11/2026 às 09:00 (Brasília, UTC−03:00)")
+        self.assertEqual(page.text("time", datetime="2026-11"), "novembro de 2026")
+        chart = page.one("svg", id="history-chart")
+        self.assertEqual(len([n for n in page.matching("circle") if chart in n["parents"]]), 2)
+        self.assertEqual(len([n for n in page.matching("rect") if chart in n["parents"]]), 2)
+        self.assertIn("outubro de 2026: indisponível", chart["text"])
+        self.assertFalse([n for n in page.matching("polyline") if chart in n["parents"]])
+
+        # A canonical correction replaces September once, without moving current back.
+        corrected = monthly_resource("2026-09", 1109, 86)
+        resources[SEPTEMBER_URL] = corrected
+        page = self.refresh(ControlledArchive(resources),
+                            clock=lambda: CHECK_TIME + timedelta(days=2))
+        history = json.loads((self.data / "history.json").read_text())
+        self.assertEqual(len(history["observations"]), 2)
+        self.assertEqual(history["corrections"], [{
+            "superseded": september,
+            "replacement_source": {
+                "url": SEPTEMBER_URL, "sha256": hashlib.sha256(corrected).hexdigest(),
+                "retrieved_at": "2026-11-15T12:00:00Z",
+            },
+        }])
+        self.assertEqual(page.text("time", datetime="2026-11"), "novembro de 2026")
+        self.assertIn("Ocupados: 1.109 — setembro de 2026",
+                      page.text("svg", id="history-chart"))
+        self.assertIn("Vagos: 86 — setembro de 2026", page.text("svg", id="history-chart"))
+        self.assertNotIn("1.108", page.text("table", id="history-values"))
+
+        # Later discovery backfills October, retains missing November and crosses years.
+        resources = {
+            resource_url("2027-01"): monthly_resource("2027-01", 1130, 65),
+            resource_url("2026-10"): monthly_resource("2026-10", 1110, 85),
+            SEPTEMBER_URL: corrected,
+        }
+        page = self.refresh(ControlledArchive(resources),
+                            clock=lambda: CHECK_TIME + timedelta(days=3))
+        history = json.loads((self.data / "history.json").read_text())
+        self.assertEqual([row["reference_month"] for row in history["observations"]],
+                         ["2026-09", "2026-10", "2026-11", "2027-01"])
+        self.assertEqual(history["observations"][2], original["observations"][1])
+        self.assertEqual(len(history["corrections"]), 1, "Unchanged correction is not audited twice")
+        self.assertEqual(history["observations"][0]["source"]["retrieved_at"],
+                         "2026-11-15T12:00:00Z")
+        self.assertEqual(page.text("time", datetime="2027-01"), "janeiro de 2027")
+        self.assertEqual(page.text("time", datetime="2026-11-16T12:00:00Z"),
+                         "16/11/2026 às 09:00 (Brasília, UTC−03:00)")
+        current = page.text("table", id="current-values")
+        for value in ("1.130", "65", "1.195", "94,6%", "5,4%"):
+            self.assertIn(value, current)
+        self.assertIn("Ocupados: 1.130 (94,6%)", page.text("svg", id="current-pie"))
+        self.assertIn("Vagos: 65 (5,4%)", page.text("svg", id="current-pie"))
+        chart = page.one("svg", id="history-chart")
+        table = page.one("table", id="history-values")
+        rows = [n for n in page.matching("tr") if table in n["parents"]][1:]
+        self.assertEqual(len(rows), 5)
+        for index, month, label, occupied, vacant in (
+            (0, "2026-09", "setembro de 2026", "1.109", "86"),
+            (1, "2026-10", "outubro de 2026", "1.110", "85"),
+            (2, "2026-11", "novembro de 2026", "1.120", "75"),
+            (4, "2027-01", "janeiro de 2027", "1.130", "65"),
+        ):
+            cells = [n["text"] for n in page.nodes
+                     if n["tag"] in ("th", "td") and rows[index] in n["parents"]]
+            self.assertEqual(cells[:4], [label, occupied, vacant, "1.195"])
+            self.assertIn(f"Ocupados: {occupied} — {label}", chart["text"])
+            self.assertIn(f"Vagos: {vacant} — {label}", chart["text"])
+            self.assertTrue([n for n in page.matching("a", href=resource_url(month))
+                             if rows[index] in n["parents"]])
+        self.assertIn("dezembro de 2026", rows[3]["text"])
+        self.assertIn("Indisponível", rows[3]["text"])
+        self.assertIn("dezembro de 2026: indisponível", chart["text"])
+        for series in ("Ocupados", "Vagos"):
+            lines = [n for n in page.matching("polyline", **{"aria-label": series})
+                     if chart in n["parents"]]
+            self.assertEqual(len(lines), 1)
+            self.assertEqual(len(lines[0]["attrs"]["points"].split()), 3)
+        self.assertEqual(json.loads((self.site / "data/history.json").read_text()), history)
+        self.assertEqual((self.site / "data/status.json").read_bytes(),
+                         (self.data / "status.json").read_bytes())
+
     def test_zero_counts_and_zero_total_do_not_invent_proportions_or_sectors(self):
         for occupied, vacant in ((0, 0), (1195, 0), (0, 1195)):
             with self.subTest(occupied=occupied, vacant=vacant):
@@ -229,6 +325,52 @@ class DashboardTests(unittest.TestCase):
         page = Page((self.site / "index.html").read_text())
         self.assertEqual(page.text("time", datetime="2026-09"), "setembro de 2026")
         self.assertIn("13/11/2026", page.text("time", datetime="2026-11-13T12:00:00Z"))
+
+    def test_failed_incremental_candidate_preserves_dashboard_and_can_be_retried(self):
+        self.refresh()
+        before = {path.relative_to(self.root): path.read_bytes()
+                  for path in self.root.rglob("*") if path.is_file()}
+        october_url = resource_url("2026-10")
+        october = monthly_resource("2026-10", 1110, 85)
+        corrected = monthly_resource("2026-09", 1109, 86)
+        resources = {SEPTEMBER_URL: corrected, october_url: october}
+        scenarios = (
+            (ScriptedArchive({october_url: [TimeoutError("controlled outage")] * 3}, resources),
+             "after 3 attempt"),
+            (ControlledArchive({SEPTEMBER_URL: corrected, october_url: b"truncated ODS"}),
+             "Invalid spreadsheet"),
+        )
+        for source, diagnostic in scenarios:
+            with self.subTest(diagnostic=diagnostic):
+                # September is valid but changed: no partial correction may leak out
+                # when a subsequent resource fails download or validation.
+                with self.assertRaisesRegex(ValueError, diagnostic) as failure:
+                    self.refresh(source, clock=lambda: CHECK_TIME + timedelta(days=1))
+                self.assertIn(october_url, str(failure.exception))
+                after = {path.relative_to(self.root): path.read_bytes()
+                         for path in self.root.rglob("*") if path.is_file()}
+                self.assertEqual(after, before)
+                page = Page((self.site / "index.html").read_text())
+                self.assertEqual(page.text("time", datetime="2026-09"), "setembro de 2026")
+                self.assertEqual(page.text("time", datetime="2026-11-13T12:00:00Z"),
+                                 "13/11/2026 às 09:00 (Brasília, UTC−03:00)")
+                self.assertIn("Ocupados: 1.108 (92,7%)", page.text("svg", id="current-pie"))
+                self.assertIn("Vagos: 87 — setembro de 2026", page.text("svg", id="history-chart"))
+
+        # Recovery uses the accepted history; no deletion or manual data repair.
+        page = self.refresh(ControlledArchive(resources),
+                            clock=lambda: CHECK_TIME + timedelta(days=2))
+        self.assertEqual(page.text("time", datetime="2026-10"), "outubro de 2026")
+        self.assertEqual(page.text("time", datetime="2026-11-15T12:00:00Z"),
+                         "15/11/2026 às 09:00 (Brasília, UTC−03:00)")
+        self.assertIn("Ocupados: 1.110 (92,9%)", page.text("svg", id="current-pie"))
+        history = json.loads((self.site / "data/history.json").read_text())
+        self.assertEqual([row["reference_month"] for row in history["observations"]],
+                         ["2026-09", "2026-10"])
+        self.assertEqual(len(history["corrections"]), 1)
+        self.assertEqual(history["corrections"][0]["superseded"]["occupied"], 1108)
+        self.assertEqual((self.site / "data/history.json").read_bytes(),
+                         (self.data / "history.json").read_bytes())
 
     def test_complete_artifact_serves_local_assets_and_data_under_repository_subpath(self):
         self.site = self.root / "www" / "monitorar-vacancias-perito-pf"

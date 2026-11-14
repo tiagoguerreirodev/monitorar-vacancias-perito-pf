@@ -22,7 +22,19 @@ valida o recorte PF/PCF e constrói um candidato completo. Exit 0 significa
 construção/promoção local bem-sucedida, **não** publicação. Exit 1 inclui diagnóstico
 em stderr. O CLI não grava no Git. `site/` contém HTML, dados locais e ativos do
 renderer; funciona sob o subcaminho do repositório, sem acesso do navegador à
-fonte oficial. Não executar duas atualizações locais nos mesmos diretórios.
+fonte oficial. Inclui pizza e histórico SVG com descrições, tabelas equivalentes,
+pistas além da cor e regiões roláveis por teclado em telas pequenas. Um mês gera
+pontos isolados; meses ausentes interrompem as linhas, sem fabricar zeros.
+
+Para conferir o mesmo artefato sob o subcaminho, sem publicar:
+
+```sh
+PREVIEW=$(mktemp -d)
+mkdir -p "$PREVIEW/monitorar-vacancias-perito-pf"
+cp -R site/. "$PREVIEW/monitorar-vacancias-perito-pf/"
+python3 -m http.server --bind 127.0.0.1 --directory "$PREVIEW" 8000
+# Abrir http://127.0.0.1:8000/monitorar-vacancias-perito-pf/
+```
 
 ## Confiança, persistência e publicação
 
@@ -75,12 +87,20 @@ verificação bem-sucedida, não a data de referência dos cargos. Somente meses
 partir de **2026-09**, inclusive; lacunas ficam indisponíveis, nunca interpoladas.
 Não há registros individuais nem números de vagas anunciadas em concurso.
 
-A política de #1/#4 exige retenção do histórico aceito, uma observação por mês,
-verificação inalterada atualizando apenas o status, correção canônica preservando
-valores/proveniência supersedidos e recusa de recursos conflitantes sem ordenação
-autoritativa. **#4 ainda está em implementação nesta base**: o tracer atual
-reconstrói observações a partir da descoberta e renova timestamps. Esta automação
-persiste o resultado do CLI, mas seus testes não demonstram que #4 está concluído.
+A reconciliação de #4 está implementada: retém observações aceitas mesmo se os
+recursos sumirem da listagem, mantém uma observação por mês e insere backfills e
+novos anos em ordem cronológica. O maior mês aceito é a referência atual, não o
+último download. Bytes inalterados preservam os valores e o instante original de
+coleta; apenas a última verificação bem-sucedida avança.
+
+Bytes diferentes no **mesmo URL canônico** são uma correção, mesmo com totais
+iguais. `history.json` mantém a nova observação e acrescenta em `corrections` a
+observação completa `superseded` e a `replacement_source` (URL, SHA-256 e instante
+da substituição). Repetir os mesmos bytes não duplica esse registro. Um arquivo
+alternativo para o mesmo mês (por exemplo `_v2.ods`), mês/ano mal localizado ou
+dado salvo inválido causa falha; não se escolhe automaticamente entre recursos
+concorrentes. Não se promete descobrir versões intermediárias nunca observadas.
+
 Não editar totais manualmente para balancear uma fonte divergente; revisar a
 mudança oficial e o coletor, manter a versão anterior e testar antes de tentar de
 novo. O histórico versionado no Git também permite inspecionar alterações:
@@ -93,11 +113,31 @@ git log -p -- data/history.json data/status.json
 
 Coleta/validação/build com falha não chega ao passo de commit/upload/deploy.
 O candidato completo é construído antes da promoção local; erros de fonte mantêm
-os agregados e a última verificação anteriores. Na base atual há timeout de
-**30 segundos por requisição**; retries limitados e demais cenários adversariais
-são parte de #4. Actions limita refresh a **30 minutos** e deploy a **10 minutos**.
-Não se garante atomicidade contra crash do processo/filesystem ou entre os dois
-diretórios de saída.
+os agregados, o site e a última verificação anteriores, mesmo se um recurso válido
+já tiver sido processado antes de outro falhar. Há timeout configurado de
+**30 segundos por tentativa** e **até três tentativas por requisição** de índice
+ou planilha, com esperas de **0,1 e 0,2 segundos**. São retentados timeout, erro de
+conexão/URL, leitura incompleta, HTTP 429 e HTTP 5xx. Outros HTTP (por exemplo 404)
+e erros de formato/validação falham sem retry. Não é um prazo total de execução:
+há múltiplos recursos e o timeout de I/O não limita todo o run. Actions limita
+refresh a **30 minutos** e deploy a **10 minutos**.
+
+Cada execução mantém locks **consultivos POSIX**, não bloqueantes, por caminho de
+saída resolvido. Compartilhar qualquer um dos dois caminhos com outro escritor
+cooperante causa erro imediato `Concurrent refresh`, inclusive em outro processo.
+Os arquivos de lock ficam no diretório temporário do sistema, em
+`perito-dashboard-<uid>/<sha256-do-caminho>.lock`; **não os apagar** para destravar
+(um inode diferente permitiria dois locks). O processo libera o lock ao sair.
+Isso não é um lock de Git, de outro host nem de caminhos diferentes/ancestrais;
+não impede editores que ignorem o protocolo. O runtime depende de `fcntl`/POSIX.
+
+Uma assinatura dos conteúdos detecta mudanças nas saídas durante coleta/build,
+antes da promoção. Relógio sem fuso ou anterior ao último check também é recusado.
+Isso não é compare-and-swap: existe uma janela entre a última checagem e a troca
+de diretórios. A promoção tenta reverter erros ordinários de I/O, mas não garante
+atomicidade contra crash do processo/filesystem ou entre os dois diretórios, nem
+impede um leitor de observar a troca entre eles. Serialização de Actions não
+transforma filesystem, Git e Pages em uma transação única.
 
 Se commit/push falhar, o run falha e não publica o candidato. Se upload/deploy
 falhar **depois** de um commit aceito, os dados podem estar adiante do site live:
@@ -158,10 +198,12 @@ gh api "repos/$R/environments/github-pages/deployment-branch-policies" \
 
 ## Aceitação real pendente (#6)
 
-Os testes locais validam contrato de workflow, Git real em repos temporários e
-a guarda de revisão com respostas GitHub controladas. Não simulam uma implantação
-bem-sucedida como prova de que Pages está live. Após integração/revisão, cabe ao
-coordenador executar o manual confiável e verificar:
+Os testes locais validam refresh/build integrado, equivalência dos gráficos e
+tabelas após rechecks/correção/backfill, preservação e recuperação de falhas,
+contrato de workflow, Git real em repos temporários e a guarda de revisão com
+respostas GitHub controladas. Coleta oficial e browser local sob o subcaminho
+não comprovam Actions/Pages live. Após integração e duas revisões finais frescas,
+cabe somente ao coordenador executar o manual confiável e verificar:
 
 - Actions verde, commit restrito aos JSON, artefato e deployment do mesmo run.
 - URL pública, `build.json`, dados/ativos locais e navegação sob o subcaminho.
