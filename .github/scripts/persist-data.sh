@@ -26,7 +26,13 @@ if [[ "$(git rev-parse FETCH_HEAD)" != "$EXPECTED_REVISION" ]]; then
   exit 1
 fi
 
-git add -- data/history.json data/status.json
+# First-run partial acceptance may legitimately have only one feed's pair.
+# Never stage the data directory, glob matches, source documents or proof files.
+for path in data/history.json data/status.json data/uf.json data/uf-status.json; do
+  if [[ -e "$path" ]] || git ls-files --error-unmatch "$path" >/dev/null 2>&1; then
+    git add -- "$path"
+  fi
+done
 if ! git diff --cached --quiet; then
   git -c user.name='github-actions[bot]' \
       -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \

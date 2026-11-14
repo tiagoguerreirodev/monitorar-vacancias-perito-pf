@@ -169,9 +169,14 @@ and independent literal assertions in `tests/fixtures/uf/README.md`, `tests/test
 
 Implementation resources (ordinary code; no harness runtime):
 
-- `perito_dashboard/_collector.py`: discovers executables, owns one process group
-  and absolute temporary run, bounded controller, new GUID-named download only,
-  completion/size check and mandatory cleanup receipt, kill-survivors finally.
+- `perito_dashboard/_collector.py`: every live call obtains two sequential fresh
+  exports, each with its own process group and absolute temporary run, bounded
+  controller, new GUID-named download, size check and mandatory cleanup. Both
+  exports pass the same central parser, agree on period/semantic identity, have
+  different GUIDs and non-overlapping sessions. No qualification/single-run flag.
+- `perito_dashboard/runtime.py` and `collector/runtime.json`: checksum/version
+  verified private Linux Node/Chrome installation, inside the UF candidate.
+  Setup failure cannot suppress healthy national advancement.
 - `perito_dashboard/collector/browser-probe.mjs`: isolated clean Chrome profile,
   dynamic loopback DevTools/control ports, random authenticated loopback control,
   ordinary anonymous frontend bootstrap, trace, denial stop, bounded cleanup.
@@ -185,8 +190,9 @@ Implementation resources (ordinary code; no harness runtime):
 `PERITO_NODE` and `PERITO_CHROME` optionally select explicit executable paths
 (including paths with spaces); otherwise system discovery uses `node` and common
 Chrome/Chromium names, including macOS Chrome. Node needs built-in WebSocket,
-fetch and AbortSignal timeout; use a modern Node (22+). #15 must choose/pin/test
-its runtime rather than assuming CI discovery succeeds. Resources are read only
+fetch and AbortSignal timeout; use a modern Node (22+). Trusted workflows use
+`PERITO_RUNTIME_ROOT` with the [exact runtime lock](uf-runtime.md), not CI browser
+discovery. Actual Ubuntu acquisition remains pending. Resources are read only
 in place. Outputs/profile/download/logs are in a fresh owned temporary directory;
 no existing browser/tab/profile or private session is attached/reused.
 No runtime qualification flag, cookie injection, Gov outreach, alternate network,
@@ -195,7 +201,8 @@ HTTP 401/403/429, denied WebSocket/Qlik or authentication/CAPTCHA/UI denial stop
 collection. The overall controller and browser each have a 180-second bound.
 Cleanup closes/kills only owned processes and removes only the owned profile/run.
 
-`UFExport.evidence` has three top-level keys:
+`UFExport.evidence` has three required top-level keys (the live adapter also
+returns cleanup receipts and browser version for the read-only proof):
 
 - `snapshot`: final public frontend result: `entry` (`...index.html#fvm`), `appId`,
   `table`, `latest` (`qText`, numeric `qNum`), `availablePeriodCount`,
@@ -235,5 +242,8 @@ cleanup boundary with genuine saved evidence, not the real Chrome/frontend runti
 It is neither runtime qualification nor a production fixture fallback.
 
 Trusted Ubuntu/Python 3.13 + pinned Node/Chrome clean anonymous first-and-repeat
-runs remain for #15. That gate must verify actual source acquisition/cleanup and
-record provenance rather than mark these offline tests as trusted runtime proof.
+acquisition remains **PENDING** for #15. The [manual trusted-main workflow and
+operator runbook](uf-runtime.md) exercise that same two-export production path,
+retain both raw aggregate XLSX and sanitized evidence/provenance, and never
+publish a site. #15 stays open until the coordinator reviews its actual proof;
+offline tests are not trusted runtime proof.
