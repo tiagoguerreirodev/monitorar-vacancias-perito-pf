@@ -18,6 +18,7 @@ import time
 
 PARSER = Path('/sbin/apparmor_parser')
 PROFILES = Path('/sys/kernel/security/apparmor/profiles')
+HANDLED_SIGNALS = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGALRM)
 
 
 def digest(path):
@@ -120,8 +121,13 @@ class Owner:
         if self.loaded() or self.base.exists() or self.base.is_symlink():
             raise ValueError('collision')
         original = tree_inventory(self.source)
-        self.base.mkdir(mode=0o755)  # Exclusive mkdir: never replace a collision.
-        self.created = True
+        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, HANDLED_SIGNALS)
+        try:
+            self.base.mkdir(mode=0o755)  # Exclusive mkdir: never replace a collision.
+            self.created = True
+        finally:
+            # Deliver pending interruptions only after exclusive ownership is recorded.
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
         shutil.copytree(self.source, self.runtime, symlinks=True)
         for entry in [*self.runtime.rglob('*'), self.runtime]:
             if not entry.is_symlink():
@@ -251,7 +257,7 @@ def main():
     def interrupt(_signum, _frame):
         if not cleaning:
             raise KeyboardInterrupt
-    for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGALRM):
+    for signum in HANDLED_SIGNALS:
         signal.signal(signum, interrupt)
     try:
         for line in sys.stdin:
