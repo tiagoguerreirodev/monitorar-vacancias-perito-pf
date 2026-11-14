@@ -13,6 +13,30 @@ const classes = [
   ['permission_denied', /permission denied/i],
   ['crash', /segmentation fault|trace\/breakpoint trap|received signal|fatal:/i],
 ];
+// [DEBUG-uf-linux] Pinned public source sites only; never return matched text.
+const fatalSites = [
+  ['setuid_sandbox_host.cc', 'suid_helper_fatal'],
+  ['zygote_host_impl_linux.cc', 'zygote_host_fatal'],
+  ['sandbox_linux.cc', 'namespace_fatal'],
+  ['credentials.cc', 'credentials_fatal'],
+  ['sandbox_bpf.cc', 'seccomp_fatal'],
+  ['crashpad_linux.cc', 'crashpad_fatal'],
+  ['process_singleton_posix.cc', 'profile_fatal'],
+  ['resource_bundle.cc', 'resource_fatal'],
+];
+const fatalLiterals = [
+  ['setuid_sandbox_host.cc', 'The SUID sandbox helper binary was found, but is not configured correctly.', 'suid_bad_configuration'],
+  ['setuid_sandbox_host.cc', 'The SUID sandbox helper binary is missing:', 'suid_missing'],
+  ['zygote_host_impl_linux.cc', 'No usable sandbox!', 'no_usable_sandbox'],
+];
+function fatalClasses(stderr) {
+  const matches = [...stderr.matchAll(/\bFATAL:(?:[A-Za-z0-9_.-]+\/)*([A-Za-z0-9_.-]+\.cc)(?::[0-9]+|\([0-9]+\))\]([^\r\n]*)/g)];
+  return [
+    ...fatalSites.filter(([site]) => matches.some(match => match[1] === site)).map(([, label]) => label),
+    ...fatalLiterals.filter(([site, literal]) => matches.some(match => match[1] === site && match[2].includes(literal)))
+      .map(([, , label]) => label),
+  ];
+}
 function groupAlive(pid) {
   try { process.kill(-pid, 0); return true; } catch (error) {
     if (error.code === 'ESRCH') return false;
@@ -122,7 +146,10 @@ export async function observeStartup(chrome, expectedVersion, startupMs = 15000)
     const signal = browser?.signalCode;
     record.signal = ['SIGTERM', 'SIGKILL', 'SIGABRT', 'SIGSEGV', 'SIGTRAP', 'SIGILL', 'SIGBUS'].includes(signal)
       ? signal : signal ? 'other' : null;
-    record.stderr_classes = classes.filter(([, pattern]) => pattern.test(stderr)).map(([name]) => name);
+    record.stderr_classes = [
+      ...classes.filter(([, pattern]) => pattern.test(stderr)).map(([name]) => name),
+      ...fatalClasses(stderr),
+    ];
     if (!record.stderr_classes.length) record.stderr_classes = [stderr.length ? 'other' : 'none'];
     stderr = '';
     if (record.cleanup.process_group_stopped) {

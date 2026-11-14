@@ -57,7 +57,10 @@ def validated_observations(stdout):
     outcomes = {'startup_timeout', 'spawn_failed', 'early_exit', 'invalid_port_file',
                 'invalid_readiness', 'ready', 'owner_interrupted', 'helper_failed'}
     signals = {None, 'SIGTERM', 'SIGKILL', 'SIGABRT', 'SIGSEGV', 'SIGTRAP', 'SIGILL', 'SIGBUS', 'other'}
-    classes = {'sandbox_refusal', 'missing_library', 'permission_denied', 'crash', 'other', 'none'}
+    classes = {'sandbox_refusal', 'missing_library', 'permission_denied', 'crash', 'other', 'none',
+               'suid_helper_fatal', 'zygote_host_fatal', 'namespace_fatal', 'credentials_fatal',
+               'seccomp_fatal', 'crashpad_fatal', 'profile_fatal', 'resource_fatal',
+               'suid_bad_configuration', 'suid_missing', 'no_usable_sandbox'}
     for record in records:
         if not isinstance(record, dict) or set(record) != fields:
             raise ValueError('helper record shape')
@@ -72,7 +75,7 @@ def validated_observations(stdout):
         if code is not None and (type(code) is not int or not 0 <= code <= 255):
             raise ValueError('helper exit code')
         labels = record['stderr_classes']
-        if (not isinstance(labels, list) or not 1 <= len(labels) <= 4
+        if (not isinstance(labels, list) or not 1 <= len(labels) <= len(classes)
                 or any(not isinstance(label, str) or label not in classes for label in labels)
                 or len(set(labels)) != len(labels)):
             raise ValueError('helper classification')
