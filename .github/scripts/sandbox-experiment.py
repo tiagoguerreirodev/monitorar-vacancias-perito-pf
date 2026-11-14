@@ -149,16 +149,26 @@ def experiment(privileged_command, observer_command):
 
     def request(action):
         nonlocal owner_cleanup
-        owner.stdin.write((json.dumps({'action': action}) + '\n').encode())
-        owner.stdin.flush()
-        deadline = time.monotonic() + 180
+        recovering = False
+        try:
+            owner.stdin.write((json.dumps({'action': action}) + '\n').encode())
+            owner.stdin.flush()
+        except BrokenPipeError:
+            if action != 'cleanup':
+                raise
+            # A final receipt may be unread when the owner closes its input.
+            # Require EOF for the whole recovery receipt, within one second.
+            recovering = True
+        deadline = time.monotonic() + (1 if recovering else 180)
         data = b''
-        while b'\n' not in data and len(data) <= 4096:
+        while (recovering or b'\n' not in data) and len(data) <= 4096:
             remaining = deadline - time.monotonic()
             if remaining <= 0 or not select.select([owner.stdout], [], [], remaining)[0]:
                 raise ValueError('owner deadline')
             block = os.read(owner.stdout.fileno(), 4097 - len(data))
             if not block:
+                if recovering:
+                    break
                 raise ValueError('owner ended')
             data += block
         if len(data) > 4096 or not data.endswith(b'\n'):
@@ -173,6 +183,7 @@ def experiment(privileged_command, observer_command):
             final = validated_owner_final(response, action)
             owner_cleanup = final
             if 'failure' in final:
+                result['status'] = 'experiment_failed'
                 result['owner_failure'] = final['failure']
                 result['candidate_ancestors'] = final['candidate_ancestors']
             if action != 'cleanup':
