@@ -145,7 +145,7 @@ def _history(observations):
 <p>Cargos ocupados e vagos em cada mês de referência oficial, em valores absolutos.</p>
 <p>{note}</p><p>{gaps}</p><figure>
 <div class="chart-scroll" tabindex="0" role="region" aria-label="Gráfico histórico; role horizontalmente em telas pequenas">
-<svg id="history-chart" viewBox="0 0 {width} 360" style="min-width: {max(760, len(months) * 64)}px" role="img" aria-labelledby="history-chart-title history-description">
+<svg id="history-chart" viewBox="0 0 {width} 360" style="min-width: {width}px" role="img" aria-labelledby="history-chart-title history-description">
 <title id="history-chart-title">Histórico de cargos ocupados e vagos</title>
 <desc id="history-description">{note} {gaps} {" ".join(missing)} Ocupados: círculos e linha sólida. Vagos: quadrados e linha tracejada. Os valores exatos estão na tabela abaixo.</desc>
 <text x="85" y="18">Cargos (quantidade)</text>{"".join(graphics)}

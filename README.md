@@ -58,7 +58,8 @@ caixa, são recusados para revisão humana, sem escolher uma versão arbitrariam
 
 O painel inclui pizza com proporções, histórico de ocupados/vagos, tabelas e
 descrições acessíveis em pt-BR, pistas além da cor e layout mobile. Um único mês
-é mostrado como pontos, sem tendência; lacunas interrompem as linhas. Todos os
+é mostrado como pontos, sem tendência; lacunas interrompem as linhas. O histórico
+rola horizontalmente sem reduzir os rótulos conforme a série cresce. Todos os
 ativos e JSON são locais, com caminhos relativos ao subcaminho de Pages.
 
 A coleta usa timeout de 30 s por tentativa e até três tentativas por requisição

@@ -319,6 +319,10 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("1.108", page.text("table", id="current-values"))
         self.assertIn("Histórico a partir de junho de 2025", page.text("body"))
         chart = page.one("svg", id="history-chart")
+        # The scrollable timeline must not scale its 15px labels down as months grow.
+        minimum_width = float(chart["attrs"]["style"].split(":")[1].strip().removesuffix("px"))
+        self.assertGreaterEqual(minimum_width, float(chart["attrs"]["viewbox"].split()[2]),
+                                "Keep chart labels at their intended size; scroll instead of shrinking")
         table = page.one("table", id="history-values")
         rows = [n for n in page.matching("tr") if table in n["parents"]][1:]
         self.assertEqual(len(rows), 16)
@@ -418,17 +422,20 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("13/11/2026", page.text("time", datetime="2026-11-13T12:00:00Z"))
 
     def test_failed_incremental_candidate_preserves_dashboard_and_can_be_retried(self):
-        self.refresh()
+        accepted = national_resources()
+        self.refresh(ControlledArchive(accepted))
+        accepted_history = json.loads((self.data / "history.json").read_text())["observations"]
+        self.assertEqual(len(accepted_history), 15)
         before = {path.relative_to(self.root): path.read_bytes()
                   for path in self.root.rglob("*") if path.is_file()}
         october_url = resource_url("2026-10")
         october = monthly_resource("2026-10", 1110, 85)
         corrected = monthly_resource("2026-09", 1109, 86)
-        resources = {SEPTEMBER_URL: corrected, october_url: october}
+        resources = {**accepted, SEPTEMBER_URL: corrected, october_url: october}
         scenarios = (
             (ScriptedArchive({october_url: [TimeoutError("controlled outage")] * 3}, resources),
              "after 3 attempt"),
-            (ControlledArchive({SEPTEMBER_URL: corrected, october_url: b"truncated ODS"}),
+            (ControlledArchive({**resources, october_url: b"truncated ODS"}),
              "Invalid spreadsheet"),
         )
         for source, diagnostic in scenarios:
@@ -457,7 +464,9 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("Ocupados: 1.110 (92,9%)", page.text("svg", id="current-pie"))
         history = json.loads((self.site / "data/history.json").read_text())
         self.assertEqual([row["reference_month"] for row in history["observations"]],
-                         ["2026-09", "2026-10"])
+                         [row["reference_month"] for row in accepted_history] + ["2026-10"])
+        self.assertEqual(history["observations"][:-2], accepted_history[:-1],
+                         "Retry must preserve all fourteen unchanged historical observations")
         self.assertEqual(len(history["corrections"]), 1)
         self.assertEqual(history["corrections"][0]["superseded"]["occupied"], 1108)
         self.assertEqual((self.site / "data/history.json").read_bytes(),

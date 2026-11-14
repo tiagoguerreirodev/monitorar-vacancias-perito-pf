@@ -87,6 +87,19 @@ verificação bem-sucedida, não a data de referência dos cargos. Somente meses
 partir de **2025-06**, inclusive; lacunas ficam indisponíveis, nunca interpoladas.
 Não há registros individuais nem números de vagas anunciadas em concurso.
 
+Para reproduzir a aceitação nacional sem rede:
+
+```sh
+python3 -m unittest -v tests.test_dashboard tests.test_history
+```
+
+As fixtures oficiais reduzidas cobrem 15 observações de junho/2025 a setembro/2026,
+com julho/2025 indisponível; a suíte confere valores literais, proveniência retida,
+rechecks, correções e falha parcial preservando todos os bytes do histórico completo.
+Esses dados controlados não devem substituir `data/`: para coleta real, usar o CLI
+acima. Conferir o artefato em desktop e 320 px: rótulos do gráfico não encolhem ao
+crescer a série; gráfico e tabela têm rolagem horizontal independente da página.
+
 A reconciliação de #4 está implementada: retém observações aceitas mesmo se os
 recursos sumirem da listagem, mantém uma observação por mês e insere backfills e
 novos anos em ordem cronológica. O maior mês aceito é a referência atual, não o
