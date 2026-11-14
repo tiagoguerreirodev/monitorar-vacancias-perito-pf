@@ -5,6 +5,7 @@ from xml.etree.ElementTree import ParseError
 from zipfile import BadZipFile
 
 from . import refresh_and_build
+from ._refresh import _SourceFailure
 
 
 def main():
@@ -15,7 +16,8 @@ def main():
     try:
         result = refresh_and_build(args.data_dir, args.site_dir)
     except (ValueError, OSError, BadZipFile, ParseError, KeyError) as exc:
-        print(f"Refresh/build failed; no candidate published: {exc}", file=sys.stderr)
+        message = exc.operator_message if isinstance(exc, _SourceFailure) else str(exc)
+        print(f"Refresh/build failed; no candidate published: {message}", file=sys.stderr)
         return 1
     summary = '; '.join(f'{key}={value}' for key, value in result.items())
     print(f"Refresh/build succeeded ({summary}): aggregates in {args.data_dir}; static artifact in {args.site_dir}")

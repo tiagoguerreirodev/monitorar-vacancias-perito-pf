@@ -3,15 +3,18 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import platform
 import re
 import shutil
 import signal
 import subprocess
+import sys
 import tempfile
 import time
 from urllib.request import Request, urlopen
 
-from ._uf import UFExport, accept_export
+from ._uf import UFExport, UFSourceDenied, accept_export
+from .runtime import _digest, UFRuntimeError, UFRuntimeIntegrityError
 
 
 class UFBlocked(ValueError):
@@ -27,11 +30,28 @@ def _runtime(variable, candidates):
     raise UFBlocked(f'UF collector requires executable {variable}')
 
 
+def _runtime_observation(node, chrome):
+    """Safe receipt from the actual resolved executables, without their paths."""
+    paths = {'python': str(Path(sys.executable).resolve()), 'node': node, 'chrome': chrome}
+    def version(path):
+        output = subprocess.run([path, '--version'], capture_output=True, text=True,
+                                check=True, timeout=10).stdout.strip()
+        if re.fullmatch(r'(?:v|Google Chrome(?: for Testing)? |Chromium |Python )[0-9]+(?:\.[0-9]+){2,3}', output):
+            return output
+        return 'unrecognized version output (not runtime qualification)'
+    try:
+        return {'sha256': {name: _digest(Path(path)) for name, path in paths.items()},
+                'versions': {'python': platform.python_version(), 'node': version(node), 'chrome': version(chrome)}}
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise UFRuntimeError('UF runtime observation failed') from exc
+
+
 class OfficialUF:
     """No workbook, URL, session or user-profile inputs; every call exports afresh."""
     def latest_export(self):
         # No enable/skip flag: every live candidate proves independent repeatability.
         self.proof = ()
+        self.runtime_receipt = None
         if os.environ.get('PERITO_RUNTIME_ROOT'):
             from .runtime import ensure_runtime
             node, chrome = ensure_runtime(os.environ['PERITO_RUNTIME_ROOT'])
@@ -39,6 +59,7 @@ class OfficialUF:
             node = _runtime('PERITO_NODE', ['node'])
             chrome = _runtime('PERITO_CHROME', ['google-chrome', 'chromium', 'chromium-browser',
                               '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'])
+        before = _runtime_observation(node, chrome)
         first = self._fresh_export(node, chrome)
         first_snapshot = accept_export(first, datetime.now(timezone.utc).isoformat())
         second = self._fresh_export(node, chrome)
@@ -51,6 +72,10 @@ class OfficialUF:
                 or first_source['download_guid'] == second_source['download_guid']
                 or instant(isolated) <= instant(first_source['retrieved_at'])):
             raise ValueError('UF independent exports disagree or reuse a download')
+        after = _runtime_observation(node, chrome)
+        if before != after:
+            raise UFRuntimeIntegrityError('UF runtime changed during collection')
+        self.runtime_receipt = {'before': before, 'after': after}
         self.proof = ((first, first_snapshot), (second, second_snapshot))
         return second
 
@@ -64,7 +89,13 @@ class OfficialUF:
             def alive():
                 if time.monotonic() > deadline:
                     raise ValueError('UF collector exceeded bounded deadline')
-                if (run / 'STOP.json').exists() or proc.poll() is not None:
+                if (run / 'STOP.json').exists():
+                    reason = json.loads((run / 'STOP.json').read_text()).get('reason')
+                    if reason in ('public HTTP denial', 'public WebSocket denied', 'public Qlik access denied',
+                                  'public WebSocket error', 'public UI authentication, CAPTCHA or denial'):
+                        raise UFSourceDenied('UF source denied anonymous collection')
+                    raise ValueError('UF ordinary collector stopped; no export accepted')
+                if proc.poll() is not None:
                     raise ValueError('UF ordinary collector stopped; no export accepted')
 
             def command(op, **kwargs):

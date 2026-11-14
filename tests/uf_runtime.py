@@ -10,6 +10,18 @@ from pathlib import Path
 import sys
 
 
+def install_offline_runtime(root, documents):
+    """Install a private process stand-in replaying an explicit document sequence."""
+    runtime = root / 'external-runtime'
+    runtime.write_text('#!' + sys.executable + '\nimport runpy\nrunpy.run_path(' +
+                       repr(str(Path(__file__).resolve())) + ", run_name='__main__')\n")
+    runtime.chmod(0o700)
+    sequence = root / 'sequence.json'
+    sequence.write_text(json.dumps(documents))
+    return {'PERITO_NODE': str(runtime), 'PERITO_CHROME': sys.executable,
+            'PERITO_RUNTIME_ROOT': '', 'PERITO_TEST_EXPORT_SEQUENCE': str(sequence)}
+
+
 def main():
     if sys.argv[1:] == ['--version']:
         print('offline-process-stand-in (NOT a Node runtime proof)')

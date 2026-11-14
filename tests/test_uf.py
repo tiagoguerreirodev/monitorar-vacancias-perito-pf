@@ -5,7 +5,7 @@ from io import BytesIO
 import json
 import os
 from pathlib import Path
-import sys
+import struct
 from unittest.mock import patch
 import tempfile
 import unittest
@@ -14,6 +14,7 @@ from zipfile import ZipFile
 
 from perito_dashboard import refresh_and_build
 from tests.sources import ControlledArchive, UnavailableUF
+from tests.uf_runtime import install_offline_runtime
 
 FIXTURES = Path(__file__).parent / 'fixtures/uf'
 NOW = datetime(2026, 11, 14, 12, tzinfo=timezone.utc)
@@ -76,6 +77,156 @@ class UFAcceptanceTests(unittest.TestCase):
     def bytes(self):
         return {str(p.relative_to(self.root)): p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
 
+    def test_malformed_compression_and_unknown_encoding_are_isolated_uf_failures(self):
+        from tests.sources import monthly_resource
+        original = ExportSource().content
+        broken_deflate = bytearray(original)
+        with ZipFile(BytesIO(original)) as archive:
+            item = archive.getinfo('xl/worksheets/sheet1.xml')
+            offset = item.header_offset
+            name_size, extra_size = struct.unpack_from('<HH', original, offset + 26)
+            # BFINAL=1, BTYPE=3 is an invalid DEFLATE block, not just a CRC error.
+            broken_deflate[offset + 30 + name_size + extra_size] = 7
+        output = BytesIO()
+        with ZipFile(BytesIO(original)) as source, ZipFile(output, 'w') as target:
+            for item in source.infolist():
+                content = source.read(item.filename)
+                if item.filename == 'xl/worksheets/sheet1.xml':
+                    content = content.replace(b'encoding="UTF-8"', b'encoding="BOGUS"')
+                    self.assertIn(b'encoding="BOGUS"', content)
+                target.writestr(item, content)
+        for case, content in [('deflate', bytes(broken_deflate)), ('encoding', output.getvalue())]:
+            for last_good in (False, True):
+                with self.subTest(case=case, last_good=last_good):
+                    root = self.root / (case + str(last_good))
+                    root.mkdir()
+                    data, site = root / 'data', root / 'site'
+                    if last_good:
+                        refresh_and_build(data, site, source=ControlledArchive(),
+                                          uf_source=ExportSource(), clock=lambda: NOW)
+                    before = {name: (data / name).read_bytes() for name in ('uf.json', 'uf-status.json')
+                              if (data / name).exists()}
+                    malformed = ExportSource(content=content)
+                    (root / 'malformed.xlsx').write_bytes(content)
+                    (root / 'malformed.json').write_text(json.dumps(malformed.evidence))
+                    env = install_offline_runtime(root, [{'workbook': str(root / 'malformed.xlsx'),
+                                                         'evidence': str(root / 'malformed.json')}])
+                    with patch.dict(os.environ, env):
+                        result = refresh_and_build(data, site,
+                            source=ControlledArchive(dict([monthly_resource('2026-10')])),
+                            clock=lambda: NOW + timedelta(days=1))
+                    self.assertEqual(result, {'national': 'updated', 'uf': 'failed', 'publication': 'partial'})
+                    self.assertEqual(json.loads((data / 'history.json').read_text())['observations'][-1]['reference_month'], '2026-10')
+                    for name in ('uf.json', 'uf-status.json'):
+                        if last_good:
+                            self.assertEqual((data / name).read_bytes(), before[name])
+                            self.assertEqual((site / 'data' / name).read_bytes(), before[name])
+                        else:
+                            self.assertFalse((data / name).exists())
+                            self.assertFalse((site / 'data' / name).exists())
+                    self.assertIn('Cargos vagos', (site / 'index.html').read_text())
+
+    def test_utf16_entity_workbooks_cannot_enter_complete_publication(self):
+        from tests.sources import monthly_resource
+        for encoding in ('utf-16', 'utf-16-be', 'utf-16-le'):
+            with self.subTest(encoding=encoding):
+                root = self.root / encoding
+                root.mkdir()
+                data, site = root / 'data', root / 'site'
+                refresh_and_build(data, site, source=ControlledArchive(),
+                                  uf_source=ExportSource(), clock=lambda: NOW)
+                before = {name: (data / name).read_bytes() for name in ('uf.json', 'uf-status.json')}
+                output = BytesIO()
+                with ZipFile(BytesIO(ExportSource().content)) as source, ZipFile(output, 'w') as target:
+                    for item in source.infolist():
+                        content = source.read(item.filename)
+                        if item.filename == 'xl/worksheets/sheet1.xml':
+                            text = content.decode('utf-8').replace('encoding="UTF-8"', 'encoding="UTF-16"')
+                            text = text.replace('<worksheet ', '<!DOCTYPE worksheet [<!ENTITY count "1">]>\n<worksheet ', 1)
+                            text = text.replace('<v>1</v>', '<v>&count;</v>', 1)
+                            content = text.encode(encoding)
+                        target.writestr(item, content)
+                content = output.getvalue()
+                malformed = ExportSource(content=content)
+                (root / 'malformed.xlsx').write_bytes(content)
+                (root / 'malformed.json').write_text(json.dumps(malformed.evidence))
+                env = install_offline_runtime(root, [
+                    {'workbook': str(root / 'malformed.xlsx'), 'evidence': str(root / 'malformed.json')},
+                    {'workbook': str(FIXTURES.resolve() / 'run-7.xlsx'),
+                     'evidence': str(FIXTURES.resolve() / 'run-7.json')}])
+                with patch.dict(os.environ, env):
+                    result = refresh_and_build(data, site,
+                        source=ControlledArchive(dict([monthly_resource('2026-10')])),
+                        clock=lambda: NOW + timedelta(days=1))
+                self.assertEqual(result, {'national': 'updated', 'uf': 'failed', 'publication': 'partial'})
+                for name, raw in before.items():
+                    self.assertEqual((data / name).read_bytes(), raw)
+                    self.assertEqual((site / 'data' / name).read_bytes(), raw)
+                self.assertEqual(json.loads((data / 'history.json').read_text())['observations'][-1]['reference_month'], '2026-10')
+                self.assertIn('1.108 PCFs ativos', (site / 'index.html').read_text())
+
+    def test_partial_refresh_emits_actionable_sanitized_per_feed_diagnostics(self):
+        for case, code in [('invalid', 'invalid_export'), ('denial', 'source_denied'),
+                           ('runtime', 'runtime_unavailable'), ('transport', 'collection_failed')]:
+            with self.subTest(case=case):
+                root = self.root / case
+                root.mkdir()
+                malformed = ExportSource(content=b'not an XLSX') if case == 'invalid' else ExportSource()
+                if case == 'denial':
+                    next(e for e in malformed.evidence['trace'] if e['kind'] == 'ws_handshake')['status'] = 403
+                (root / 'candidate.xlsx').write_bytes(malformed.content)
+                (root / 'candidate.json').write_text(json.dumps(malformed.evidence))
+                env = install_offline_runtime(root, [{'workbook': str(root / 'candidate.xlsx'),
+                                                     'evidence': str(root / 'candidate.json')}])
+                if case == 'runtime':
+                    env['PERITO_NODE'] = '/nonexistent/private-token-node'
+                class SensitiveOutage:
+                    def latest_export(self):
+                        raise ValueError('cookie=SECRET csrf=SECRET DevTools profile /tempcontent/SECRET ' * 500)
+                with patch.dict(os.environ, env), self.assertLogs('perito_dashboard', level='WARNING') as messages:
+                    kwargs = {'uf_source': SensitiveOutage()} if case == 'transport' else {}
+                    result = refresh_and_build(root / 'data', root / 'site', source=ControlledArchive(),
+                                               clock=lambda: NOW, **kwargs)
+                self.assertEqual(result['publication'], 'partial')
+                text = '\n'.join(messages.output)
+                self.assertIn('uf: ' + code, text)
+                self.assertIn('check ', text)
+                self.assertLess(len(text), 500)
+                for forbidden in ('SECRET', 'cookie', 'csrf', 'DevTools', 'profile', 'tempcontent', 'private-token'):
+                    self.assertNotIn(forbidden, text)
+                self.assertTrue((root / 'site/data/history.json').exists())
+                self.assertFalse((root / 'data/uf-status.json').exists())
+        # Opposite direction also exposes a safe reason while accepting UF.
+        with self.assertLogs('perito_dashboard', level='WARNING') as messages:
+            result = self.refresh(national=UnavailableNational())
+        self.assertEqual(result['publication'], 'partial')
+        self.assertIn('national: source_unavailable_or_invalid', '\n'.join(messages.output))
+
+    def test_changed_actual_runtime_receipt_rejects_only_uf_after_two_exports(self):
+        from tests.sources import monthly_resource
+        self.refresh()
+        before = {name: (self.data / name).read_bytes() for name in ('uf.json', 'uf-status.json')}
+        env = install_offline_runtime(self.root, [
+            {'workbook': str(FIXTURES.resolve() / f'run-{run}.xlsx'),
+             'evidence': str(FIXTURES.resolve() / f'run-{run}.json')} for run in (6, 7)])
+        # External executable boundary: it changes its own bytes on acquisition,
+        # not on --version. No production runtime/collector method is patched.
+        runtime = Path(env['PERITO_NODE'])
+        runtime.write_text(runtime.read_text().replace('import runpy\n',
+            "import runpy, sys\nif sys.argv[1:] != ['--version']:\n"
+            "    with open(__file__, 'a') as executable: executable.write('# changed\\n')\n"))
+        with patch.dict(os.environ, env), self.assertLogs('perito_dashboard', level='WARNING') as messages:
+            result = refresh_and_build(self.data, self.site,
+                                       source=ControlledArchive(dict([monthly_resource('2026-10')])),
+                                       clock=lambda: NOW + timedelta(days=1))
+        self.assertEqual(result, {'national': 'updated', 'uf': 'failed', 'publication': 'partial'})
+        self.assertIn('uf: runtime_integrity; check ', '\n'.join(messages.output))
+        self.assertEqual(Path(env['PERITO_TEST_EXPORT_SEQUENCE']).with_suffix('.count').read_text(), '2')
+        for name, raw in before.items():
+            self.assertEqual((self.data / name).read_bytes(), raw)
+            self.assertEqual((self.site / 'data' / name).read_bytes(), raw)
+        self.assertEqual(self.saved('history.json')['observations'][-1]['reference_month'], '2026-10')
+
     def test_download_receipt_binds_well_formed_guid_and_actual_document_size(self):
         for field in ('guid', 'size'):
             evidence = deepcopy(ExportSource().evidence)
@@ -114,35 +265,26 @@ class UFAcceptanceTests(unittest.TestCase):
         self.assertEqual(self.bytes(), {})
 
     def test_default_production_adapter_uses_configured_owned_runtime_and_composes_uf(self):
-        runtime = self.root / 'runtime with spaces'
-        runtime.write_text('#!' + sys.executable + '\nimport runpy\nrunpy.run_path(' +
-                           repr(str(Path(__file__).with_name('uf_runtime.py').resolve())) + ", run_name='__main__')\n")
-        runtime.chmod(0o700)
-        sequence = self.root / 'sequence.json'
-        sequence.write_text(json.dumps([
+        root = self.root / 'runtime with spaces'
+        root.mkdir()
+        env = install_offline_runtime(root, [
             {'workbook': str(FIXTURES.resolve() / f'run-{run}.xlsx'),
-             'evidence': str(FIXTURES.resolve() / f'run-{run}.json')} for run in (6, 7)]))
-        with patch.dict(os.environ, {'PERITO_NODE': str(runtime), 'PERITO_CHROME': sys.executable,
-                                     'PERITO_TEST_EXPORT_SEQUENCE': str(sequence)}):
+             'evidence': str(FIXTURES.resolve() / f'run-{run}.json')} for run in (6, 7)])
+        with patch.dict(os.environ, env):
             result = refresh_and_build(self.data, self.site, source=UnavailableNational(), clock=lambda: NOW)
         self.assertEqual(result, {'national': 'failed', 'uf': 'updated', 'publication': 'partial'})
         self.assertEqual(self.saved('uf.json')['current']['counts_by_uf']['DF'], 324)
         self.assertIn('premissa do projeto', (self.site / 'index.html').read_text())
 
     def test_managed_runtime_setup_failure_is_inside_uf_candidate_not_global(self):
-        runtime = self.root / 'external-runtime'
-        runtime.write_text('#!' + sys.executable + '\nimport runpy\nrunpy.run_path(' +
-                           repr(str(Path(__file__).with_name('uf_runtime.py').resolve())) + ", run_name='__main__')\n")
-        runtime.chmod(0o700)
         # A file cannot be a runtime directory, on any host; never reaches network.
         blocked = self.root / 'not-a-runtime-directory'
         blocked.write_text('blocked')
-        sequence = self.root / 'sequence.json'
-        sequence.write_text(json.dumps([
+        env = install_offline_runtime(self.root, [
             {'workbook': str(FIXTURES.resolve() / f'run-{run}.xlsx'),
-             'evidence': str(FIXTURES.resolve() / f'run-{run}.json')} for run in (6, 7)]))
-        with patch.dict(os.environ, {'PERITO_NODE': str(runtime), 'PERITO_CHROME': sys.executable,
-                                     'PERITO_RUNTIME_ROOT': str(blocked), 'PERITO_TEST_EXPORT_SEQUENCE': str(sequence)}):
+             'evidence': str(FIXTURES.resolve() / f'run-{run}.json')} for run in (6, 7)])
+        env['PERITO_RUNTIME_ROOT'] = str(blocked)
+        with patch.dict(os.environ, env):
             result = refresh_and_build(self.data, self.site, source=ControlledArchive(), clock=lambda: NOW)
         self.assertEqual(result, {'national': 'updated', 'uf': 'failed', 'publication': 'partial'})
         self.assertEqual(self.saved('history.json')['observations'][-1]['reference_month'], '2026-09')
@@ -151,10 +293,6 @@ class UFAcceptanceTests(unittest.TestCase):
     def test_production_repeat_disagreement_preserves_uf_but_advances_healthy_national(self):
         self.refresh()
         before = {name: (self.data / name).read_bytes() for name in ('uf.json', 'uf-status.json')}
-        runtime = self.root / 'external-runtime'
-        runtime.write_text('#!' + sys.executable + '\nimport runpy\nrunpy.run_path(' +
-                           repr(str(Path(__file__).with_name('uf_runtime.py').resolve())) + ", run_name='__main__')\n")
-        runtime.chmod(0o700)
         evidence = deepcopy(ExportSource(run=7).evidence)
         evidence['snapshot']['qGrandTotalRow'][0]['qNum'] = 1107
         ns = '{http://schemas.openxmlformats.org/spreadsheetml/2006/main}'
@@ -166,14 +304,12 @@ class UFAcceptanceTests(unittest.TestCase):
                 event['receivedBytes'] = event['totalBytes'] = len(content)
         (self.root / 'changed.xlsx').write_bytes(content)
         (self.root / 'changed.json').write_text(json.dumps(evidence))
-        sequence = self.root / 'sequence.json'
-        sequence.write_text(json.dumps([
+        env = install_offline_runtime(self.root, [
             {'workbook': str(FIXTURES.resolve() / 'run-6.xlsx'), 'evidence': str(FIXTURES.resolve() / 'run-6.json')},
             {'workbook': str(self.root / 'changed.xlsx'), 'evidence': str(self.root / 'changed.json')},
-        ]))
+        ])
         from tests.sources import monthly_resource
-        with patch.dict(os.environ, {'PERITO_NODE': str(runtime), 'PERITO_CHROME': sys.executable,
-                                     'PERITO_TEST_EXPORT_SEQUENCE': str(sequence)}):
+        with patch.dict(os.environ, env):
             result = refresh_and_build(self.data, self.site,
                                        source=ControlledArchive(dict([monthly_resource('2026-10')])),
                                        clock=lambda: NOW + timedelta(days=1))
@@ -185,10 +321,6 @@ class UFAcceptanceTests(unittest.TestCase):
 
     def test_live_repeat_denial_cleanup_and_reused_receipt_leave_uf_bytes_but_national_advances(self):
         from tests.sources import monthly_resource
-        runtime = self.root / 'external-runtime'
-        runtime.write_text('#!' + sys.executable + '\nimport runpy\nrunpy.run_path(' +
-                           repr(str(Path(__file__).with_name('uf_runtime.py').resolve())) + ", run_name='__main__')\n")
-        runtime.chmod(0o700)
         for case in ('denial', 'cleanup', 'guid'):
             with self.subTest(case=case):
                 data, site = self.root / case / 'data', self.root / case / 'site'
@@ -209,12 +341,11 @@ class UFAcceptanceTests(unittest.TestCase):
                 second = {'workbook': str(FIXTURES.resolve() / 'run-7.xlsx'), 'evidence': str(path)}
                 if case == 'cleanup':
                     second['cleanup'] = {'fatal': None, 'browser_stopped': False, 'clean_profile_removed': False}
-                sequence = self.root / case / 'sequence.json'
-                sequence.write_text(json.dumps([
+                env = install_offline_runtime(self.root / case, [
                     {'workbook': str(FIXTURES.resolve() / 'run-6.xlsx'),
-                     'evidence': str(FIXTURES.resolve() / 'run-6.json')}, second]))
-                with patch.dict(os.environ, {'PERITO_NODE': str(runtime), 'PERITO_CHROME': sys.executable,
-                                             'PERITO_TEST_EXPORT_SEQUENCE': str(sequence)}):
+                     'evidence': str(FIXTURES.resolve() / 'run-6.json')}, second])
+                sequence = Path(env['PERITO_TEST_EXPORT_SEQUENCE'])
+                with patch.dict(os.environ, env):
                     result = refresh_and_build(data, site, source=ControlledArchive(dict([monthly_resource('2026-10')])),
                                                clock=lambda: NOW + timedelta(days=1))
                 self.assertEqual(result, {'national': 'updated', 'uf': 'failed', 'publication': 'partial'})

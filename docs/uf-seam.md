@@ -34,6 +34,16 @@ refresh_and_build(data_dir, site_dir, *, source=None, uf_source=None, clock=None
 - `python -m perito_dashboard --data-dir data --site-dir site` uses both real
   boundaries. CLI prints the three outcomes; complete/partial exit 0, total or
   transaction failure exits nonzero. No workflow modification is included here.
+- After successful partial promotion, logger `perito_dashboard` emits one bounded
+  WARNING per failed feed (CLI stderr by default). Fixed reason/action vocabulary:
+  national `source_unavailable_or_invalid`; UF `source_denied`, `invalid_export`,
+  `runtime_unavailable`, `runtime_integrity`, `runtime_setup`, `collection_failed`.
+  Warnings explain what to check and that failed feed data/check stayed unchanged
+  (unavailable on first absence). Total source failure CLI uses the same safe
+  summaries and exits 1. No raw exception/process text, source rows, credentials,
+  download/control/profile paths or URLs are echoed in these source diagnostics;
+  no accepted metadata is mutated to record failure. Shared transaction errors
+  remain globally fatal, not partial success.
 
 ### Concrete offline public-flow example (tests only)
 
@@ -173,7 +183,9 @@ Implementation resources (ordinary code; no harness runtime):
   exports, each with its own process group and absolute temporary run, bounded
   controller, new GUID-named download, size check and mandatory cleanup. Both
   exports pass the same central parser, agree on period/semantic identity, have
-  different GUIDs and non-overlapping sessions. No qualification/single-run flag.
+  different GUIDs and non-overlapping sessions. Runtime is resolved once; safe
+  before/after actual executable hash/version receipts must agree, and qualification
+  consumes that receipt rather than resolving paths again. No qualification/single-run flag.
 - `perito_dashboard/runtime.py` and `collector/runtime.json`: checksum/version
   verified private Linux Node/Chrome installation, inside the UF candidate.
   Setup failure cannot suppress healthy national advancement.
@@ -185,7 +197,9 @@ Implementation resources (ordinary code; no harness runtime):
   selection rereads, aggregate table dimensions/measure/total. The controller then
   invokes the **installed public download button**, not a reconstructed export URL.
 - `perito_dashboard/_uf.py`: bounded strict OOXML parser and document/evidence
-  acceptance; it never requests an employee field/table or individual data.
+  acceptance; XML must be UTF-8 (optional BOM), with no NULs, DTDs or entities.
+  Unsupported encodings and expected ZIP/XML decompression/encoding failures
+  reject only the UF document. It never requests an employee field/table or individual data.
 
 `PERITO_NODE` and `PERITO_CHROME` optionally select explicit executable paths
 (including paths with spaces); otherwise system discovery uses `node` and common
