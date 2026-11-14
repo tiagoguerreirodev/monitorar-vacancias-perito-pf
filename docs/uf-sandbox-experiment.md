@@ -1,9 +1,21 @@
-# [DEBUG-uf-linux] Temporary sandbox A/B/A preparation (#26)
+# [DEBUG-uf-linux] Retained sandbox A/B/A diagnostic (#26 → #34)
 
-**Not executed; not a production fix, AppArmor attribution, Linux compatibility
-claim, or Gov-source qualification.** #15, #16 and whole #8→#9 remain open. The
-owner's UF de lotação assumption remains unchanged. Remove this temporary probe
-after the coordinator has reviewed its evidence; do not wire it into production.
+**Not Gov-source qualification.** Trusted no-Gov run **43624804937** on
+`3f441894471aec394983d6a81ae404c5065e8204` established same-path A-red/B-ready/A-red,
+a real live DevTools port, unchanged pins/host facts and complete cleanup. #34
+adopts that reviewed capsule; #15 remains open pending actual final-code source
+qualification. The UF de lotação assumption remains unchanged.
+
+Retain this manual DEBUG tool to diagnose future runner-image/runtime drift and
+reproduce reversal without government requests. Production never imports
+`.github`: both production and this diagnostic use the canonical packaged
+`perito_dashboard/collector/runtime-owner.py` and `_capsule.OwnerClient`.
+`.github/scripts/sandbox-owner.py` is only a compatibility entrypoint. No second
+privileged staging/policy/cleanup implementation exists. Diagnostic A/B/A phases
+remain manual-only; production loads the approved exception for its two ordinary
+fresh exports, then verifies and completely cleans before publishing. Historical
+sections below describe the evidence and authorizations **at those earlier steps**,
+not current prohibitions on this approved adoption.
 
 ## Measured evidence versus hypotheses
 

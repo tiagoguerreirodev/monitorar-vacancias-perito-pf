@@ -1,11 +1,10 @@
-"""[DEBUG-uf-linux] Temporary no-Gov causal probe, never source qualification."""
+"""[DEBUG-uf-linux] Retained no-Gov drift probe, never source qualification."""
 import argparse
 import importlib.util
 import json
 import os
 from pathlib import Path
 import re
-import select
 import signal
 import subprocess
 import sys
@@ -15,54 +14,11 @@ import time
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from perito_dashboard.runtime import MANIFEST, ensure_runtime  # noqa: E402
+from perito_dashboard._capsule import OwnerClient, OWNED_ROOT  # noqa: E402
 
 spec = importlib.util.spec_from_file_location('linux_diagnosis', Path(__file__).with_name('diagnose-uf-linux.py'))
 diagnostic = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(diagnostic)
-OWNED_ROOT = r'/usr/lib/perito-uf-sandbox-[0-9a-f]{32}/runtime'
-OWNER_FAILURE_REASONS = frozenset({
-    'ancestor_unprotected', 'source_ownership', 'collision', 'inventory_refused',
-    'copy_integrity', 'executable_integrity', 'policy_refused', 'parser_untrusted',
-    'not_staged', 'runtime_changed', 'process_visibility', 'browser_running',
-    'policy_removal', 'policy_absent', 'invalid_request', 'interrupted', 'unexpected_error',
-})
-
-
-def unique_object(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError('duplicate key')
-        result[key] = value
-    return result
-
-
-def validated_owner_final(response, action):
-    """Validate the entire bounded receipt before retaining ANY cleanup/failure facts."""
-    cleanup_keys = {'profile_removed', 'runtime_removed', 'processes_stopped'}
-    if not isinstance(response, dict) or response.get('ok') is not True:
-        raise ValueError('owner final')
-    expected = {'ok', *cleanup_keys}
-    if 'failure' in response:
-        expected |= {'failure', 'candidate_ancestors'}
-        failure = response['failure']
-        if (not isinstance(failure, dict) or set(failure) != {'action', 'reason'}
-                or not isinstance(failure['action'], str) or failure['action'] not in {action, 'protocol'}
-                or not isinstance(failure['reason'], str) or failure['reason'] not in OWNER_FAILURE_REASONS):
-            raise ValueError('owner failure')
-        candidates = response.get('candidate_ancestors')
-        if not isinstance(candidates, dict) or set(candidates) != {'root', 'opt', 'usr', 'usr_lib'}:
-            raise ValueError('owner candidates')
-        for facts in candidates.values():
-            if (not isinstance(facts, dict)
-                    or set(facts) != {'directory', 'non_symlink', 'root_owned', 'group_or_world_writable'}
-                    or any(value is not None and type(value) is not bool for value in facts.values())):
-                raise ValueError('owner candidate facts')
-    if set(response) != expected or any(type(response[key]) is not bool for key in cleanup_keys):
-        raise ValueError('owner cleanup')
-    return response
-
-
 def trusted():
     return all(os.environ.get(key) == value for key, value in {
         'GITHUB_REPOSITORY': 'tiagoguerreirodev/monitorar-vacancias-perito-pf',
@@ -132,7 +88,6 @@ def experiment(privileged_command, observer_command):
     result = {'status': 'unsupported', 'tree_sha256': None, 'phases': {},
               'cleanup': {'profile_removed': False, 'runtime_removed': False, 'processes_stopped': False}}
     owner = None
-    owner_cleanup = None
     active = None
     interrupted = False
     previous = {}
@@ -148,49 +103,7 @@ def experiment(privileged_command, observer_command):
         previous[signum] = signal.signal(signum, interrupt)
 
     def request(action):
-        nonlocal owner_cleanup
-        recovering = False
-        try:
-            owner.stdin.write((json.dumps({'action': action}) + '\n').encode())
-            owner.stdin.flush()
-        except BrokenPipeError:
-            if action != 'cleanup':
-                raise
-            # A final receipt may be unread when the owner closes its input.
-            # Require EOF for the whole recovery receipt, within one second.
-            recovering = True
-        deadline = time.monotonic() + (1 if recovering else 180)
-        data = b''
-        while (recovering or b'\n' not in data) and len(data) <= 4096:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0 or not select.select([owner.stdout], [], [], remaining)[0]:
-                raise ValueError('owner deadline')
-            block = os.read(owner.stdout.fileno(), 4097 - len(data))
-            if not block:
-                if recovering:
-                    break
-                raise ValueError('owner ended')
-            data += block
-        if len(data) > 4096 or not data.endswith(b'\n'):
-            raise ValueError('owner report bound')
-        try:
-            response = json.loads(data, object_pairs_hook=unique_object)
-        except RecursionError:
-            raise ValueError('owner report nesting') from None
-        if not isinstance(response, dict) or response.get('ok') is not True:
-            raise ValueError('owner refused')
-        if action == 'cleanup' or 'failure' in response or set(response) == {'ok', *result['cleanup']}:
-            final = validated_owner_final(response, action)
-            owner_cleanup = final
-            if 'failure' in final:
-                result['status'] = 'experiment_failed'
-                result['owner_failure'] = final['failure']
-                result['candidate_ancestors'] = final['candidate_ancestors']
-            if action != 'cleanup':
-                raise ValueError('owner entered finally')
-        if action in {'load', 'unload'} and set(response) != {'ok'}:
-            raise ValueError('owner transition failed')
-        return response
+        return owner.request(action)
 
     def observe(runtime):
         nonlocal active
@@ -219,8 +132,7 @@ def experiment(privileged_command, observer_command):
         return records
 
     try:
-        owner = subprocess.Popen(privileged_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                 stderr=subprocess.DEVNULL, start_new_session=True)
+        owner = OwnerClient(privileged_command)
         staged = request('stage')
         runtime = staged.get('runtime', '')
         tree_hash = staged.get('tree_sha256', '')
@@ -255,21 +167,17 @@ def experiment(privileged_command, observer_command):
     finally:
         if owner is not None:
             try:
-                cleanup = owner_cleanup if owner_cleanup is not None else request('cleanup')
-                result['cleanup'] = {key: cleanup[key] for key in result['cleanup']}
+                owner.finish()
             except (ValueError, OSError, subprocess.SubprocessError, UnicodeError):
-                pass
-            finally:
-                try:
-                    owner.stdin.close()  # EOF also triggers the privileged owner's finally.
-                except OSError:
-                    pass
-                try:
-                    owner.wait(timeout=30)
-                except subprocess.TimeoutExpired:
-                    # Never kill a privileged owner while it may be cleaning policy.
-                    result['status'] = 'cleanup_failed'
-                owner.stdout.close()
+                result['status'] = 'experiment_failed'
+            if owner.final is not None:
+                result['cleanup'] = {key: owner.final[key] for key in result['cleanup']}
+                if 'failure' in owner.final:
+                    result['status'] = 'experiment_failed'
+                    result['owner_failure'] = owner.final['failure']
+                    result['candidate_ancestors'] = owner.final['candidate_ancestors']
+            if owner.exit_code is None:
+                result['status'] = 'cleanup_failed'
         if not all(result['cleanup'].values()):
             result['status'] = 'cleanup_failed'
         for signum, handler in previous.items():
@@ -313,6 +221,8 @@ def main():
     for name, path in {'experiment': Path(__file__), 'privileged_owner': Path(__file__).with_name('sandbox-owner.py'),
                        'diagnostic_driver': Path(diagnostic.__file__), 'startup_helper': diagnostic.HELPER,
                        'runtime_manifest': MANIFEST, 'runtime_installer': ROOT / 'perito_dashboard/runtime.py',
+                       'capsule_client': ROOT / 'perito_dashboard/_capsule.py',
+                       'packaged_owner': ROOT / 'perito_dashboard/collector/runtime-owner.py',
                        'production_launch_recipe': ROOT / 'perito_dashboard/collector/browser-probe.mjs'}.items():
         report['resources_sha256'][name] = diagnostic.digest(path)
     try:

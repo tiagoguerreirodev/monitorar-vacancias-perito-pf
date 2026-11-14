@@ -10,7 +10,7 @@ import sys
 import tempfile
 import unittest
 
-OWNER = Path(__file__).resolve().parents[1] / '.github/scripts/sandbox-owner.py'
+OWNER = Path(__file__).resolve().parents[1] / 'perito_dashboard/collector/runtime-owner.py'
 HARNESS = r'''
 import hashlib, importlib.util, json, os, shutil, stat, sys
 from contextlib import ExitStack
@@ -37,7 +37,7 @@ for key, relative in [('node', 'node/bin/node'), ('chrome', 'chrome-linux64/chro
     (source / relative).chmod(0o755)
     pins[key] = {'executable_sha256': hashlib.sha256(data).hexdigest()}
 (root / 'repo/perito_dashboard/collector/runtime.json').write_text(json.dumps(pins))
-owner.__file__ = str(root / 'repo/.github/scripts/sandbox-owner.py')
+owner.__file__ = str(root / 'repo/perito_dashboard/collector/runtime-owner.py')
 owner.PROFILES = root / 'policies'
 owner.PROFILES.write_text('')
 name = 'perito-uf-sandbox-' + 'a' * 32

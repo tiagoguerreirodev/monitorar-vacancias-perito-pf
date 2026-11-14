@@ -3,48 +3,15 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
-import platform
 import re
-import shutil
 import signal
 import subprocess
-import sys
 import tempfile
 import time
 from urllib.request import Request, urlopen
 
 from ._uf import UFExport, UFSourceDenied, accept_export
-from .runtime import _digest, UFRuntimeError, UFRuntimeIntegrityError
-
-
-class UFBlocked(ValueError):
-    """A required collector runtime is absent; no source observation is available."""
-
-
-def _runtime(variable, candidates):
-    configured = os.environ.get(variable)
-    for name in ([configured] if configured else candidates):
-        path = shutil.which(name)
-        if path and Path(path).is_file() and os.access(path, os.X_OK):
-            return str(Path(path).resolve())
-    raise UFBlocked(f'UF collector requires executable {variable}')
-
-
-def _runtime_observation(node, chrome):
-    """Safe receipt from the actual resolved executables, without their paths."""
-    paths = {'python': str(Path(sys.executable).resolve()), 'node': node, 'chrome': chrome}
-    def version(path):
-        output = subprocess.run([path, '--version'], capture_output=True, text=True,
-                                check=True, timeout=10).stdout.strip()
-        if re.fullmatch(r'(?:v|Google Chrome(?: for Testing)? |Chromium |Python )[0-9]+(?:\.[0-9]+){2,3}', output):
-            return output
-        return 'unrecognized version output (not runtime qualification)'
-    try:
-        return {'sha256': {name: _digest(Path(path)) for name, path in paths.items()},
-                'versions': {'python': platform.python_version(), 'node': version(node), 'chrome': version(chrome)}}
-    except (OSError, subprocess.SubprocessError) as exc:
-        raise UFRuntimeError('UF runtime observation failed') from exc
-
+from .runtime import UFBlocked, runtime_capsule
 
 class OfficialUF:
     """No workbook, URL, session or user-profile inputs; every call exports afresh."""
@@ -52,37 +19,29 @@ class OfficialUF:
         # No enable/skip flag: every live candidate proves independent repeatability.
         self.proof = ()
         self.runtime_receipt = None
-        if os.environ.get('PERITO_RUNTIME_ROOT'):
-            from .runtime import ensure_runtime
-            node, chrome = ensure_runtime(os.environ['PERITO_RUNTIME_ROOT'])
-        else:
-            node = _runtime('PERITO_NODE', ['node'])
-            chrome = _runtime('PERITO_CHROME', ['google-chrome', 'chromium', 'chromium-browser',
-                              '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'])
-        before = _runtime_observation(node, chrome)
-        first = self._fresh_export(node, chrome)
-        first_snapshot = accept_export(first, datetime.now(timezone.utc).isoformat())
-        second = self._fresh_export(node, chrome)
-        second_snapshot = accept_export(second, datetime.now(timezone.utc).isoformat())
-        first_source, second_source = first_snapshot['source'], second_snapshot['source']
-        isolated = next(t['utc'] for t in second.evidence['trace'] if t['kind'] == 'isolation')
-        instant = lambda value: datetime.fromisoformat(value.replace('Z', '+00:00'))
-        if (first_snapshot['reference_month'] != second_snapshot['reference_month']
-                or first_snapshot['semantic_identity'] != second_snapshot['semantic_identity']
-                or first_source['download_guid'] == second_source['download_guid']
-                or instant(isolated) <= instant(first_source['retrieved_at'])):
-            raise ValueError('UF independent exports disagree or reuse a download')
-        after = _runtime_observation(node, chrome)
-        if before != after:
-            raise UFRuntimeIntegrityError('UF runtime changed during collection')
-        self.runtime_receipt = {'before': before, 'after': after}
+        with runtime_capsule() as capsule:
+            first = self._fresh_export(capsule)
+            first_snapshot = accept_export(first, datetime.now(timezone.utc).isoformat())
+            second = self._fresh_export(capsule)
+            second_snapshot = accept_export(second, datetime.now(timezone.utc).isoformat())
+            first_source, second_source = first_snapshot['source'], second_snapshot['source']
+            isolated = next(t['utc'] for t in second.evidence['trace'] if t['kind'] == 'isolation')
+            instant = lambda value: datetime.fromisoformat(value.replace('Z', '+00:00'))
+            if (first_snapshot['reference_month'] != second_snapshot['reference_month']
+                    or first_snapshot['semantic_identity'] != second_snapshot['semantic_identity']
+                    or first_source['download_guid'] == second_source['download_guid']
+                    or instant(isolated) <= instant(first_source['retrieved_at'])):
+                raise ValueError('UF independent exports disagree or reuse a download')
+        self.runtime_receipt = capsule.receipt
         self.proof = ((first, first_snapshot), (second, second_snapshot))
         return second
 
-    def _fresh_export(self, node, chrome):
+    def _fresh_export(self, capsule):
         resources = Path(__file__).resolve().with_name('collector')
-        with tempfile.TemporaryDirectory(prefix='perito-uf-') as directory:
+        with tempfile.TemporaryDirectory(prefix='' if capsule.temporary_parent else 'perito-uf-',
+                                         dir=capsule.temporary_parent) as directory:
             root, proc, control = Path(directory), None, None
+            capsule.preflight_run(root)
             run = root / 'run'
             deadline = time.monotonic() + 180
 
@@ -125,9 +84,9 @@ class OfficialUF:
 
             try:
                 with (root / 'launch.log').open('wb') as log:
-                    proc = subprocess.Popen([node, str(resources / 'browser-probe.mjs'), str(run), chrome],
+                    proc = subprocess.Popen([capsule.node, str(resources / 'browser-probe.mjs'), str(run), capsule.chrome],
                                             stdin=subprocess.DEVNULL, stdout=log, stderr=log,
-                                            start_new_session=True)
+                                            start_new_session=True, env=capsule.environment)
                     end = time.monotonic() + 20
                     while not (run / 'control.json').exists():
                         alive()

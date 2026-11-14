@@ -7,7 +7,8 @@ import {randomBytes} from 'node:crypto';
 const run=process.argv[2], chrome=process.argv[3];
 if(!run || !path.isAbsolute(run) || !chrome || !path.isAbsolute(chrome)) throw new Error('Explicit absolute owned paths required');
 fs.mkdirSync(run,{mode:0o700});
-const profile=fs.mkdtempSync(path.join(run,'clean-profile-'));
+// Keep the fresh profile within the independently preflighted Linux socket budget.
+const profile=fs.mkdtempSync(path.join(run,'p-'));
 const downloadDir=path.join(run,'downloads');fs.mkdirSync(downloadDir);
 const entry='https://pep.paineis.gov.br/extensions/pep/index.html';
 const token=randomBytes(32).toString('hex');
