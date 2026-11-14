@@ -19,6 +19,14 @@ from zipfile import BadZipFile, ZipFile
 MANIFEST = Path(__file__).resolve().with_name('collector') / 'runtime.json'
 
 
+class UFRuntimeError(ValueError):
+    """The required pinned runtime could not be prepared; never fall back."""
+
+
+class UFRuntimeIntegrityError(UFRuntimeError):
+    """Pinned archive/executable bytes or version did not match."""
+
+
 def _digest(path):
     digest = hashlib.sha256()
     with path.open('rb') as stream:
@@ -41,16 +49,18 @@ def _download(spec, path, deadline):
                 raise ValueError('Pinned UF runtime archive exceeded size bound')
             output.write(block)
     if ('size' in spec and count != spec['size']) or _digest(path) != spec['sha256']:
-        raise ValueError('Pinned UF runtime archive checksum/length mismatch')
+        raise UFRuntimeIntegrityError('Pinned UF runtime archive checksum/length mismatch')
 
 
 def ensure_runtime(directory):
     """Return exact verified (Node, Chrome) paths; failures belong to UF only."""
     try:
         return _install_and_verify(directory)
-    except (subprocess.SubprocessError, tarfile.TarError, BadZipFile, HTTPException,
+    except UFRuntimeError:
+        raise
+    except (ValueError, OSError, subprocess.SubprocessError, tarfile.TarError, BadZipFile, HTTPException,
             KeyError, TypeError) as exc:
-        raise ValueError(f'Pinned UF runtime setup failed ({type(exc).__name__})') from exc
+        raise UFRuntimeError(f'Pinned UF runtime setup failed ({type(exc).__name__})') from exc
 
 
 def _install_and_verify(directory):
@@ -92,8 +102,8 @@ def _install_and_verify(directory):
 def _verify_runtime(root, pins):
     for executable, key in ((root / 'node/bin/node', 'node'), (root / 'chrome-linux64/chrome', 'chrome')):
         if executable.is_symlink() or _digest(executable) != pins[key]['executable_sha256']:
-            raise ValueError('Pinned UF runtime executable checksum mismatch')
+            raise UFRuntimeIntegrityError('Pinned UF runtime executable checksum mismatch')
         result = subprocess.run([str(executable), '--version'], check=True,
                                 capture_output=True, text=True, timeout=10)
         if pins[key]['version'] not in result.stdout.split():
-            raise ValueError('Pinned UF runtime executable version mismatch')
+            raise UFRuntimeIntegrityError('Pinned UF runtime executable version mismatch')

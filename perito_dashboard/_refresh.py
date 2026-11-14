@@ -8,6 +8,7 @@ from html.parser import HTMLParser
 from http.client import IncompleteRead
 from io import BytesIO
 import json
+import logging
 import os
 from pathlib import Path
 import re
@@ -22,8 +23,9 @@ from zipfile import BadZipFile, ZipFile
 
 from ._render import render_site
 from ._shared import CUTOFF, PF_ORGANIZATION, write_json
-from ._uf import accept_export, load_saved
+from ._uf import accept_export, load_saved, UFInvalidExport, UFSourceDenied
 from ._collector import OfficialUF, UFBlocked
+from .runtime import UFRuntimeError, UFRuntimeIntegrityError
 
 ARCHIVE_URL = "https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/"
 CLASSES = {
@@ -35,6 +37,33 @@ CLASSES = {
 TABLE = "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}"
 OFFICE = "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}"
 TEXT = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
+
+
+class _SourceFailure(ValueError):
+    """Detailed API failure with a separate, fixed-vocabulary operator message."""
+    def __init__(self, errors, diagnostics):
+        super().__init__('; '.join(errors))
+        self.operator_message = '; '.join(diagnostics)
+
+
+def _source_diagnostic(feed, error):
+    # Fixed vocabulary only: never interpolate untrusted exceptions, rows,
+    # process output, URLs or runtime/control/profile paths into operator logs.
+    if feed == 'national':
+        code, action = 'source_unavailable_or_invalid', 'check official archive availability and ODS format'
+    elif isinstance(error, UFSourceDenied):
+        code, action = 'source_denied', 'check public anonymous access; stop rather than bypass or retry denial'
+    elif isinstance(error, UFBlocked):
+        code, action = 'runtime_unavailable', 'check configured Node and Chrome executable availability'
+    elif isinstance(error, UFRuntimeIntegrityError):
+        code, action = 'runtime_integrity', 'check pinned archive/executable checksums and versions; do not use fallback'
+    elif isinstance(error, UFRuntimeError):
+        code, action = 'runtime_setup', 'check pinned runtime platform, ownership and installation requirements'
+    elif isinstance(error, UFInvalidExport):
+        code, action = 'invalid_export', 'check workbook format, population, period and same-run download evidence'
+    else:
+        code, action = 'collection_failed', 'check anonymous frontend availability and collector compatibility'
+    return f'{feed}: {code}; {action}; failed feed data/check unchanged (unavailable on first absence)'
 
 
 class _StaleRefresh(ValueError):
@@ -455,7 +484,7 @@ def _refresh_locked(data_dir, site_dir, source, uf_source, clock):
     if data_dir.exists() and any(p.name not in allowed or not p.is_file() or p.is_symlink() for p in data_dir.iterdir()):
         raise ValueError('Unknown saved data files; nothing published')
     status = json.loads((data_dir / 'status.json').read_text()) if successful_check else None
-    outcomes, errors = {}, []
+    outcomes, errors, diagnostics = {}, [], []
     documents = {}
     try:
         candidate_history, candidate_status = _national_candidate(deepcopy(history), source, checked_at)
@@ -465,6 +494,7 @@ def _refresh_locked(data_dir, site_dir, source, uf_source, clock):
     except (ValueError, OSError) as exc:
         outcomes['national'] = 'failed'
         errors.append(str(exc))
+        diagnostics.append(_source_diagnostic('national', exc))
     try:
         export = uf_source.latest_export()
         uf_now = clock() if clock is not None else datetime.now(timezone.utc)
@@ -489,8 +519,9 @@ def _refresh_locked(data_dir, site_dir, source, uf_source, clock):
             raise
         outcomes['uf'] = 'blocked' if isinstance(exc, UFBlocked) else 'failed'
         errors.append(str(exc))
+        diagnostics.append(_source_diagnostic('uf', exc))
     if all(value in ('failed', 'blocked') for value in outcomes.values()):
-        raise ValueError('; '.join(errors))
+        raise _SourceFailure(errors, diagnostics)
     outcomes['publication'] = 'partial' if any(v in ('failed', 'blocked') for v in outcomes.values()) else 'complete'
     with ExitStack() as stack:
         staged = []
@@ -515,4 +546,6 @@ def _refresh_locked(data_dir, site_dir, source, uf_source, clock):
         if before != (_output_state(data_dir), _output_state(site_dir)):
             raise ValueError("Stale refresh: accepted outputs changed during refresh; nothing promoted")
         _promote(staged)
+    for diagnostic in diagnostics:
+        logging.getLogger('perito_dashboard').warning('%s', diagnostic)
     return outcomes

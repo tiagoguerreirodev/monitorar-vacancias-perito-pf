@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 
-from ._collector import OfficialUF, _runtime
+from ._collector import OfficialUF
 
 
 def _resources_sha256():
@@ -35,24 +35,16 @@ def main():
         collector.latest_export()
         if hashes != _resources_sha256():
             raise ValueError('UF collector resources changed during observation')
-        if os.environ.get('PERITO_RUNTIME_ROOT'):
-            runtime = Path(os.environ['PERITO_RUNTIME_ROOT'])
-            node, chrome = str(runtime / 'node/bin/node'), str(runtime / 'chrome-linux64/chrome')
-        else:
-            node = _runtime('PERITO_NODE', ['node'])
-            chrome = _runtime('PERITO_CHROME', ['google-chrome', 'chromium', 'chromium-browser',
-                              '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'])
-        node_version = subprocess.run([node, '--version'], capture_output=True, text=True,
-                                      check=True, timeout=10).stdout.strip()
+        receipt = collector.runtime_receipt
         proof = {
-            'runtime': {'python': platform.python_version(), 'node': node_version,
+            'runtime': {'python': platform.python_version(), 'node': receipt['after']['versions']['node'],
                         'system': platform.system(), 'machine': platform.machine(),
                         'runner_image': os.environ.get('ImageVersion'),
                         'runner_os': os.environ.get('ImageOS')},
             'resources_sha256': hashes,
             'pins': json.loads((Path(__file__).resolve().parent / 'collector/runtime.json').read_text()),
-            'executables_sha256': {name: hashlib.sha256(Path(path).read_bytes()).hexdigest()
-                                   for name, path in (('python', sys.executable), ('node', node), ('chrome', chrome))},
+            'executables_sha256': receipt['after']['sha256'],
+            'runtime_verification': receipt,
             'exports': [],
         }
         # Only explicitly selected safe aggregate fields, never frontend trace,

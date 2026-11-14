@@ -1,4 +1,5 @@
 """Public read-only qualification command with OFFLINE external process documents."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -6,6 +7,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+
+from tests.uf_runtime import install_offline_runtime
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / 'tests/fixtures/uf'
@@ -15,17 +18,10 @@ class QualificationTests(unittest.TestCase):
     def test_command_retains_two_fresh_raw_exports_and_only_sanitized_aggregate_proof(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            runtime = root / 'external-runtime'
-            runtime.write_text('#!' + sys.executable + '\nimport runpy\nrunpy.run_path(' +
-                               repr(str(ROOT / 'tests/uf_runtime.py')) + ", run_name='__main__')\n")
-            runtime.chmod(0o700)
-            sequence = root / 'sequence.json'
-            sequence.write_text(json.dumps([
+            env = {**os.environ, **install_offline_runtime(root, [
                 {'workbook': str(FIXTURES / f'run-{run}.xlsx'), 'evidence': str(FIXTURES / f'run-{run}.json')}
                 for run in (6, 7)
-            ]))
-            env = {**os.environ, 'PERITO_NODE': str(runtime), 'PERITO_CHROME': sys.executable,
-                   'PERITO_TEST_EXPORT_SEQUENCE': str(sequence)}
+            ])}
             output = root / 'proof'
             result = subprocess.run([sys.executable, '-m', 'perito_dashboard.qualify', '--output', str(output)],
                                     cwd=ROOT, env=env, capture_output=True, text=True, timeout=30)
@@ -44,6 +40,14 @@ class QualificationTests(unittest.TestCase):
                 self.assertEqual(proof['exports'][index - 1]['cleanup'],
                                  {'browser_stopped': True, 'clean_profile_removed': True,
                                   'node_stopped': True, 'owned_directory_removed': True})
+            expected_hashes = {'python': hashlib.sha256(Path(sys.executable).read_bytes()).hexdigest(),
+                               'chrome': hashlib.sha256(Path(sys.executable).read_bytes()).hexdigest(),
+                               'node': hashlib.sha256((root / 'external-runtime').read_bytes()).hexdigest()}
+            self.assertEqual(proof['executables_sha256'], expected_hashes)
+            for when in ('before', 'after'):
+                self.assertEqual(proof['runtime_verification'][when]['sha256'], expected_hashes)
+                self.assertEqual(set(proof['runtime_verification'][when]['versions']), {'python', 'node', 'chrome'})
+            self.assertIn('not runtime qualification', proof['runtime']['node'])
             self.assertEqual(proof['pins']['node']['version'], 'v26.13.1')
             self.assertIn('collector/runtime.json', proof['resources_sha256'])
             self.assertNotIn(str(root), json.dumps(proof))
@@ -57,10 +61,6 @@ class QualificationTests(unittest.TestCase):
         for case in ('denial', 'cleanup', 'guid', 'overlap'):
             with self.subTest(case=case), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
-                runtime = root / 'external-runtime'
-                runtime.write_text('#!' + sys.executable + '\nimport runpy\nrunpy.run_path(' +
-                                   repr(str(ROOT / 'tests/uf_runtime.py')) + ", run_name='__main__')\n")
-                runtime.chmod(0o700)
                 evidence = json.loads((FIXTURES / 'run-7.json').read_text())
                 first = json.loads((FIXTURES / 'run-6.json').read_text())
                 if case == 'denial':
@@ -76,15 +76,13 @@ class QualificationTests(unittest.TestCase):
                     # Each export is individually valid but their owned sessions overlap.
                     evidence['trace'][0]['utc'] = first['trace'][0]['utc']
                 (root / 'second.json').write_text(json.dumps(evidence))
-                sequence = root / 'sequence.json'
                 second = {'workbook': str(FIXTURES / 'run-7.xlsx'), 'evidence': str(root / 'second.json')}
                 if case == 'cleanup':
                     second['cleanup'] = {'fatal': None, 'browser_stopped': False, 'clean_profile_removed': False}
-                sequence.write_text(json.dumps([
+                env = {**os.environ, **install_offline_runtime(root, [
                     {'workbook': str(FIXTURES / 'run-6.xlsx'), 'evidence': str(FIXTURES / 'run-6.json')}, second
-                ]))
-                env = {**os.environ, 'PERITO_NODE': str(runtime), 'PERITO_CHROME': sys.executable,
-                       'PERITO_TEST_EXPORT_SEQUENCE': str(sequence)}
+                ])}
+                sequence = Path(env['PERITO_TEST_EXPORT_SEQUENCE'])
                 output = root / 'proof'
                 result = subprocess.run([sys.executable, '-m', 'perito_dashboard.qualify', '--output', str(output)],
                                         cwd=ROOT, env=env, capture_output=True, text=True, timeout=30)

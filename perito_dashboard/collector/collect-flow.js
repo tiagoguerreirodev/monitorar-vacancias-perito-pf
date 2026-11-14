@@ -18,7 +18,7 @@ async function metadataList(field){return new Promise((resolve,reject)=>{let onc
 const fvm=Object.fromEntries(PAGE_CONFIGS.fvm.filters.map(x=>[x.label,x.objectId]));
 const servidores=Object.fromEntries(PAGE_CONFIGS.servidores.filters.map(x=>[x.label,x.objectId]));
 await select(fvm['Seção'],'Seção',['Servidores']);
-const pb=await box(fvm['Mês/Ano']);const pv=await values(pb);const eligible=pv.filter(x=>['O','A','S'].includes(x.qState)&&Number.isFinite(x.qNum));if(!eligible.length)throw new Error('No public reference months');const latest=eligible.reduce((a,b)=>a.qNum>b.qNum?a:b);
+const periodBox=await box(fvm['Mês/Ano']);const periodValues=await values(periodBox);const eligible=periodValues.filter(x=>['O','A','S'].includes(x.qState)&&Number.isFinite(x.qNum));if(!eligible.length)throw new Error('No public reference months');const latest=eligible.reduce((a,b)=>a.qNum>b.qNum?a:b);
 await select(fvm['Mês/Ano'],'Mês/Ano',[latest.qText]);
 await select(servidores['Grupo Situação do Vinculo'],'Grupo Situação do Vinculo',['Ativo']);
 const orgBox=await box(servidores['Orgão']);if(!equal(orgBox.definition.qDef.qFieldDefs,[nativeOrgaoField]))throw new Error('Native public Orgão field changed');
@@ -34,15 +34,15 @@ const abbreviationMapping=await metadataList(physicalFields[0]);diagnostics.mapp
 const availableAbbreviations=abbreviationMapping.values.filter(x=>['O','A','S','L'].includes(x.qState)).map(x=>x.qText);
 if(!equal(availableAbbreviations,['DPF']))throw new Error('Exact public PF name does not map exclusively to returned DPF: '+JSON.stringify(availableAbbreviations));
 diagnostics.mapping.availableAbbreviations=availableAbbreviations;
-const cb=await box(servidores['Cargo']);const cv=await values(cb);diagnostics.cargoCandidates=cv;
-const candidates=cv.filter(x=>cargos.includes(x.qText)&&['O','A','S'].includes(x.qState)).map(x=>x.qText);if(!equal(candidates,cargos))throw new Error('Exact four PCF cargo contract changed: '+JSON.stringify(candidates));
+const cargoBox=await box(servidores['Cargo']);const cargoValues=await values(cargoBox);diagnostics.cargoCandidates=cargoValues;
+const candidates=cargoValues.filter(x=>cargos.includes(x.qText)&&['O','A','S'].includes(x.qState)).map(x=>x.qText);if(!equal(candidates,cargos))throw new Error('Exact four PCF cargo contract changed: '+JSON.stringify(candidates));
 await select(servidores['Cargo'],'Cargo',cargos);
 await select(fvm['Dimensão'],'Dimensão',expectedDims);
 await select(fvm['Métricas'],'Métricas',['Servidores']);
 const finalSelections=[];for(const t of trace.filter(x=>x.label!=='Dimensão (mapping inspection)')){const b=await box(t.parent);const selected=(await values(b)).filter(x=>['S','L'].includes(x.qState)).map(x=>x.qText);if(!equal(selected,t.requested))throw new Error('Final selection drift: '+t.label);finalSelections.push({label:t.label,selected});}
 const layout=await vis.model.getLayout(),cube=layout.qHyperCube;const dimensions=cube.qDimensionInfo.filter(x=>!x.qError).map(x=>x.qFallbackTitle);if(!equal(dimensions,['Ano','Mês',...expectedDims]))throw new Error('Unexpected returned public table dimensions: '+JSON.stringify(dimensions));
 if(cube.qError?.qErrorCode||cube.qSize.qcx!==7||cube.qSize.qcy<1||cube.qSize.qcy>108||cube.qGrandTotalRow.length!==1||!Number.isSafeInteger(cube.qGrandTotalRow[0].qNum)||cube.qGrandTotalRow[0].qNum<0)throw new Error('Invalid aggregate table size/total');
-const snapshot={utc:new Date().toISOString(),entry:location.href,appId:PEP_SERVICES.qlik.config.appId,table:PAGE_CONFIGS.fvm.table,title:layout.title,privileges:layout.qMeta.privileges,latest,availablePeriodCount:eligible.length,availablePeriods:pv,selectionTrace:trace,finalSelections,mapping:diagnostics.mapping,qSize:cube.qSize,dimensions,qGrandTotalRow:cube.qGrandTotalRow,measure:cube.qMeasureInfo.filter(x=>!x.qError).map(x=>({title:x.qFallbackTitle,minimum:x.qMin,maximum:x.qMax})),visibleText:document.querySelector('#page-fvm').innerText};
+const snapshot={utc:new Date().toISOString(),entry:location.href,appId:PEP_SERVICES.qlik.config.appId,table:PAGE_CONFIGS.fvm.table,title:layout.title,privileges:layout.qMeta.privileges,latest,availablePeriodCount:eligible.length,availablePeriods:periodValues,selectionTrace:trace,finalSelections,mapping:diagnostics.mapping,qSize:cube.qSize,dimensions,qGrandTotalRow:cube.qGrandTotalRow,measure:cube.qMeasureInfo.filter(x=>!x.qError).map(x=>({title:x.qFallbackTitle,minimum:x.qMin,maximum:x.qMax})),visibleText:document.querySelector('#page-fvm').innerText};
 // Preparation only; controller next invokes the installed public download control with a user gesture.
 return snapshot;
 })()

@@ -117,7 +117,11 @@ Artifact `uf-qualification-SHA-RUN_ID-ATTEMPT` (14 days):
   27 UFs, counts, own source total, raw SHA, canonical semantic SHA, selections,
   native DPF mapping), safe isolation/WS/download receipts, owner-observed Node/run
   cleanup plus browser/profile cleanup, actual versions/executable SHA, manifest
-  pins and unchanged collector-resource hashes.
+  pins and unchanged collector-resource hashes. `runtime_verification.before` and
+  `.after` contain matching SHA/version observations of the exact resolved
+  Python/Node/Chrome executables used by the collector; the qualifier does not
+  resolve them again. Unrecognized version output is a fixed non-qualification
+  marker, never raw process output. No executable paths are published.
 - `workflow.json`: checked-out code revision, workflow run ID and attempt.
 
 No temporary download URLs, selection trace dumps, raw browser/control logs,

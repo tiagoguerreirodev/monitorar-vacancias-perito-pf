@@ -5,6 +5,7 @@ import hashlib
 from io import BytesIO
 import json
 import re
+import zlib
 from xml.etree import ElementTree as ET
 from zipfile import ZipFile, BadZipFile
 
@@ -21,6 +22,16 @@ GEOGRAPHY = {'source_field': 'UF Servidores', 'meaning': 'UF de lotação',
 COVERAGE = {'ufs': UFS, 'absent_class_uf_pairs': 'not_asserted_zero'}
 SCOPE = {'organization': 'DPF', 'native_organization': 'Departamento De Policia Federal',
          'status': 'Ativo', 'classes': CARGOS, 'metric': 'Servidores'}
+ORGANIZATION_MAPPING = {'nativeOrgaoField': 'Órgão (Servidores)',
+                        'nativePfLabel': SCOPE['native_organization'],
+                        'physicalFields': ['Sigla Orgão Vinculado (Servidores)'],
+                        'availableAbbreviations': ['DPF']}
+
+
+def _expected_filters(period):
+    return {'Seção': ['Servidores'], 'Mês/Ano': [period],
+            'Grupo Situação do Vinculo': ['Ativo'], 'Orgão': [SCOPE['native_organization']],
+            'Cargo': CARGOS, 'Dimensão': HEADERS[2:6], 'Métricas': ['Servidores']}
 
 
 @dataclass(frozen=True)
@@ -30,14 +41,28 @@ class UFExport:
     evidence: dict
 
 
+class UFInvalidExport(ValueError):
+    """An untrusted workbook or its source evidence failed document validation."""
+
+
+class UFSourceDenied(UFInvalidExport):
+    """The ordinary anonymous source refused collection; do not retry/bypass."""
+
+
 def _require(condition, message):
     if not condition:
-        raise ValueError('Invalid UF export: ' + message)
+        raise UFInvalidExport('Invalid UF export: ' + message)
 
 
 def _xml(archive, name):
     content = archive.read(name)
-    _require(b'<!DOCTYPE' not in content.upper() and b'<!ENTITY' not in content.upper(), 'XML declarations')
+    # This export contract supports UTF-8 XML only. Decode before scanning:
+    # raw ASCII searches miss NUL-interleaved UTF-16 declarations/entities.
+    text = content.decode('utf-8-sig')
+    _require('\x00' not in text, 'XML encoding')
+    encoding = re.search(r'^<\?xml\s[^?]*encoding\s*=\s*[\"\']([^\"\']+)', text, re.IGNORECASE)
+    _require(encoding is None or encoding[1].upper() == 'UTF-8', 'XML encoding')
+    _require('<!DOCTYPE' not in text.upper() and '<!ENTITY' not in text.upper(), 'XML declarations')
     return ET.fromstring(content)
 
 
@@ -118,13 +143,9 @@ def _evidence(evidence, current, checked_at, content_size):
     snapshot, trace = evidence['snapshot'], evidence['trace']
     _require(snapshot['entry'] == ENTRY + '#fvm' and snapshot['appId'] == APP and snapshot['table'] == 'Dwnkq', 'entry/app/table')
     mapping = snapshot['mapping']
-    _require(mapping['nativeOrgaoField'] == 'Órgão (Servidores)'
-             and mapping['nativePfLabel'] == SCOPE['native_organization']
-             and mapping['physicalFields'] == ['Sigla Orgão Vinculado (Servidores)']
-             and mapping['availableAbbreviations'] == ['DPF'], 'native organization mapping')
-    expected = {'Seção': ['Servidores'], 'Mês/Ano': [snapshot['latest']['qText']],
-                'Grupo Situação do Vinculo': ['Ativo'], 'Orgão': [SCOPE['native_organization']],
-                'Cargo': CARGOS, 'Dimensão': HEADERS[2:6], 'Métricas': ['Servidores']}
+    _require({key: mapping[key] for key in ORGANIZATION_MAPPING} == ORGANIZATION_MAPPING,
+             'native organization mapping')
+    expected = _expected_filters(snapshot['latest']['qText'])
     selections = snapshot['finalSelections']
     _require(len(selections) == len(expected) and {s['label'] for s in selections} == set(expected), 'selection labels')
     _require(all(sorted(s['selected']) == sorted(expected[s['label']]) for s in selections), 'actual selections')
@@ -148,8 +169,9 @@ def _evidence(evidence, current, checked_at, content_size):
     completed = [t for t in trace if t['kind'] == 'Browser.downloadProgress' and t['state'] == 'completed']
     _require(len(isolated) == 1 and type(isolated[0]['cookieCountBeforeNavigation']) is int
              and isolated[0]['cookieCountBeforeNavigation'] == 0, 'clean anonymous session')
+    if any(t['kind'] == 'STOP' or t.get('status') in (401, 403, 429) for t in trace):
+        raise UFSourceDenied('Invalid UF export: source denial')
     _require(any(t['kind'] == 'ws_handshake' and t['status'] == 101 for t in trace), 'ordinary frontend handshake')
-    _require(not any(t['kind'] == 'STOP' or (t.get('status') in (401, 403, 429)) for t in trace), 'source denial')
     _require(len(started) == len(completed) == 1 and started[0]['guid'] == completed[0]['guid']
              and re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', started[0]['guid']) is not None,
              'fresh correlated download')
@@ -162,8 +184,7 @@ def _evidence(evidence, current, checked_at, content_size):
     return {'url': ENTRY, 'app_id': APP, 'table': 'Dwnkq', 'retrieved_at': completed[0]['utc'],
             'download_guid': started[0]['guid'], 'own_source_total': current['total'],
             'filters': {s['label']: s['selected'] for s in selections},
-            'organization_mapping': {key: mapping[key] for key in
-                                     ('nativeOrgaoField', 'nativePfLabel', 'physicalFields', 'availableAbbreviations')},
+            'organization_mapping': {key: mapping[key] for key in ORGANIZATION_MAPPING},
             'anonymous_session': {'cookie_count_before_navigation': 0, 'websocket_status': 101},
             'evidence_sha256': hashlib.sha256(json.dumps(evidence, sort_keys=True, ensure_ascii=False,
                                                        separators=(',', ':')).encode()).hexdigest()}
@@ -176,8 +197,8 @@ def accept_export(export, checked_at):
         source['sha256'] = hashlib.sha256(export.content).hexdigest()
         current['source'] = source
         return current
-    except (KeyError, TypeError, AttributeError, IndexError, BadZipFile, ET.ParseError, OverflowError, NotImplementedError) as exc:
-        raise ValueError(f'Invalid UF export: {type(exc).__name__}') from exc
+    except (LookupError, TypeError, AttributeError, BadZipFile, ET.ParseError, zlib.error, UnicodeError, OverflowError, NotImplementedError) as exc:
+        raise UFInvalidExport(f'Invalid UF export: {type(exc).__name__}') from exc
 
 
 def load_saved(data_dir, timestamp):
@@ -205,13 +226,8 @@ def load_saved(data_dir, timestamp):
                      and re.fullmatch('[0-9a-f]{64}', source['sha256']) is not None
                      and timestamp(source['retrieved_at']) <= check, 'saved source provenance')
             year, month = current['reference_month'].split('-')
-            _require(source['filters'] == {'Seção': ['Servidores'], 'Mês/Ano': [MONTHS[int(month)-1] + ' ' + year],
-                                          'Grupo Situação do Vinculo': ['Ativo'], 'Orgão': [SCOPE['native_organization']],
-                                          'Cargo': CARGOS, 'Dimensão': HEADERS[2:6], 'Métricas': ['Servidores']}
-                     and source['organization_mapping'] == {'nativeOrgaoField': 'Órgão (Servidores)',
-                                                            'nativePfLabel': SCOPE['native_organization'],
-                                                            'physicalFields': ['Sigla Orgão Vinculado (Servidores)'],
-                                                            'availableAbbreviations': ['DPF']}
+            _require(source['filters'] == _expected_filters(MONTHS[int(month)-1] + ' ' + year)
+                     and source['organization_mapping'] == ORGANIZATION_MAPPING
                      and json.dumps(source['anonymous_session'], sort_keys=True) ==
                          '{"cookie_count_before_navigation": 0, "websocket_status": 101}', 'saved source outcomes')
         validate(data['current'])
