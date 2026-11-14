@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 from urllib.request import urlopen
 
 from perito_dashboard import refresh_and_build
-from tests.sources import CHECK_TIME, ControlledArchive, national_resources, resource_url
+from tests.sources import CHECK_TIME, ControlledArchive, national_resources, resource_url, UnavailableUF
 from tests.test_dashboard import monthly_resource
 
 
@@ -167,7 +167,7 @@ def prepare(root):
     for name, documents in resources.items():
         refresh_and_build(root / f"data-{name}",
                           root / f"www/{name}/monitorar-vacancias-perito-pf",
-                          source=ControlledArchive(documents), clock=lambda: CHECK_TIME)
+                          source=ControlledArchive(documents), uf_source=UnavailableUF(), clock=lambda: CHECK_TIME)
     fallback = root / "www/fallback/monitorar-vacancias-perito-pf"
     shutil.copytree(root / "www/national/monitorar-vacancias-perito-pf",
                     fallback, dirs_exist_ok=True)

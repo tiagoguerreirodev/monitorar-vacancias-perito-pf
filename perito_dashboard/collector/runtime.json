@@ -1,0 +1,32 @@
+{
+  "platform": "ubuntu-24.04-x64",
+  "python": {
+    "version": "3.13.18",
+    "url": "https://github.com/actions/python-versions/releases/download/3.13.18-40336726450/python-3.13.18-linux-24.04-x64.tar.gz",
+    "size": 102778317,
+    "sha256": "683005a1465d94d40045f6a1a6eb316885b5f08d3360f7922b44ef58a14a9eed",
+    "executable_sha256": "5d782b88e6d48cc376d3e4b890539876ccaf7235acb1a265b7880ba471432cba",
+    "publisher_digest": "GitHub actions/python-versions release asset 678421609 digest"
+  },
+  "node": {
+    "version": "v26.13.1",
+    "size": 34093052,
+    "url": "https://nodejs.org/dist/v26.13.1/node-v26.13.1-linux-x64.tar.xz",
+    "sha256": "5c063e46bab0fbc1c17cc445d7ff129cbdcd0471be6ed83b6ab864f8143bc864",
+    "publisher_digest": "https://nodejs.org/dist/v26.13.1/SHASUMS256.txt",
+    "executable_sha256": "d931c649850ffa7155b8ceffb400dc916ef325866e509cc52ae36e33e8fbb9a9"
+  },
+  "chrome": {
+    "version": "157.0.8103.78",
+    "url": "https://storage.googleapis.com/chrome-for-testing-public/157.0.8103.78/linux64/chrome-linux64.zip?generation=1794360528414332",
+    "sha256": "9223832977a13db3646201b1341c1f9cf08afa3ceae92540116d7b0c062364fb",
+    "executable_sha256": "f60cb86024464df9740504a1584b605c2b3cf107625ff11e1da22c875c1627e8",
+    "generation": "1794360528414332",
+    "size": 203266906,
+    "crc32c_base64": "XCtEmw==",
+    "md5_base64": "n3ml73xVw0ZMdH0ruvsZVg==",
+    "revision": "1717349",
+    "metadata_url": "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json",
+    "digest_provenance": "Locally computed SHA256 after exact-generation HTTPS download and official length/CRC32C/MD5 verification on 2026-11-14; not a publisher signature"
+  }
+}

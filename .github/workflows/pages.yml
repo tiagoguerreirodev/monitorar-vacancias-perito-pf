@@ -9,7 +9,7 @@
   "jobs": {
     "refresh": {
       "if": "${{ github.repository == 'tiagoguerreirodev/monitorar-vacancias-perito-pf' && github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}",
-      "runs-on": "ubuntu-latest",
+      "runs-on": "ubuntu-24.04",
       "timeout-minutes": 30,
       "permissions": {"contents": "write"},
       "outputs": {
@@ -17,10 +17,10 @@
         "artifact_name": "pages-${{ github.run_id }}-${{ github.run_attempt }}"
       },
       "steps": [
-        {"uses": "actions/checkout@v7", "with": {"ref": "${{ github.sha }}", "persist-credentials": false}},
-        {"uses": "actions/setup-python@v7", "with": {"python-version": "3.13"}},
+        {"uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", "with": {"ref": "${{ github.sha }}", "persist-credentials": false}},
+        {"name": "Install checksum-verified Python", "run": "bash .github/scripts/setup-python.sh"},
         {"name": "Validate before refreshing", "run": "python3 -m unittest discover -v"},
-        {"name": "Refresh and build complete candidate", "run": "python3 -m perito_dashboard --data-dir data --site-dir site"},
+        {"name": "Refresh and build complete candidate", "env": {"PERITO_RUNTIME_ROOT": "${{ runner.temp }}/perito-uf-runtime"}, "run": "python3 -m perito_dashboard --data-dir data --site-dir site"},
         {
           "name": "Persist accepted aggregates without force pushing",
           "id": "persist",
@@ -35,7 +35,7 @@
         },
         {
           "name": "Upload this run's validated site",
-          "uses": "actions/upload-pages-artifact@v5",
+          "uses": "actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9",
           "with": {"path": "site", "name": "pages-${{ github.run_id }}-${{ github.run_attempt }}"}
         }
       ]
@@ -56,7 +56,7 @@
         {
           "name": "Deploy this run's artifact explicitly",
           "id": "deployment",
-          "uses": "actions/deploy-pages@v5",
+          "uses": "actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346",
           "with": {"artifact_name": "${{ needs.refresh.outputs.artifact_name }}"}
         }
       ]

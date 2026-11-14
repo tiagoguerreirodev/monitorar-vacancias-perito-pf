@@ -1,0 +1,33 @@
+{
+  "name": "Observe trusted UF runtime (no publication)",
+  "on": {"workflow_dispatch": {}},
+  "permissions": {"contents": "read"},
+  "concurrency": {"group": "uf-qualification-main", "cancel-in-progress": false},
+  "jobs": {
+    "qualify": {
+      "if": "${{ github.repository == 'tiagoguerreirodev/monitorar-vacancias-perito-pf' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' }}",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 20,
+      "steps": [
+        {"uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", "with": {"ref": "${{ github.sha }}", "persist-credentials": false}},
+        {"name": "Install checksum-verified Python", "run": "bash .github/scripts/setup-python.sh"},
+        {"name": "Validate offline before observation", "run": "python3 -m unittest discover -v"},
+        {
+          "name": "Observe two independent production exports",
+          "env": {"PERITO_RUNTIME_ROOT": "${{ runner.temp }}/perito-uf-runtime"},
+          "run": "python3 -m perito_dashboard.qualify --output uf-proof"
+        },
+        {
+          "name": "Record immutable observation provenance",
+          "env": {"CODE_REVISION": "${{ github.sha }}"},
+          "run": "printf '{\"code_revision\":\"%s\",\"run_id\":\"%s\",\"run_attempt\":\"%s\"}\\n' \"$CODE_REVISION\" \"$GITHUB_RUN_ID\" \"$GITHUB_RUN_ATTEMPT\" > uf-proof/workflow.json"
+        },
+        {
+          "name": "Retain aggregate exports and sanitized evidence only",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "with": {"name": "uf-qualification-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}", "path": "uf-proof", "if-no-files-found": "error", "retention-days": 14}
+        }
+      ]
+    }
+  }
+}
