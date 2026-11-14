@@ -2,7 +2,7 @@
 import json
 
 
-CUTOFF = "2026-09"
+CUTOFF = "2025-06"
 PF_ORGANIZATION = {
     "code": 20115,
     "name": "DEPARTAMENTO DE POLICIA FEDERAL",

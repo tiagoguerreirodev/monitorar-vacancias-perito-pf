@@ -15,9 +15,9 @@ SEPTEMBER = Path(__file__).parent.joinpath("fixtures/september-2026.ods").read_b
 CHECK_TIME = datetime(2026, 11, 13, 12, 0, tzinfo=timezone.utc)
 
 
-def variant(edit):
+def variant(edit, content=SEPTEMBER):
     """Edit a copy of official source XML, never application/parser internals."""
-    with ZipFile(BytesIO(SEPTEMBER)) as archive:
+    with ZipFile(BytesIO(content)) as archive:
         root = ET.fromstring(archive.read("content.xml"))
     table = next(t for t in root.iter(TABLE + "table")
                  if t.get(TABLE + "name") == "por_Órgao_e_Cargo")
@@ -43,6 +43,15 @@ def set_cell(row, header, name, value):
     cell[:] = []
     cell.set(OFFICE + "value-type", "string")
     ET.SubElement(cell, TEXT + "p").text = str(value)
+
+
+def national_resources():
+    """Authentic reduced publications; filenames retain their original casing."""
+    resources = {SEPTEMBER_URL: SEPTEMBER}
+    for path in Path(__file__).parent.joinpath("fixtures/national").glob("*.ods"):
+        year = path.stem.rsplit("_", 1)[1][:4]
+        resources[ARCHIVE_URL + year + "/" + path.name] = path.read_bytes()
+    return resources
 
 
 def resource_url(month):

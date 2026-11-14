@@ -18,7 +18,7 @@ from zipfile import ZipFile
 from perito_dashboard import refresh_and_build
 from tests.sources import (
     ARCHIVE_URL, CHECK_TIME, ControlledArchive, OFFICE, SEPTEMBER_URL, ScriptedArchive, TABLE,
-    TEXT, directory_index, monthly_resource, pf_classes, set_cell, variant,
+    TEXT, directory_index, monthly_resource, national_resources, pf_classes, set_cell, variant,
 )
 
 
@@ -55,6 +55,9 @@ class HistoryTests(unittest.TestCase):
         invalid_url, invalid = monthly_resource("2026-13")
         scenarios = [
             {november_url: november, november_url.replace(".ods", "_v2.ods"): november},
+            {november_url: november, november_url.replace("CargosVagosVacancias", "cargosvagosvacancias"): november},
+            {november_url.replace("CargosVagosVacancias", "cargosvagosvacancias"): november,
+             november_url.replace(".ods", "_v2.ods"): november},
             {november_url.replace("/2026/", "/2027/"): november},
             {invalid_url: invalid},
         ]
@@ -441,7 +444,7 @@ class HistoryTests(unittest.TestCase):
         # The latest source disappears while older eligible months are discovered.
         self.refresh(ControlledArchive(dict([
             monthly_resource("2026-11"), monthly_resource("2026-09"),
-            (ARCHIVE_URL + "2026/CargosVagosVacancias_202608.ods", b"outside cutoff"),
+            (ARCHIVE_URL + "2025/CargosVagosVacancias_202505.ods", b"outside cutoff"),
         ])), CHECK_TIME + timedelta(days=1))
         rows = self.history()["observations"]
         self.assertEqual([row["reference_month"] for row in rows], ["2026-09", "2026-11", "2027-01"])
@@ -452,6 +455,71 @@ class HistoryTests(unittest.TestCase):
         self.refresh(ControlledArchive({}), CHECK_TIME + timedelta(days=2))
         self.assertEqual((self.data / "history.json").read_bytes(), before)
         self.history()
+
+    def test_historical_lowercase_correction_audit_replays_and_aliases_fail_closed(self):
+        resources = national_resources()
+        self.refresh(ControlledArchive(resources))
+        original = self.history()
+        september = original["observations"][-1]
+        august = original["observations"][1]
+        url = ARCHIVE_URL + "2025/cargosvagosvacancias_202508.ods"
+
+        def correction(table, header):
+            row = pf_classes(table, header)[0]
+            set_cell(row, header, "OCUPADA", "860")
+            set_cell(row, header, "VAGA", "71")
+        corrected = variant(correction, resources[url])
+        resources[url] = corrected
+        self.refresh(ControlledArchive(resources), CHECK_TIME + timedelta(days=1))
+        history = self.history()
+        replacement = history["observations"][1]
+        self.assertEqual((replacement["authorized"], replacement["occupied"], replacement["vacant"]),
+                         (1195, 1110, 85))
+        self.assertEqual(replacement["source"], {
+            "url": url, "sha256": hashlib.sha256(corrected).hexdigest(),
+            "retrieved_at": "2026-11-14T12:00:00Z",
+        })
+        self.assertEqual(history["corrections"], [{
+            "superseded": august, "replacement_source": replacement["source"],
+        }])
+        self.assertEqual(history["observations"][-1], september)
+        self.assertEqual(len(history["observations"]), 15)
+        self.refresh(ControlledArchive({url: corrected}), CHECK_TIME + timedelta(days=2))
+        self.assertEqual(self.history(), history, "Retain absent months and do not audit twice")
+        before = self.output_bytes()
+        alias = url.replace("cargosvagosvacancias", "CargosVagosVacancias")
+        for source in (ControlledArchive({url: corrected, alias: corrected}),
+                       ControlledArchive({alias: corrected})):
+            with self.subTest(resources=list(source.resources)):
+                with self.assertRaisesRegex(ValueError, "[Cc]onflict"):
+                    self.refresh(source, CHECK_TIME + timedelta(days=3))
+                self.assertEqual(self.output_bytes(), before)
+
+    def test_lowercase_saved_source_validation_keeps_exact_official_directory_and_period(self):
+        url = ARCHIVE_URL + "2025/cargosvagosvacancias_202508.ods"
+        self.refresh(ControlledArchive({url: national_resources()[url]}))
+        history = self.history()
+        invalid_urls = (
+            url.replace("https:", "http:"),
+            url.replace("repositorio.dados.gov.br", "example.org"),
+            url.replace("/segrt/", "/SEGRT/"),
+            url.replace("/2025/", "/2026/"),
+            url.replace("202508.ods", "202509.ods"),
+            url.replace("202508.ods", "202513.ods"),
+            url.replace("202508.ods", "202508_v2.ods"),
+            url.replace("202508.ods", "202508.csv"),
+            url + "?download=1", url + "#source", url + "/",
+            url.replace("/2025/", "/2025/../2025/"),
+        )
+        for invalid_url in invalid_urls:
+            with self.subTest(url=invalid_url):
+                invalid = deepcopy(history)
+                invalid["observations"][0]["source"]["url"] = invalid_url
+                (self.data / "history.json").write_text(json.dumps(invalid))
+                before = self.output_bytes()
+                with self.assertRaisesRegex(ValueError, "Invalid saved source URL"):
+                    self.refresh(ControlledArchive({}), CHECK_TIME + timedelta(days=1))
+                self.assertEqual(self.output_bytes(), before)
 
     def test_canonical_correction_keeps_superseded_values_and_provenance_once(self):
         self.refresh()
