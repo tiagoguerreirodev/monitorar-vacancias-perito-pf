@@ -4,25 +4,40 @@ It replays saved source documents; it is NOT a collector or runtime qualificatio
 Only tests install this script as PERITO_NODE in a private temporary directory.
 """
 import json
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-import shutil
 import sys
 
 
 def main():
-    fixtures = Path(__file__).parent / 'fixtures/uf'
+    if sys.argv[1:] == ['--version']:
+        print('offline-process-stand-in (NOT a Node runtime proof)')
+        return
     # Node argv: immutable browser script, new absolute owned run, Chrome executable.
     resource, run, chrome = map(Path, sys.argv[1:])
     if not resource.is_file() or not chrome.is_file() or not run.is_absolute() or run.exists():
         raise SystemExit(2)
-    evidence = json.loads((fixtures / 'run-6.json').read_text())
+    item = {}
+    sequence = os.environ.get('PERITO_TEST_EXPORT_SEQUENCE')
+    if sequence:
+        sequence = Path(sequence)
+        count = sequence.with_suffix('.count')
+        index = int(count.read_text()) if count.exists() else 0
+        count.write_text(str(index + 1))
+        with sequence.with_suffix('.runs').open('a') as log:
+            log.write(json.dumps({'run': str(run), 'pid': os.getpid()}) + '\n')
+        item = json.loads(sequence.read_text())[index]
+        content = Path(item['workbook']).read_bytes()
+        evidence = json.loads(Path(item['evidence']).read_text())
+    else:
+        raise SystemExit('OFFLINE stand-in requires explicit document sequence')
     snapshot = evidence['snapshot']
     snapshot['availablePeriods'] = evidence['available_periods']
     run.mkdir()
     (run / 'downloads').mkdir()
     begin = next(t for t in evidence['trace'] if t['kind'] == 'Browser.downloadWillBegin')
-    shutil.copyfile(fixtures / 'run-6.xlsx', run / 'downloads' / begin['guid'])
+    (run / 'downloads' / begin['guid']).write_bytes(content)
     (run / 'trace.jsonl').write_text(''.join(json.dumps(t) + '\n' for t in evidence['trace']))
 
     class Handler(BaseHTTPRequestHandler):
@@ -35,7 +50,8 @@ def main():
                 return
             request = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
             if request['op'] == 'stop':
-                (run / 'end.json').write_text(json.dumps({'fatal': None, 'browser_stopped': True, 'clean_profile_removed': True}))
+                (run / 'end.json').write_text(json.dumps(item.get('cleanup', {
+                    'fatal': None, 'browser_stopped': True, 'clean_profile_removed': True})))
                 result = {'closing': True}
             else:
                 # The saved export is returned for the ordinary FVM preparation;

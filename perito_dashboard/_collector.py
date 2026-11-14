@@ -1,4 +1,5 @@
 """Bounded anonymous frontend transport using owned processes/profile/output only."""
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -10,7 +11,7 @@ import tempfile
 import time
 from urllib.request import Request, urlopen
 
-from ._uf import UFExport
+from ._uf import UFExport, accept_export
 
 
 class UFBlocked(ValueError):
@@ -29,9 +30,31 @@ def _runtime(variable, candidates):
 class OfficialUF:
     """No workbook, URL, session or user-profile inputs; every call exports afresh."""
     def latest_export(self):
-        node = _runtime('PERITO_NODE', ['node'])
-        chrome = _runtime('PERITO_CHROME', ['google-chrome', 'chromium', 'chromium-browser',
-                          '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'])
+        # No enable/skip flag: every live candidate proves independent repeatability.
+        self.proof = ()
+        if os.environ.get('PERITO_RUNTIME_ROOT'):
+            from .runtime import ensure_runtime
+            node, chrome = ensure_runtime(os.environ['PERITO_RUNTIME_ROOT'])
+        else:
+            node = _runtime('PERITO_NODE', ['node'])
+            chrome = _runtime('PERITO_CHROME', ['google-chrome', 'chromium', 'chromium-browser',
+                              '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'])
+        first = self._fresh_export(node, chrome)
+        first_snapshot = accept_export(first, datetime.now(timezone.utc).isoformat())
+        second = self._fresh_export(node, chrome)
+        second_snapshot = accept_export(second, datetime.now(timezone.utc).isoformat())
+        first_source, second_source = first_snapshot['source'], second_snapshot['source']
+        isolated = next(t['utc'] for t in second.evidence['trace'] if t['kind'] == 'isolation')
+        instant = lambda value: datetime.fromisoformat(value.replace('Z', '+00:00'))
+        if (first_snapshot['reference_month'] != second_snapshot['reference_month']
+                or first_snapshot['semantic_identity'] != second_snapshot['semantic_identity']
+                or first_source['download_guid'] == second_source['download_guid']
+                or instant(isolated) <= instant(first_source['retrieved_at'])):
+            raise ValueError('UF independent exports disagree or reuse a download')
+        self.proof = ((first, first_snapshot), (second, second_snapshot))
+        return second
+
+    def _fresh_export(self, node, chrome):
         resources = Path(__file__).resolve().with_name('collector')
         with tempfile.TemporaryDirectory(prefix='perito-uf-') as directory:
             root, proc, control = Path(directory), None, None
@@ -110,8 +133,9 @@ class OfficialUF:
                     receipt = json.loads((run / 'end.json').read_text())
                     if proc.returncode or receipt['fatal'] or not receipt['browser_stopped'] or not receipt['clean_profile_removed']:
                         raise ValueError('UF collector cleanup failed')
-                    return UFExport(content, {'snapshot': snapshot, 'trace': trace,
-                                             'available_periods': snapshot['availablePeriods']})
+                    result = UFExport(content, {'snapshot': snapshot, 'trace': trace,
+                                                'available_periods': snapshot['availablePeriods'],
+                                                'cleanup': receipt, 'browser_version': control.get('version')})
             except (OSError, subprocess.SubprocessError, KeyError, TypeError, json.JSONDecodeError) as exc:
                 raise ValueError(f'UF collector transport failed ({type(exc).__name__})') from exc
             finally:
@@ -130,4 +154,11 @@ class OfficialUF:
                         os.killpg(proc.pid, signal.SIGKILL)
                     except ProcessLookupError:
                         pass
-                    proc.wait(timeout=3)
+                    try:
+                        proc.wait(timeout=3)
+                    except subprocess.TimeoutExpired as exc:
+                        raise ValueError('UF owned process cleanup exceeded deadline') from exc
+        # Record owner-observed cleanup, not just the child-process receipt.
+        result.evidence['cleanup'].update(node_stopped=proc.returncode is not None,
+                                          owned_directory_removed=not root.exists())
+        return result

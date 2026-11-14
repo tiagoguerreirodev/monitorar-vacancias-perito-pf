@@ -53,7 +53,7 @@ class WorkflowTests(unittest.TestCase):
                  "|| github.event_name == 'workflow_dispatch') }}")
         for job in (refresh, deploy):
             self.assertEqual(job["if"], guard)
-            self.assertEqual(job["runs-on"], "ubuntu-latest")
+            self.assertEqual(job["runs-on"], 'ubuntu-24.04' if job is refresh else 'ubuntu-latest')
             self.assertLessEqual(job["timeout-minutes"], 30)
         self.assertEqual(refresh["permissions"], {"contents": "write"})
         self.assertEqual(deploy["permissions"], {
@@ -64,19 +64,18 @@ class WorkflowTests(unittest.TestCase):
             "name": "github-pages", "url": "${{ steps.deployment.outputs.page_url }}",
         })
         steps = refresh["steps"]
-        self.assertEqual(steps[0]["uses"], "actions/checkout@v7")
+        self.assertEqual(steps[0]["uses"], "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1")
         self.assertEqual(steps[0]["with"], {"ref": "${{ github.sha }}", "persist-credentials": False})
-        self.assertEqual(steps[1]["uses"], "actions/setup-python@v7")
-        self.assertEqual(steps[1]["with"]["python-version"], "3.13")
+        self.assertEqual(steps[1]['run'], 'bash .github/scripts/setup-python.sh')
         commands = [step["run"] for step in steps if "run" in step]
-        self.assertEqual(commands[:2], ["python3 -m unittest discover -v",
+        self.assertEqual(commands[:3], ['bash .github/scripts/setup-python.sh', "python3 -m unittest discover -v",
                                         "python3 -m perito_dashboard --data-dir data --site-dir site"])
         upload = steps[-1]
-        self.assertEqual(upload["uses"], "actions/upload-pages-artifact@v5")
+        self.assertEqual(upload["uses"], "actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9")
         self.assertEqual(upload["with"]["path"], "site")
         self.assertEqual(upload["with"]["name"], "pages-${{ github.run_id }}-${{ github.run_attempt }}")
         publish = deploy["steps"][-1]
-        self.assertEqual(publish["uses"], "actions/deploy-pages@v5")
+        self.assertEqual(publish["uses"], "actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346")
         self.assertEqual(publish["id"], "deployment")
         self.assertEqual(refresh["outputs"]["artifact_name"], upload["with"]["name"])
         self.assertEqual(publish["with"]["artifact_name"], "${{ needs.refresh.outputs.artifact_name }}")
@@ -85,6 +84,33 @@ class WorkflowTests(unittest.TestCase):
             for step in job["steps"]:
                 self.assertNotIn("if", step)
                 self.assertNotIn("continue-on-error", step)
+
+    def test_manual_qualification_is_trusted_main_read_only_and_uses_production_runtime(self):
+        config = workflow('qualify-uf.yml')
+        self.assertEqual(config['on'], {'workflow_dispatch': {}})
+        self.assertEqual(config['permissions'], {'contents': 'read'})
+        self.assertEqual(set(config['jobs']), {'qualify'})
+        job = config['jobs']['qualify']
+        self.assertEqual(job['if'], "${{ github.repository == 'tiagoguerreirodev/monitorar-vacancias-perito-pf' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' }}")
+        self.assertEqual(job['runs-on'], 'ubuntu-24.04')
+        self.assertNotIn('environment', job)
+        steps = job['steps']
+        self.assertEqual(steps[0]['with'], {'ref': '${{ github.sha }}', 'persist-credentials': False})
+        collect = next(step for step in steps if step.get('name') == 'Observe two independent production exports')
+        self.assertEqual(collect['run'], 'python3 -m perito_dashboard.qualify --output uf-proof')
+        self.assertEqual(collect['env'], {'PERITO_RUNTIME_ROOT': '${{ runner.temp }}/perito-uf-runtime'})
+        production = next(step for step in workflow('pages.yml')['jobs']['refresh']['steps']
+                          if step.get('name') == 'Refresh and build complete candidate')
+        self.assertEqual(production['env'], collect['env'])
+        self.assertEqual(steps[-1]['with']['path'], 'uf-proof')
+        for step in steps:
+            self.assertNotIn('if', step)
+            self.assertNotIn('continue-on-error', step)
+            self.assertNotIn('secrets', str(step))
+            self.assertNotIn('deploy-pages', str(step))
+            self.assertNotIn('--site-dir', str(step))
+        for step in (steps[0], steps[-1]):
+            self.assertRegex(step['uses'], r'@[0-9a-f]{40}$')
 
     def test_failed_deploy_retry_reuses_the_successful_refresh_artifact(self):
         config = workflow("pages.yml")
@@ -234,6 +260,17 @@ class GitPersistenceTests(unittest.TestCase):
                 self.assertEqual(self.git(self.repo, "rev-parse", "HEAD").stdout.strip(), self.base)
                 self.assertEqual(self.git(self.remote, "rev-parse", "refs/heads/main").stdout.strip(), tip)
 
+    def test_new_uf_pair_is_persisted_with_only_explicit_accepted_filenames(self):
+        for name in ('uf.json', 'uf-status.json'):
+            (self.repo / 'data' / name).write_text('{"accepted": 2}\n')
+        (self.repo / 'data/uf-private.json').write_text('must not stage\n')
+        result = self.persist()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        changed = self.git(self.repo, 'diff-tree', '--no-commit-id', '--name-only', '-r', 'HEAD')
+        self.assertEqual(changed.stdout.splitlines(), ['data/uf-status.json', 'data/uf.json'])
+        self.assertEqual(self.git(self.remote, 'rev-parse', 'refs/heads/main').stdout.strip(),
+                         self.git(self.repo, 'rev-parse', 'HEAD').stdout.strip())
+
     def test_commit_contains_only_accepted_data_and_no_change_is_a_safe_noop(self):
         result = self.persist()
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -258,7 +295,7 @@ class GitPersistenceTests(unittest.TestCase):
         refresh = config["jobs"]["refresh"]
         self.assertEqual(refresh["outputs"]["revision"], "${{ steps.persist.outputs.revision }}")
         ids = [step.get("id", step.get("uses", step.get("name"))) for step in refresh["steps"]]
-        self.assertLess(ids.index("persist"), ids.index("actions/upload-pages-artifact@v5"))
+        self.assertLess(ids.index("persist"), ids.index("actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9"))
         self.assertEqual(self.git(self.repo, "config", "--local", "--get-regexp",
                                   "user\\.").stdout.strip(),
                          "user.name Test Maintainer\nuser.email test@example.invalid")

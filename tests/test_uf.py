@@ -118,11 +118,113 @@ class UFAcceptanceTests(unittest.TestCase):
         runtime.write_text('#!' + sys.executable + '\nimport runpy\nrunpy.run_path(' +
                            repr(str(Path(__file__).with_name('uf_runtime.py').resolve())) + ", run_name='__main__')\n")
         runtime.chmod(0o700)
-        with patch.dict(os.environ, {'PERITO_NODE': str(runtime), 'PERITO_CHROME': sys.executable}):
+        sequence = self.root / 'sequence.json'
+        sequence.write_text(json.dumps([
+            {'workbook': str(FIXTURES.resolve() / f'run-{run}.xlsx'),
+             'evidence': str(FIXTURES.resolve() / f'run-{run}.json')} for run in (6, 7)]))
+        with patch.dict(os.environ, {'PERITO_NODE': str(runtime), 'PERITO_CHROME': sys.executable,
+                                     'PERITO_TEST_EXPORT_SEQUENCE': str(sequence)}):
             result = refresh_and_build(self.data, self.site, source=UnavailableNational(), clock=lambda: NOW)
         self.assertEqual(result, {'national': 'failed', 'uf': 'updated', 'publication': 'partial'})
         self.assertEqual(self.saved('uf.json')['current']['counts_by_uf']['DF'], 324)
         self.assertIn('premissa do projeto', (self.site / 'index.html').read_text())
+
+    def test_managed_runtime_setup_failure_is_inside_uf_candidate_not_global(self):
+        runtime = self.root / 'external-runtime'
+        runtime.write_text('#!' + sys.executable + '\nimport runpy\nrunpy.run_path(' +
+                           repr(str(Path(__file__).with_name('uf_runtime.py').resolve())) + ", run_name='__main__')\n")
+        runtime.chmod(0o700)
+        # A file cannot be a runtime directory, on any host; never reaches network.
+        blocked = self.root / 'not-a-runtime-directory'
+        blocked.write_text('blocked')
+        sequence = self.root / 'sequence.json'
+        sequence.write_text(json.dumps([
+            {'workbook': str(FIXTURES.resolve() / f'run-{run}.xlsx'),
+             'evidence': str(FIXTURES.resolve() / f'run-{run}.json')} for run in (6, 7)]))
+        with patch.dict(os.environ, {'PERITO_NODE': str(runtime), 'PERITO_CHROME': sys.executable,
+                                     'PERITO_RUNTIME_ROOT': str(blocked), 'PERITO_TEST_EXPORT_SEQUENCE': str(sequence)}):
+            result = refresh_and_build(self.data, self.site, source=ControlledArchive(), clock=lambda: NOW)
+        self.assertEqual(result, {'national': 'updated', 'uf': 'failed', 'publication': 'partial'})
+        self.assertEqual(self.saved('history.json')['observations'][-1]['reference_month'], '2026-09')
+        self.assertFalse((self.data / 'uf.json').exists())
+
+    def test_production_repeat_disagreement_preserves_uf_but_advances_healthy_national(self):
+        self.refresh()
+        before = {name: (self.data / name).read_bytes() for name in ('uf.json', 'uf-status.json')}
+        runtime = self.root / 'external-runtime'
+        runtime.write_text('#!' + sys.executable + '\nimport runpy\nrunpy.run_path(' +
+                           repr(str(Path(__file__).with_name('uf_runtime.py').resolve())) + ", run_name='__main__')\n")
+        runtime.chmod(0o700)
+        evidence = deepcopy(ExportSource(run=7).evidence)
+        evidence['snapshot']['qGrandTotalRow'][0]['qNum'] = 1107
+        ns = '{http://schemas.openxmlformats.org/spreadsheetml/2006/main}'
+        def zero(root):
+            root.find('.//' + ns + 'c[@r="G2"]/' + ns + 'v').text = '0'
+        content = workbook_variant(zero)
+        for event in evidence['trace']:
+            if event.get('state') == 'completed':
+                event['receivedBytes'] = event['totalBytes'] = len(content)
+        (self.root / 'changed.xlsx').write_bytes(content)
+        (self.root / 'changed.json').write_text(json.dumps(evidence))
+        sequence = self.root / 'sequence.json'
+        sequence.write_text(json.dumps([
+            {'workbook': str(FIXTURES.resolve() / 'run-6.xlsx'), 'evidence': str(FIXTURES.resolve() / 'run-6.json')},
+            {'workbook': str(self.root / 'changed.xlsx'), 'evidence': str(self.root / 'changed.json')},
+        ]))
+        from tests.sources import monthly_resource
+        with patch.dict(os.environ, {'PERITO_NODE': str(runtime), 'PERITO_CHROME': sys.executable,
+                                     'PERITO_TEST_EXPORT_SEQUENCE': str(sequence)}):
+            result = refresh_and_build(self.data, self.site,
+                                       source=ControlledArchive(dict([monthly_resource('2026-10')])),
+                                       clock=lambda: NOW + timedelta(days=1))
+        self.assertEqual(result, {'national': 'updated', 'uf': 'failed', 'publication': 'partial'})
+        self.assertEqual(self.saved('history.json')['observations'][-1]['reference_month'], '2026-10')
+        for name, raw in before.items():
+            self.assertEqual((self.data / name).read_bytes(), raw)
+            self.saved(name)
+
+    def test_live_repeat_denial_cleanup_and_reused_receipt_leave_uf_bytes_but_national_advances(self):
+        from tests.sources import monthly_resource
+        runtime = self.root / 'external-runtime'
+        runtime.write_text('#!' + sys.executable + '\nimport runpy\nrunpy.run_path(' +
+                           repr(str(Path(__file__).with_name('uf_runtime.py').resolve())) + ", run_name='__main__')\n")
+        runtime.chmod(0o700)
+        for case in ('denial', 'cleanup', 'guid'):
+            with self.subTest(case=case):
+                data, site = self.root / case / 'data', self.root / case / 'site'
+                refresh_and_build(data, site, source=ControlledArchive(), uf_source=ExportSource(), clock=lambda: NOW)
+                before = {name: (data / name).read_bytes() for name in ('uf.json', 'uf-status.json')}
+                evidence = deepcopy(ExportSource(run=7).evidence)
+                if case == 'denial':
+                    for event in evidence['trace']:
+                        if event['kind'] == 'ws_handshake':
+                            event['status'] = 403
+                elif case == 'guid':
+                    guid = next(e['guid'] for e in ExportSource().evidence['trace'] if 'guid' in e)
+                    for event in evidence['trace']:
+                        if 'guid' in event:
+                            event['guid'] = guid
+                path = self.root / case / 'second.json'
+                path.write_text(json.dumps(evidence))
+                second = {'workbook': str(FIXTURES.resolve() / 'run-7.xlsx'), 'evidence': str(path)}
+                if case == 'cleanup':
+                    second['cleanup'] = {'fatal': None, 'browser_stopped': False, 'clean_profile_removed': False}
+                sequence = self.root / case / 'sequence.json'
+                sequence.write_text(json.dumps([
+                    {'workbook': str(FIXTURES.resolve() / 'run-6.xlsx'),
+                     'evidence': str(FIXTURES.resolve() / 'run-6.json')}, second]))
+                with patch.dict(os.environ, {'PERITO_NODE': str(runtime), 'PERITO_CHROME': sys.executable,
+                                             'PERITO_TEST_EXPORT_SEQUENCE': str(sequence)}):
+                    result = refresh_and_build(data, site, source=ControlledArchive(dict([monthly_resource('2026-10')])),
+                                               clock=lambda: NOW + timedelta(days=1))
+                self.assertEqual(result, {'national': 'updated', 'uf': 'failed', 'publication': 'partial'})
+                for name, raw in before.items():
+                    self.assertEqual((data / name).read_bytes(), raw)
+                    self.assertEqual((site / 'data' / name).read_bytes(), raw)
+                self.assertEqual(json.loads((data / 'history.json').read_text())['observations'][-1]['reference_month'], '2026-10')
+                self.assertEqual(sequence.with_suffix('.count').read_text(), '2')
+                for line in sequence.with_suffix('.runs').read_text().splitlines():
+                    self.assertFalse(Path(json.loads(line)['run']).parent.exists())
 
     def test_each_healthy_feed_advances_while_failed_feed_bytes_are_preserved(self):
         from tests.sources import monthly_resource
