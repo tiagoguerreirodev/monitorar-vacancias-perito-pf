@@ -13,7 +13,7 @@ from unittest.mock import patch
 import tempfile
 import unittest
 from xml.etree import ElementTree as ET
-from zipfile import ZipFile
+from zipfile import ZipFile, ZIP_DEFLATED
 
 from perito_dashboard import refresh_and_build
 from tests.sources import ControlledArchive, UnavailableUF
@@ -425,6 +425,60 @@ class UFAcceptanceTests(unittest.TestCase):
                 self.assertEqual(sequence.with_suffix('.count').read_text(), '2')
                 for line in sequence.with_suffix('.runs').read_text().splitlines():
                     self.assertFalse(Path(json.loads(line)['run']).parent.exists())
+
+    def assert_malformed_national_is_isolated(self, damage):
+        from tests.sources import SEPTEMBER, SEPTEMBER_URL
+        self.refresh()
+        national_before = {name: (self.data / name).read_bytes()
+                           for name in ('history.json', 'status.json')}
+        uf_before = (self.data / 'uf.json').read_bytes()
+        output = BytesIO()
+        with ZipFile(BytesIO(SEPTEMBER)) as original, ZipFile(output, 'w', ZIP_DEFLATED) as archive:
+            archive.writestr('content.xml', original.read('content.xml'))
+        content = bytearray(output.getvalue())
+        with ZipFile(BytesIO(content)) as archive:
+            central = archive.start_dir
+        if damage == 'deflate':
+            name_size, extra_size = struct.unpack_from('<HH', content, 26)
+            # Invalid DEFLATE BTYPE=3, rather than a CRC-only failure.
+            content[30 + name_size + extra_size] = 7
+        elif damage == 'unsupported':
+            struct.pack_into('<H', content, 8, 99)
+            struct.pack_into('<H', content, central + 10, 99)
+        elif damage == 'encrypted':
+            struct.pack_into('<H', content, 6, 1)
+            struct.pack_into('<H', content, central + 8, 1)
+        else:
+            self.fail('unknown document damage')
+        ns = '{http://schemas.openxmlformats.org/spreadsheetml/2006/main}'
+        def correction(root):
+            root.find('.//' + ns + 'c[@r="G2"]/' + ns + 'v').text = '0'
+        evidence = deepcopy(ExportSource().evidence)
+        evidence['snapshot']['qGrandTotalRow'][0]['qNum'] = 1107
+        result = refresh_and_build(self.data, self.site,
+            source=ControlledArchive({SEPTEMBER_URL: bytes(content)}),
+            uf_source=ExportSource(content=workbook_variant(correction), evidence=evidence),
+            clock=lambda: NOW + timedelta(days=1))
+        self.assertEqual(result, {'national': 'failed', 'uf': 'updated', 'publication': 'partial'})
+        for name, before in national_before.items():
+            self.assertEqual((self.data / name).read_bytes(), before)
+            self.assertEqual((self.site / 'data' / name).read_bytes(), before)
+        self.assertNotEqual((self.data / 'uf.json').read_bytes(), uf_before)
+        current = self.saved('uf.json')['current']
+        self.assertEqual(current['total'], 1107)
+        self.assertEqual(current['counts_by_uf']['AC'], 8)
+        self.assertEqual(current['counts_by_uf']['DF'], 324)
+        self.assertEqual(len(current['rows']), 88)
+        self.assertEqual(self.saved('uf-status.json')['last_successful_check'], '2026-11-15T12:00:00Z')
+
+    def test_corrupt_national_deflate_retains_national_and_advances_valid_uf(self):
+        self.assert_malformed_national_is_isolated('deflate')
+
+    def test_unsupported_national_zip_retains_national_and_advances_valid_uf(self):
+        self.assert_malformed_national_is_isolated('unsupported')
+
+    def test_encrypted_national_member_retains_national_and_advances_valid_uf(self):
+        self.assert_malformed_national_is_isolated('encrypted')
 
     def test_each_healthy_feed_advances_while_failed_feed_bytes_are_preserved(self):
         from tests.sources import monthly_resource

@@ -1,6 +1,5 @@
 """[DEBUG-uf-linux] Retained trusted no-Gov startup diagnostic; not qualification."""
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -13,16 +12,9 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from perito_dashboard.runtime import MANIFEST, ensure_runtime  # noqa: E402
+from perito_dashboard._shared import file_digest as digest  # noqa: E402
 
 HELPER = Path(__file__).with_name('uf-linux-startup.mjs')
-
-
-def digest(path):
-    value = hashlib.sha256()
-    with Path(path).open('rb') as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b''):
-            value.update(block)
-    return value.hexdigest()
 
 
 def receipt(executables, pins):

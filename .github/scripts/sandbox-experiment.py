@@ -102,9 +102,6 @@ def experiment(privileged_command, observer_command):
     for signum in (signal.SIGTERM, signal.SIGINT):
         previous[signum] = signal.signal(signum, interrupt)
 
-    def request(action):
-        return owner.request(action)
-
     def observe(runtime):
         nonlocal active
         with tempfile.TemporaryFile() as output:
@@ -133,7 +130,7 @@ def experiment(privileged_command, observer_command):
 
     try:
         owner = OwnerClient(privileged_command)
-        staged = request('stage')
+        staged = owner.request('stage')
         runtime = staged.get('runtime', '')
         tree_hash = staged.get('tree_sha256', '')
         if (set(staged) != {'ok', 'runtime', 'tree_sha256'} or not isinstance(runtime, str)
@@ -150,12 +147,12 @@ def experiment(privileged_command, observer_command):
         elif not red(result['phases']['A1']):
             result['status'] = 'baseline_not_reproduced'
         else:
-            request('load')
+            owner.request('load')
             if interrupted:
                 result['status'] = 'interrupted'
             else:
                 result['phases']['B'] = observe(runtime)
-                request('unload')
+                owner.request('unload')
                 if interrupted:
                     result['status'] = 'interrupted'
                 else:
