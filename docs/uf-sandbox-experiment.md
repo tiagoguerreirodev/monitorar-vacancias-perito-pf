@@ -82,6 +82,80 @@ path, existing-parent chmod/chown or protection relaxation is permitted. Actual
 browser reversals still require the coordinator's separately reviewed CI run.
 Offline fixtures below do not establish actual Linux/root behavior or causation.
 
+## Actual protected-parent B abort and temporary classification (#31)
+
+Trusted no-Gov run **43619280568**, code
+**7dd6b5f6e4c213263fddc509f0bb5c7665459af3**, independently verified in
+`protected-parent-experiment-verified.json` (outside the artifact directory),
+successfully staged the protected copy. All three A1 and all three A2 observations
+were `early_exit` / `SIGABRT`, `sandbox_refusal` + `crash`; all three B observations
+were `early_exit` / `SIGABRT`, **only `crash`**. No phase reached a port or readiness.
+Runtime receipts and supporting host facts matched before/after; all browser,
+profile, runtime and process cleanup flags were true. Status was
+`no_reversible_effect`, qualification false. **B's cause remains UNKNOWN.** The
+missing-verified-file remark in the primary research was a directory-location
+mistake, not absent independent verification.
+
+The next discriminator ranks (not concludes): helper configuration; later
+namespace/credentials/seccomp failure; other crashpad/profile/resource startup
+failure. Only temporary `stderr_classes` instrumentation changes. No remedy,
+helper mode/removal, copy/policy/path change, launch argument change or production
+change is authorized. A known public helper literal is not evidence of B's actual
+cause until a separately authorized actual CI observation matches it.
+
+All mappings below use immutable Chromium **157.0.8103.78**, commit
+**4b3d0dabb8250b6f152d2d85d79e7706e309d087**. A case-sensitive `FATAL:` source
+header must contain an exact allowlisted basename followed by a numeric line
+(`:123]` or `(123)]`); optional relative directory components are ignored privately.
+No matched basename, line, message, path, PID, URL or secret is emitted. Each
+allowlisted site emits its fixed category even for an unlisted CHECK. Site labels
+identify the reporting site, **not the ultimate cause**:
+
+| Public source (pinned) | Fixed site category | Public fatal fragment (fixture coverage; site category does not require this fragment) |
+|---|---|---|
+| [`setuid_sandbox_host.cc:134–175`](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/sandbox/linux/suid/client/setuid_sandbox_host.cc#134) | `suid_helper_fatal` | helper literals below |
+| [`zygote_host_impl_linux.cc:129–145,196–208`](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/content/browser/zygote_host/zygote_host_impl_linux.cc#129) | `zygote_host_fatal` | `No usable sandbox!` |
+| [`sandbox_linux.cc:227–228`](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/sandbox/policy/linux/sandbox_linux.cc#227) | `namespace_fatal` | `EngageNamespaceSandboxInternal(from_zygote)` |
+| [`credentials.cc:320–340`](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/sandbox/linux/services/credentials.cc#320) | `credentials_fatal` | `SetGidAndUidMaps(gid, uid)` |
+| [`sandbox_bpf.cc:245–277`](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/sandbox/linux/seccomp-bpf/sandbox_bpf.cc#245) | `seccomp_fatal` | `Kernel refuses to enable no-new-privs`; `Kernel refuses to turn on BPF filters` |
+| [`crashpad_linux.cc:266–268`](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/components/crash/core/app/crashpad_linux.cc#266) | `crashpad_fatal` | `client.StartHandler(` |
+| [`process_singleton_posix.cc:315,1052–1054`](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/chrome/browser/process_singleton_posix.cc#315) | `profile_fatal` | `Socket path too long:`; `Temp directory mode is not 700:` |
+| [`resource_bundle.cc:333–334`](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/ui/base/resource/resource_bundle.cc#333) | `resource_fatal` | `failed to load pak file` |
+
+Three additional labels require the **same FATAL line's** exact basename and
+case-sensitive literal fragment:
+
+- `suid_bad_configuration`: `setuid_sandbox_host.cc` +
+  `The SUID sandbox helper binary was found, but is not configured correctly.`
+- `suid_missing`: `setuid_sandbox_host.cc` +
+  `The SUID sandbox helper binary is missing:`
+- `no_usable_sandbox`: `zygote_host_impl_linux.cc` + `No usable sandbox!`.
+
+The eleven new labels above extend only the existing fixed list field; schema
+version/report shape remain unchanged. Existing four pattern classes keep their
+semantics and order, followed by site categories in table order, then the three
+literal labels in the order above. Repeated matches deduplicate. Unknown sites
+and messages remain generic `crash`/`other` (or existing legacy matches); no raw
+fallback exists. Only the existing private 64 KiB stderr prefix is examined;
+anything beyond it cannot produce a class. Nothing raw is persisted or uploaded.
+The receiver accepts exactly the six legacy plus eleven new strings, unique,
+nonempty, at most seventeen labels, retaining its 16 KiB whole-report bound.
+
+`python3 -m unittest tests.test_linux_diagnosis -v` exercises real public
+`observeStartup` through Node and an external executable printing controlled
+fragments, plus the public Python `observations` receiver with an external helper.
+It covers exact paired literals, allowlisted-site unknown CHECK fallback,
+unknown/secret-bearing and unpaired text, order/deduplication, stderr bounds,
+strict receiver vocabulary, unchanged readiness, seven arguments and cleanup.
+These are **instrumentation contracts, not Chrome/Linux/root/Gov cause proof**;
+no private classifier is patched. Existing four-signal/protected-parent/typed
+receipt/recovery/positive-readiness guards remain required.
+
+Coordinator sequence: fresh local integration and review of code, update only the
+external verifier's identical fixed vocabulary, then **one actual no-Gov A/B/A
+classifying job before any remedy**. No branch dispatch or Gov qualification is
+part of this change.
+
 ## Prepared experiment and safety boundaries
 
 Workflow `.github/workflows/sandbox-experiment.yml` is manual-only, exact-repo,
