@@ -206,7 +206,7 @@ Implementation resources (ordinary code; no harness runtime):
 Chrome/Chromium names, including macOS Chrome. Node needs built-in WebSocket,
 fetch and AbortSignal timeout; use a modern Node (22+). Trusted workflows use
 `PERITO_RUNTIME_ROOT` with the [exact runtime lock](uf-runtime.md), not CI browser
-discovery. Actual Ubuntu acquisition remains pending. Resources are read only
+discovery. Actual Ubuntu acquisition was accepted in #15; see [the qualified receipts](composed-acceptance.md). Resources are read only
 in place. Outputs/profile/download/logs are in a fresh owned temporary directory;
 no existing browser/tab/profile or private session is attached/reused.
 No runtime qualification flag, cookie injection, Gov outreach, alternate network,
@@ -256,8 +256,8 @@ cleanup boundary with genuine saved evidence, not the real Chrome/frontend runti
 It is neither runtime qualification nor a production fixture fallback.
 
 Trusted Ubuntu/Python 3.13 + pinned Node/Chrome clean anonymous first-and-repeat
-acquisition remains **PENDING** for #15. The [manual trusted-main workflow and
-operator runbook](uf-runtime.md) exercise that same two-export production path,
-retain both raw aggregate XLSX and sanitized evidence/provenance, and never
-publish a site. #15 stays open until the coordinator reviews its actual proof;
-offline tests are not trusted runtime proof.
+acquisition was **accepted for #15** in run 43633428483; see [evidence and
+limits](composed-acceptance.md). The [manual trusted-main workflow and operator
+runbook](uf-runtime.md) exercise that same two-export production path, retain both
+raw aggregate XLSX and sanitized evidence/provenance, and never publish a site.
+Offline tests are not trusted runtime proof; #16/publication remain separate.

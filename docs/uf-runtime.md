@@ -1,10 +1,11 @@
 # UF runtime and trusted read-only observation (#15)
 
-**Actual trusted Ubuntu acquisition proof: PENDING.** Offline tests, official asset
-availability and locally downloaded Linux archives are not Linux compatibility or
-Gov-source proof. #15 stays open until the coordinator reviews the code on main,
-runs the manual job, and reviews its actual artifacts; only then may #16 begin.
-No workflow was dispatched while implementing this code.
+**Actual trusted Ubuntu acquisition proof: ACCEPTED (#15 closed).** On
+14 November 2026, trusted run **43633428483**, attempt **1**, qualified code
+`631f35c9c34d3f6bc90f0ad0d584fd94c79b4fe4` using the ordinary two-export
+production path. See [receipts, artifact digest and acceptance limits](composed-acceptance.md).
+Offline tests and the preceding no-Gov diagnostic alone are not source proof.
+Qualification did not publish UF or close the composed/public acceptance gates.
 
 The [source contract](uf-source.md) and [document seam](uf-seam.md) still apply.
 UF geography is a project assumption, not an official verified definition. UF
@@ -76,8 +77,8 @@ archive and executable SHA256, publisher provenance). Runner label:
 recorded in proof. No pip/npm/package manager, unbounded install, system Chrome
 fallback, `--no-sandbox`, global AppArmor disable or browser/header/auth bypass.
 The ordinary Chrome sandbox is preserved. Ubuntu AppArmor/user-namespace and
-shared-library **source-flow** compatibility remain unproven until final-code
-trusted qualification. Trusted no-Gov run 43624804937 established reversible
+shared-library **source-flow** compatibility were established for the exact
+qualified code/runtime in the accepted trusted observation, not for future drift. Trusted no-Gov run 43624804937 established reversible
 same-path A-red/B-ready/A-red startup with a real port and complete cleanup;
 this authorizes the exact-path capsule adoption, not Gov-source qualification.
 If that exact exception fails, stop; never disable global policy or sandbox.
@@ -193,5 +194,8 @@ by its operator/14-day artifact expiry, not by collector cleanup.
 Offline external-process documents cover semantic disagreement, denial, reused
 GUID, overlapping sessions, cleanup failure, setup failure and raw-ZIP-noise
 identity. They do not establish Linux sandbox, live frontend, WS or download
-compatibility. Actual trusted-run URL/SHA/attempt and actual XLSX hashes are still
-**PENDING**; no issue closure or Linux-success claim follows from this document.
+compatibility. The actual trusted-run SHA/attempt, artifact and XLSX digests are
+now recorded in [composed acceptance](composed-acceptance.md). A change to any of
+the nine attested collector/runtime resources requires requalification before
+publication; docs-only/local acceptance changes do not. Publication remains a
+separate coordinator gate.

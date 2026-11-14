@@ -14,7 +14,8 @@ https://tiagoguerreirodev.github.io/monitorar-vacancias-perito-pf/.
 Python **3.9 ou superior**, apenas biblioteca padrão, sem `pip install`.
 A coleta UF também requer Node moderno (22+) e Chrome/Chromium; caminhos podem
 ser configurados com `PERITO_NODE` e `PERITO_CHROME`. A qualificação do runtime
-confiável e os pins de CI pertencem à #15. Na raiz do repositório:
+confiável foi aceita na #15; pins e limites estão no [runbook](docs/uf-runtime.md).
+Na raiz do repositório:
 
 ```sh
 python3 -m unittest discover -v
@@ -31,8 +32,8 @@ construção retorna 1, com diagnóstico em stderr. Não faz commit, push nem de
 
 `data` e `site` devem ser diretórios dedicados, distintos e não aninhados: a
 promoção substitui seus conteúdos. `data/history.json` e `data/status.json` são
-versionados; o par UF aceito usa `uf.json` e `uf-status.json` (a persistência de CI
-será adaptada na #15). `site/` é gerado e ignorado pelo Git. O navegador usa somente o
+versionados; o par UF aceito usa `uf.json` e `uf-status.json`, também na allowlist
+de persistência de CI. `site/` é gerado e ignorado pelo Git. O navegador usa somente o
 artefato estático, sem consultar o governo. A referência oficial e a última
 verificação bem-sucedida são informações diferentes.
 
@@ -54,8 +55,8 @@ A [visualização UF (#14)](docs/uf-view.md) mostra somente o retrato mais recen
 27 UFs/DF em barras horizontais decrescentes, contagens exatas e tabela acessível,
 com referência, verificação e fonte próprias e premissa geográfica visível.
 Pessoas ativas não são cargos legais ocupados nem vagas estaduais. Histórico UF
-(#9) e prova confiável/workflow (#15) continuam separados; implementação local
-não comprova publicação.
+(#9) permanece fora do escopo inicial. A [qualificação confiável aceita e a
+aceitação composta local](docs/composed-acceptance.md) não comprovam publicação UF.
 
 O histórico guarda mês `YYYY-MM`, totais, identificadores, URL, SHA-256 dos bytes
 do ODS e instante de coleta UTC. `status.json` guarda separadamente a última
@@ -84,7 +85,7 @@ horizontal (empates escolhem o posterior): mês em pt-BR e quantidade exata, ou
 “dados indisponíveis” na lacuna, sem confundir com zero. A seleção desaparece ao
 sair do plot; gráfico e tabela continuam úteis sem JavaScript. Todos os ativos e
 JSON são locais, com caminhos relativos ao subcaminho de Pages. A verificação
-opcional com mouse real está descrita em [operação](docs/operations.md#aceitação-local-com-mouse-real-20).
+opcional com mouse real está descrita em [operação](docs/operations.md#aceitação-local-com-mouse-real-18-20-e-21).
 
 A coleta usa timeout de 30 s por tentativa e até três tentativas por requisição
 em falhas transitórias (esperas de 0,1 e 0,2 s); erros de validação não são
@@ -102,7 +103,7 @@ Veja a [aceitação e seus limites](docs/operations.md#aceitação-inicial-de-pa
 - `validate.yml`: testes em pushes e PRs, token somente leitura, sem publicação.
 - `pages.yml`: **dia 28, 09:00 `America/Sao_Paulo`** (atualmente 12:00 UTC), ou
   execução manual; somente `main` do repositório oficial pode gravar/publicar.
-- O mesmo run testa, atualiza/constrói, grava apenas os dois JSON aceitos, envia
+- O mesmo run testa, atualiza/constrói, grava apenas os quatro JSON aceitos (pares nacional/UF disponíveis), envia
   `site/` e faz deploy explícito do artefato. Não depende de outro run disparado
   por commit do `GITHUB_TOKEN`.
 - Execuções de atualização/deploy são serializadas, sem cancelar a ativa.

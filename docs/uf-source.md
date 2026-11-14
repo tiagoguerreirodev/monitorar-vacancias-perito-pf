@@ -261,10 +261,10 @@ Os dois runs demonstram repetibilidade **local em Darwin arm64, Chrome
 do executável Chrome do probe é específico de macOS. Esperas limitadas do probe
 (75 s de prontidão, 45 s de download, watchdog de 15 min) não são SLA da fonte.
 
-**Execução real anônima sob Ubuntu/Python 3.13 no workflow confiável continua
-sendo gate posterior obrigatório de #15/#16**, junto da integração de #13 e da
-aceitação do artefato/publicação. Não foi cumprido por estes runs locais, por
-fixtures, por flags, pelo workflow nacional existente ou pela premissa geográfica.
+**A execução real anônima sob Ubuntu/Python 3.13 foi aceita na #15**, no run
+43633428483, posterior a estes runs locais. Veja [recibos e limites](composed-acceptance.md).
+Não foi cumprida por fixtures, flags ou pela premissa geográfica; aceitação
+composta e publicação continuam gates distintos.
 Não há garantia de estabilidade futura do frontend/dicionário/exportador.
 
 Permanecem obrigatórios: dados apenas agregados; validação de população,
