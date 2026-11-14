@@ -156,6 +156,69 @@ external verifier's identical fixed vocabulary, then **one actual no-Gov A/B/A
 classifying job before any remedy**. No branch dispatch or Gov qualification is
 part of this change.
 
+## Actual profile fatal and fixed discriminator (#32)
+
+Trusted no-Gov run **43621480712**, code
+**6ba766c29a8a6ff479d2cc375e99e4e0b6dc6bc6**, independently verified from the
+artifact and API receipt, records all three A1/A2 observations as
+`SIGABRT`, `sandbox_refusal`, `zygote_host_fatal`, `no_usable_sandbox`; all
+three B observations are `SIGABRT`, `crash`, `profile_fatal`. No observation
+reached a port or readiness. The protected runtime tree remained
+`c5c9b1ad6abb3093160dbf0ef030191a071fc0596f92202b4d908e10c4abf260`,
+receipts/host facts matched, and all cleanup flags were true. Status remains
+`no_reversible_effect`, qualification false. **The actual profile fatal cause
+is UNKNOWN until the next separately authorized real no-Gov CI observation.**
+
+Ranked hypotheses, not conclusions: (1) singleton Unix socket path length under
+the current staged `TMPDIR`; (2) socket-directory permission lookup/mode check;
+(3) socket creation, listen or peer-reply failure. Chromium allocates its own
+socket directory beneath `TMPDIR`; the fresh profile's `0700` mode does not
+establish the socket-directory check. No path shortening or other remedy is
+included or authorized here.
+
+Five additive fixed labels follow the existing seventeen-label vocabulary.
+Each requires the same case-sensitive `FATAL` record and exact
+`process_singleton_posix.cc` basename. Prefer the exact public literal below;
+only when **no known literal matches that record**, use its pinned numeric
+source line. Both existing `:line]` and `(line)]` headers are supported.
+Mappings refer only to immutable Chromium commit
+**4b3d0dabb8250b6f152d2d85d79e7706e309d087**:
+
+| Fixed label (append order) | Exact public literal | Pinned fallback lines |
+|---|---|---|
+| `profile_socket_create` | `socket() failed` | [297](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/chrome/browser/process_singleton_posix.cc#297) |
+| `profile_socket_path_length` | `Socket path too long: ` | [314–315](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/chrome/browser/process_singleton_posix.cc#314) |
+| `profile_socket_dir_check` | `Temp directory mode is not 700: ` | [1052–1054](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/chrome/browser/process_singleton_posix.cc#1052) |
+| `profile_listen` | `listen failed: ` | [1088–1089](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/chrome/browser/process_singleton_posix.cc#1088) |
+| `profile_peer_reply` | `The other process returned unknown message: ` | [936–937](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/chrome/browser/process_singleton_posix.cc#936) |
+
+Trailing spaces shown inside the literal code spans are significant. Official
+builds can strip CHECK/NOTREACHED streaming; see pinned
+[`base/check.h:248–288`](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/base/check.h#248)
+and [`base/notreached.h:15–36`](https://chromium.googlesource.com/chromium/src/+/4b3d0dabb8250b6f152d2d85d79e7706e309d087/base/notreached.h#15).
+Fallback therefore classifies a reporting site, not a syscall cause or build
+configuration. Unknown singleton lines/fragments retain `profile_fatal`; no
+`profile_other` or free field exists. Only fixed labels leave private memory:
+no filename, source line, message, errno, path, mode, peer reply or raw output.
+The 64 KiB private prefix, 16 KiB receiver bound, exact unique nonempty vocabulary
+(now 22), existing label order, cleanup, readiness and seven arguments remain
+unchanged.
+
+Public external-executable → Node `observeStartup` tests cover all five literals,
+both fallback header forms, wrong site/case, cross-line text, unknown secrets,
+literal-before-line precedence per record, deduplication/order and out-of-bound
+text. The strict Python receiver is exercised with an external helper, including
+all 22 labels and rejection of unknown/duplicate/non-string/empty/oversize labels
+and extra fields. Genuine pre-implementation failures were missing new classes;
+these fixtures establish **instrumentation contracts only**, not the actual
+Chromium/Linux/root/Gov cause. All prior ownership, four-signal, exclusive staging,
+final-drain, runtime pin and root guards remain untouched.
+
+Coordinator must freshly integrate and review this code and update the independent
+verifier's identical fixed vocabulary, then classify **one actual no-Gov CI run
+before choosing any fix**. This local change does not dispatch, close #32 or its
+parents, authorize Gov access, or establish the original A/B/A readiness proof.
+
 ## Prepared experiment and safety boundaries
 
 Workflow `.github/workflows/sandbox-experiment.yml` is manual-only, exact-repo,

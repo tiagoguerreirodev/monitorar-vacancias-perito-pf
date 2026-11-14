@@ -60,7 +60,9 @@ def validated_observations(stdout):
     classes = {'sandbox_refusal', 'missing_library', 'permission_denied', 'crash', 'other', 'none',
                'suid_helper_fatal', 'zygote_host_fatal', 'namespace_fatal', 'credentials_fatal',
                'seccomp_fatal', 'crashpad_fatal', 'profile_fatal', 'resource_fatal',
-               'suid_bad_configuration', 'suid_missing', 'no_usable_sandbox'}
+               'suid_bad_configuration', 'suid_missing', 'no_usable_sandbox',
+               'profile_socket_create', 'profile_socket_path_length', 'profile_socket_dir_check',
+               'profile_listen', 'profile_peer_reply'}
     for record in records:
         if not isinstance(record, dict) or set(record) != fields:
             raise ValueError('helper record shape')
