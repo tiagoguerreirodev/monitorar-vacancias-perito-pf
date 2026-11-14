@@ -15,7 +15,7 @@ from urllib.request import urlopen
 
 from perito_dashboard import refresh_and_build
 from tests.sources import (
-    CHECK_TIME, ControlledArchive, SEPTEMBER, SEPTEMBER_URL, ScriptedArchive,
+    CHECK_TIME, ControlledArchive, SEPTEMBER, SEPTEMBER_URL, ScriptedArchive, UnavailableUF,
     monthly_resource as dated_resource, national_resources, pf_classes, resource_url, set_cell, variant,
 )
 
@@ -82,7 +82,7 @@ class DashboardTests(unittest.TestCase):
 
     def refresh(self, source=None, clock=lambda: CHECK_TIME):
         refresh_and_build(self.data, self.site,
-                          source=source if source is not None else ControlledArchive(), clock=clock)
+                          source=source if source is not None else ControlledArchive(), uf_source=UnavailableUF(), clock=clock)
         return Page((self.site / "index.html").read_text(encoding="utf-8"))
 
     def _after_leading_unavailable_gap(self, rows):

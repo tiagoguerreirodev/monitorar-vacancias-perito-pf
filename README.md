@@ -12,7 +12,9 @@ https://tiagoguerreirodev.github.io/monitorar-vacancias-perito-pf/.
 ## Executar localmente
 
 Python **3.9 ou superior**, apenas biblioteca padrão, sem `pip install`.
-Na raiz do repositório:
+A coleta UF também requer Node moderno (22+) e Chrome/Chromium; caminhos podem
+ser configurados com `PERITO_NODE` e `PERITO_CHROME`. A qualificação do runtime
+confiável e os pins de CI pertencem à #15. Na raiz do repositório:
 
 ```sh
 python3 -m unittest discover -v
@@ -22,12 +24,15 @@ python3 -m http.server --directory site 8000
 
 Abra http://localhost:8000/. O segundo comando usa a rede oficial; os testes usam
 respostas controladas e relógio fixo, sem depender da disponibilidade do governo.
-O CLI retorna 0 em sucesso e 1 em erro de coleta/validação/construção, com
-diagnóstico em stderr. Não faz commit, push nem deploy.
+O CLI informa os resultados nacional/UF e publicação completa/parcial. Retorna 0
+quando ao menos uma fonte avança/verifica com sucesso; a fonte que falhou mantém
+seus dados e check anteriores. Falha total ou erro compartilhado de validação/
+construção retorna 1, com diagnóstico em stderr. Não faz commit, push nem deploy.
 
 `data` e `site` devem ser diretórios dedicados, distintos e não aninhados: a
 promoção substitui seus conteúdos. `data/history.json` e `data/status.json` são
-versionados; `site/` é gerado e ignorado pelo Git. O navegador usa somente o
+versionados; o par UF aceito usa `uf.json` e `uf-status.json` (a persistência de CI
+será adaptada na #15). `site/` é gerado e ignorado pelo Git. O navegador usa somente o
 artefato estático, sem consultar o governo. A referência oficial e a última
 verificação bem-sucedida são informações diferentes.
 
@@ -41,8 +46,11 @@ valida **aprovados = ocupados + vagos** e rejeita dados incompletos/inconsistent
 Veja também o [dicionário oficial](https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/Dicionario_CargosVagosVacancias.pdf).
 
 O [contrato da fonte de pessoal ativo por UF](docs/uf-source.md) documenta a
-premissa geográfica, a evidência local e os gates restantes; não habilita coleta
-ou publicação UF nesta entrega.
+premissa geográfica e a evidência local. O [seam UF](docs/uf-seam.md) especifica
+o coletor público, os schemas e a composição independente implementados na #13.
+UF de lotação continua premissa do projeto, não confirmação oficial; não há
+inferência de vagas por UF nem exigência de igualdade com o total nacional.
+Barras/UI (#14), histórico UF (#9) e prova confiável/workflow (#15) ficam separados.
 
 O histórico guarda mês `YYYY-MM`, totais, identificadores, URL, SHA-256 dos bytes
 do ODS e instante de coleta UTC. `status.json` guarda separadamente a última

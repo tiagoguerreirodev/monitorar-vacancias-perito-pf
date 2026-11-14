@@ -113,20 +113,38 @@ def _history(observations):
 <tbody>{"".join(rows)}</tbody></table></div></section>'''
 
 
-def render_site(history, status, destination):
+def render_site(history, status, destination, *, uf=None, uf_status=None):
     """Build a complete artifact; never fetch sources, read a clock or mutate inputs."""
     destination = Path(destination)
     (destination / "data").mkdir(parents=True, exist_ok=True)
     for name, value in (("history", history), ("status", status)):
-        write_json(destination / "data" / f"{name}.json", value)
+        if value is not None:
+            write_json(destination / "data" / f"{name}.json", value)
+    for name, value in (("uf", uf), ("uf-status", uf_status)):
+        if value is not None:
+            write_json(destination / "data" / f"{name}.json", value)
     shutil.copytree(Path(__file__).with_name("assets"), destination / "assets", dirs_exist_ok=True)
-    observations = sorted(history["observations"], key=lambda row: row["reference_month"])
+    observations = sorted(history["observations"], key=lambda row: row["reference_month"]) if history else []
     current_content = (_current(observations[-1]) if observations else
                        '<section class="panel"><h2>Dados indisponíveis</h2>'
                        '<p>Nenhuma observação oficial válida está disponível. '
                        'Não há números ou proporções a exibir.</p></section>')
     history_content = _history(observations) if observations else ""
-    checked_at = escape(status["last_successful_check"], quote=True)
+    check_content = ('<p>Verificação nacional indisponível.</p>' if status is None else
+                     f'<p>Última verificação bem-sucedida: <strong><time datetime="{escape(status["last_successful_check"], quote=True)}">'
+                     f'{_check_time(status["last_successful_check"])}</time></strong>.</p>')
+    uf_content = '<section class="panel"><h2>Pessoal ativo por UF</h2><p>Indisponível — sem observação aceita; ausência não é zero.</p></section>'
+    if uf is not None:
+        current_uf = uf['current']
+        uf_content = (f'<section class="panel" aria-labelledby="uf-title"><h2 id="uf-title">Pessoal ativo por UF</h2>'
+                      f'<p>Referência: {_month(current_uf["reference_month"])}. Total: {_number(current_uf["total"])} PCFs ativos.</p>'
+                      '<p>UF Servidores como UF de lotação: premissa do projeto; definição oficial não verificada.</p>'
+                      f'<p>Última verificação UF: {_check_time(uf_status["last_successful_check"])}.</p>'
+                      '<p><a href="data/uf.json">Agregados UF em JSON</a>; classes ausentes por UF não são zeros. '
+                      'Pessoas ativas não são cargos ocupados ou vagas estaduais.</p></section>')
+    national_links = ('<p>Dados para consulta: <a href="data/history.json">histórico em JSON</a> e '
+                      '<a href="data/status.json">última verificação em JSON</a>.</p>' if status else
+                      '<p>Fonte nacional indisponível; nenhum retrato nacional aceito.</p>')
     html = f'''<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -141,15 +159,16 @@ def render_site(history, status, destination):
 <main id="conteudo" class="wrap" tabindex="-1">
 {current_content}
 <aside class="context" aria-label="Como interpretar os dados">
-<p>Última verificação bem-sucedida: <strong><time datetime="{checked_at}">{_check_time(status["last_successful_check"])}</time></strong>.</p>
+{check_content}
 <p>Retratos oficiais mensais, não dados em tempo real. Cargos vagos são postos aprovados em lei e não ocupados; <strong>não representam vagas de concurso</strong>.</p>
 <p>A data da verificação não é a referência dos cargos. Uma verificação recente pode não encontrar um novo mês publicado.</p></aside>
 {history_content}
+{uf_content}
 <section class="sources" aria-labelledby="sources-title"><h2 id="sources-title">Fontes e escopo</h2>
 <p><a href="{DATASET_URL}">Cargos Vagos e Vacâncias — conjunto de dados oficial</a>.</p>
 <p>Somente Polícia Federal (órgão {PF_ORGANIZATION["code"]}), cargo Perito Criminal Federal, somando Classe Especial, 1ª, 2ª e 3ª classes. Outras carreiras e organizações não estão incluídas.</p>
 <p>Histórico a partir de {_month(CUTOFF)}. Dados agregados, sem registros pessoais.</p>
-<p>Dados para consulta: <a href="data/history.json">histórico em JSON</a> e <a href="data/status.json">última verificação em JSON</a>.</p></section>
+{national_links}</section>
 </main><footer class="wrap"><p>Fonte mensal oficial. Sem estimativas de efetivo ou previsões de concurso.</p></footer></body></html>
 '''
     (destination / "index.html").write_text(html, encoding="utf-8")

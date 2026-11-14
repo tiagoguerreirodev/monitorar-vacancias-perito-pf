@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 from tests.sources import (
-    ARCHIVE_URL, CHECK_TIME, ControlledArchive, SEPTEMBER, SEPTEMBER_URL, TABLE,
+    ARCHIVE_URL, CHECK_TIME, ControlledArchive, SEPTEMBER, SEPTEMBER_URL, TABLE, UnavailableUF,
     pf_classes, set_cell, variant,
 )
 
@@ -22,7 +22,7 @@ class RefreshTests(unittest.TestCase):
 
     def refresh(self, source=None, clock=lambda: CHECK_TIME):
         from perito_dashboard import refresh_and_build
-        return refresh_and_build(self.data, self.site, source=source or ControlledArchive(), clock=clock)
+        return refresh_and_build(self.data, self.site, source=source or ControlledArchive(), uf_source=UnavailableUF(), clock=clock)
 
     def test_official_september_reaches_saved_history_and_dashboard(self):
         self.refresh()
@@ -151,7 +151,7 @@ class RefreshTests(unittest.TestCase):
         blocked_site.write_text("do not replace")
         with self.assertRaises((OSError, ValueError)):
             from perito_dashboard import refresh_and_build
-            refresh_and_build(self.data, blocked_site, source=ControlledArchive(),
+            refresh_and_build(self.data, blocked_site, source=ControlledArchive(), uf_source=UnavailableUF(),
                               clock=lambda: CHECK_TIME + timedelta(days=1))
         for path, content in before.items():
             self.assertEqual((self.root / path).read_bytes(), content)
