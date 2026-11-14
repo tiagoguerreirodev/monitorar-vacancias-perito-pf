@@ -17,6 +17,65 @@ HELPER = ROOT / '.github/scripts/uf-linux-startup.mjs'
 
 
 class DiagnosticWorkflowTests(unittest.TestCase):
+    def test_executed_digest_origin_is_bound_by_all_three_resource_receipts(self):
+        # Architecture/provenance contract: qualification's catalog is read directly
+        # (live qualification is forbidden offline); both diagnostics use normal main.
+        # Only a disposable checkout is mutated, never a mocked owning helper.
+        driver = '''import contextlib, inspect, io, json, os, runpy, sys
+from pathlib import Path
+from perito_dashboard import qualify, runtime
+root = Path.cwd()
+os.environ.update(GITHUB_REPOSITORY='tiagoguerreirodev/monitorar-vacancias-perito-pf',
+    GITHUB_REF='refs/heads/main', GITHUB_EVENT_NAME='workflow_dispatch',
+    GITHUB_ACTIONS='true', RUNNER_ENVIRONMENT='github-hosted', RUNNER_OS='Linux',
+    GITHUB_SHA='a'*40, GITHUB_RUN_ID='1', GITHUB_RUN_ATTEMPT='1',
+    PERITO_RUNTIME_ROOT=str(root / 'not-a-runtime'))
+(root / 'not-a-runtime').write_text('Not a directory; reject before installation')
+reports = {'qualification': qualify._resources_sha256()}
+for script, label in [('diagnose-uf-linux.py', 'diagnostic'),
+                      ('sandbox-experiment.py', 'noGov')]:
+    api = runpy.run_path(str(root / '.github/scripts' / script))
+    digest = api['digest'] if label == 'diagnostic' else api['diagnostic'].digest
+    assert digest is runtime._digest
+    output = root / (label + '.json')
+    sys.argv = [script, '--output', str(output)]
+    with contextlib.redirect_stdout(io.StringIO()):
+        assert api['main']() == 0
+    reports[label] = json.loads(output.read_text())['resources_sha256']
+    output.unlink()
+origin = Path(inspect.getsourcefile(runtime._digest)).resolve().relative_to(root)
+print(json.dumps({'origin': str(origin), 'reports': reports}))
+'''
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copytree(ROOT / 'perito_dashboard', root / 'perito_dashboard',
+                            ignore=shutil.ignore_patterns('__pycache__'))
+            shutil.copytree(ROOT / '.github/scripts', root / '.github/scripts',
+                            ignore=shutil.ignore_patterns('__pycache__'))
+            def observe():
+                result = subprocess.run([sys.executable, '-c', driver], cwd=root,
+                                        capture_output=True, text=True, timeout=30)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                return json.loads(result.stdout)
+            before = observe()
+            origin = root / before['origin']
+            # A harmless comment changes actual implementation bytes, not behavior.
+            origin.write_text(origin.read_text().replace(
+                'def file_digest(path):\n', 'def file_digest(path):\n    # provenance mutation\n', 1))
+            after = observe()
+            self.assertEqual(before['origin'], after['origin'])
+            for label, count, key in [('qualification', 9, 'runtime.py'),
+                                      ('noGov', 9, 'runtime_installer'),
+                                      ('diagnostic', 7, 'runtime_installer')]:
+                with self.subTest(catalog=label):
+                    self.assertEqual(len(before['reports'][label]), count)
+                    # The executed helper, not merely a named runtime dependency,
+                    # must originate in the attested resource.
+                    changed = {name for name in before['reports'][label]
+                               if before['reports'][label][name] != after['reports'][label][name]}
+                    self.assertEqual(changed, {key})
+                    self.assertEqual(before['origin'], 'perito_dashboard/runtime.py')
+
     def test_streamed_digest_and_runtime_receipt_keep_exact_byte_identity(self):
         api = runpy.run_path(str(ROOT / '.github/scripts/diagnose-uf-linux.py'))
         with tempfile.TemporaryDirectory() as directory:
