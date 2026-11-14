@@ -131,12 +131,7 @@ def experiment(privileged_command, observer_command):
     try:
         owner = OwnerClient(privileged_command)
         staged = owner.request('stage')
-        runtime = staged.get('runtime', '')
-        tree_hash = staged.get('tree_sha256', '')
-        if (set(staged) != {'ok', 'runtime', 'tree_sha256'} or not isinstance(runtime, str)
-                or not re.fullmatch(OWNED_ROOT, runtime) or not isinstance(tree_hash, str)
-                or not re.fullmatch(r'[0-9a-f]{64}', tree_hash)):
-            raise ValueError('stage report')
+        runtime, tree_hash = staged['runtime'], staged['tree_sha256']
         result['tree_sha256'] = tree_hash
         if interrupted:
             result['status'] = 'interrupted'
