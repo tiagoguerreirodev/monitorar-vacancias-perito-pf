@@ -2,10 +2,13 @@
 from copy import deepcopy
 from datetime import datetime, timezone, timedelta
 from io import BytesIO
+import hashlib
 import json
 import os
 from pathlib import Path
+import platform
 import struct
+import tarfile
 from unittest.mock import patch
 import tempfile
 import unittest
@@ -289,6 +292,67 @@ class UFAcceptanceTests(unittest.TestCase):
         self.assertEqual(result, {'national': 'updated', 'uf': 'failed', 'publication': 'partial'})
         self.assertEqual(self.saved('history.json')['observations'][-1]['reference_month'], '2026-09')
         self.assertFalse((self.data / 'uf.json').exists())
+
+    def test_unsupported_managed_runtime_zip_preserves_uf_and_advances_national(self):
+        from tests.sources import monthly_resource
+        # Synthetic transport documents only: no publisher archive, real runtime
+        # install, executable launch or network access. Exercise actual hash/size
+        # verification and ZIP extraction, not a mocked installer/parser failure.
+        node = BytesIO()
+        with tarfile.open(fileobj=node, mode='w:xz') as archive:
+            directory = tarfile.TarInfo('node-v0.0.0-linux-x64')
+            directory.type = tarfile.DIRTYPE
+            archive.addfile(directory)
+        chrome = BytesIO()
+        with ZipFile(chrome, 'w') as archive:
+            archive.writestr('chrome-linux64/chrome', b'OFFLINE synthetic non-executable')
+        unsupported = bytearray(chrome.getvalue())
+        struct.pack_into('<H', unsupported, 8, 99)  # Local compression method.
+        struct.pack_into('<H', unsupported, unsupported.index(b'PK\x01\x02') + 10, 99)
+        documents = {'https://offline.invalid/node.tar.xz': node.getvalue(),
+                     'https://offline.invalid/chrome.zip': bytes(unsupported)}
+        pins = {'python': {'version': platform.python_version()}}
+        for name, url in zip(('node', 'chrome'), documents):
+            pins[name] = {'version': 'v0.0.0', 'url': url, 'size': len(documents[url]),
+                          'sha256': hashlib.sha256(documents[url]).hexdigest()}
+        manifest = self.root / 'synthetic-runtime.json'
+        manifest.write_text(json.dumps(pins))
+        for last_good in (False, True):
+            with self.subTest(last_good=last_good):
+                root = self.root / str(last_good)
+                data, site, runtime = root / 'data', root / 'site', root / 'runtime'
+                if last_good:
+                    refresh_and_build(data, site, source=ControlledArchive(), uf_source=ExportSource(),
+                                      clock=lambda: NOW)
+                before = {name: (data / name).read_bytes() for name in ('uf.json', 'uf-status.json')} if last_good else {}
+                requested = []
+                def response(url, **kwargs):
+                    requested.append(url)
+                    return BytesIO(documents[url])
+                with patch.dict(os.environ, {'PERITO_RUNTIME_ROOT': str(runtime)}), \
+                        patch('perito_dashboard.runtime.MANIFEST', manifest), \
+                        patch('perito_dashboard.runtime.platform.system', return_value='Linux'), \
+                        patch('perito_dashboard.runtime.platform.machine', return_value='x86_64'), \
+                        patch('perito_dashboard.runtime.urlopen', side_effect=response), \
+                        self.assertLogs('perito_dashboard', level='WARNING') as messages:
+                    result = refresh_and_build(data, site,
+                        source=ControlledArchive(dict([monthly_resource('2026-10')])),
+                        clock=lambda: NOW + timedelta(days=1))
+                self.assertEqual(result, {'national': 'updated', 'uf': 'failed', 'publication': 'partial'})
+                self.assertEqual(requested, list(documents))
+                self.assertIn('uf: runtime_setup; check ', '\n'.join(messages.output))
+                self.assertEqual(json.loads((data / 'history.json').read_text())['observations'][-1]['reference_month'],
+                                 '2026-10')
+                self.assertEqual((data / 'history.json').read_bytes(), (site / 'data/history.json').read_bytes())
+                self.assertIn('Cargos vagos', (site / 'index.html').read_text())
+                for name in ('uf.json', 'uf-status.json'):
+                    for path in (data / name, site / 'data' / name):
+                        if last_good:
+                            self.assertEqual(path.read_bytes(), before[name])
+                        else:
+                            self.assertFalse(path.exists())
+                self.assertFalse(runtime.exists())
+                self.assertFalse(list(root.glob('.perito-runtime-*')))
 
     def test_production_repeat_disagreement_preserves_uf_but_advances_healthy_national(self):
         self.refresh()

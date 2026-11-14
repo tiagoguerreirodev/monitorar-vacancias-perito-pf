@@ -59,7 +59,7 @@ def ensure_runtime(directory):
     except UFRuntimeError:
         raise
     except (ValueError, OSError, subprocess.SubprocessError, tarfile.TarError, BadZipFile, HTTPException,
-            KeyError, TypeError) as exc:
+            KeyError, TypeError, NotImplementedError) as exc:
         raise UFRuntimeError(f'Pinned UF runtime setup failed ({type(exc).__name__})') from exc
 
 
