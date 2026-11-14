@@ -115,6 +115,30 @@ while True:
                 self.assertEqual(json.loads(stdout), expected)
                 self.assertEqual(stderr, '')
 
+    def test_public_receiver_accepts_only_extended_fixed_vocabulary(self):
+        labels = ['sandbox_refusal', 'missing_library', 'permission_denied', 'crash',
+                  'suid_helper_fatal', 'zygote_host_fatal', 'namespace_fatal',
+                  'credentials_fatal', 'seccomp_fatal', 'crashpad_fatal',
+                  'profile_fatal', 'resource_fatal', 'suid_bad_configuration',
+                  'suid_missing', 'no_usable_sandbox']
+        record = {
+            'outcome': 'early_exit', 'launched': True, 'port_file_seen': False,
+            'port_alive': False, 'readiness': False, 'stderr_classes': labels,
+            'stderr_truncated': False, 'exit_code': 23, 'signal': None,
+            'cleanup': {'process_group_stopped': True, 'owned_directory_removed': True},
+        }
+        (stdout, stderr), code = self.shutdown_report(json.dumps([record]))
+        self.assertEqual(code, 0, stderr)
+        self.assertEqual(json.loads(stdout), [record])
+        for invalid in (labels + ['SECRET'], ['credentials.cc'], ['credentials_fatal'] * 2,
+                        ['seccomp_fatal', 1], ['unlisted_fatal']):
+            with self.subTest(labels=invalid):
+                (stdout, stderr), code = self.shutdown_report(json.dumps([{**record, 'stderr_classes': invalid}]))
+                self.assertNotEqual(code, 0)
+                self.assertEqual(stdout, '')
+                self.assertNotIn('SECRET', stderr)
+                self.assertNotIn('credentials.cc', stderr)
+
     def test_cooperative_shutdown_rejects_unbounded_or_unvalidated_output(self):
         record = {
             'outcome': 'owner_interrupted', 'launched': True, 'port_file_seen': False,
@@ -172,6 +196,86 @@ process.exit(23);
         self.assertEqual(observation['cleanup'], {'process_group_stopped': True, 'owned_directory_removed': True})
         for forbidden in ('SECRET', '/private', 'DevTools', '54321', 'token', 'ws://'):
             self.assertNotIn(forbidden, text)
+
+    def test_public_process_classifies_pinned_helper_literal_without_disclosing_stderr(self):
+        observation, text = self.observe('''
+process.stderr.write('[123:456:FATAL:sandbox/linux/suid/client/setuid_sandbox_host.cc:166] The SUID sandbox helper binary was found, but is not configured correctly. SECRET /private/chrome-sandbox\\n');
+process.exit(23);
+''')
+        self.assertEqual(observation['stderr_classes'],
+                         ['crash', 'suid_helper_fatal', 'suid_bad_configuration'])
+        self.assertEqual(observation['outcome'], 'early_exit')
+        self.assertFalse(observation['readiness'])
+        self.assertTrue(all(observation['cleanup'].values()))
+        for forbidden in ('SECRET', '/private', 'setuid_sandbox_host.cc', '123:456', 'configured'):
+            self.assertNotIn(forbidden, text)
+
+    def test_public_process_classifies_allowlisted_fatal_sites_and_specific_literals(self):
+        # Pinned public instrumentation contracts, not reproduced Chrome failures.
+        cases = [
+            ('setuid_sandbox_host.cc', 'The SUID sandbox helper binary is missing:',
+             ['crash', 'suid_helper_fatal', 'suid_missing']),
+            ('zygote_host_impl_linux.cc', 'No usable sandbox!',
+             ['sandbox_refusal', 'crash', 'zygote_host_fatal', 'no_usable_sandbox']),
+            ('sandbox_linux.cc', 'EngageNamespaceSandboxInternal(from_zygote)',
+             ['crash', 'namespace_fatal']),
+            ('credentials.cc', 'SetGidAndUidMaps(gid, uid)', ['crash', 'credentials_fatal']),
+            ('sandbox_bpf.cc', 'Kernel refuses to enable no-new-privs', ['crash', 'seccomp_fatal']),
+            ('sandbox_bpf.cc', 'Kernel refuses to turn on BPF filters', ['crash', 'seccomp_fatal']),
+            ('crashpad_linux.cc', 'client.StartHandler(', ['crash', 'crashpad_fatal']),
+            ('process_singleton_posix.cc', 'Socket path too long:', ['crash', 'profile_fatal']),
+            ('process_singleton_posix.cc', 'Temp directory mode is not 700:', ['crash', 'profile_fatal']),
+            ('resource_bundle.cc', 'failed to load pak file', ['crash', 'resource_fatal']),
+        ]
+        for site, literal, expected in cases:
+            with self.subTest(site=site, literal=literal):
+                message = f'[123:456:FATAL:public/source/{site}:321] {literal} SECRET /private/token\n'
+                observation, text = self.observe(f'process.stderr.write({json.dumps(message)}); process.exit(23);')
+                self.assertEqual(observation['stderr_classes'], expected)
+                self.assertEqual(observation['exit_code'], 23)
+                self.assertFalse(observation['readiness'])
+                self.assertTrue(all(observation['cleanup'].values()))
+                for forbidden in (site, literal, 'SECRET', '/private', '123:456'):
+                    self.assertNotIn(forbidden, text)
+
+    def test_public_process_fatal_site_fallback_is_fixed_deduplicated_and_ordered(self):
+        sites = ['resource_bundle.cc', 'process_singleton_posix.cc', 'crashpad_linux.cc',
+                 'sandbox_bpf.cc', 'credentials.cc', 'sandbox_linux.cc',
+                 'zygote_host_impl_linux.cc', 'setuid_sandbox_host.cc']
+        message = ''.join(f'[FATAL:public/{site}:99] Check failed: UNLISTED_SECRET\n' for site in sites) * 2
+        observation, text = self.observe(f'process.stderr.write({json.dumps(message)}); process.exit(23);')
+        self.assertEqual(observation['stderr_classes'], [
+            'crash', 'suid_helper_fatal', 'zygote_host_fatal', 'namespace_fatal',
+            'credentials_fatal', 'seccomp_fatal', 'crashpad_fatal', 'profile_fatal', 'resource_fatal'])
+        self.assertTrue(all(observation['cleanup'].values()))
+        self.assertNotIn('UNLISTED_SECRET', text)
+        for site in sites:
+            self.assertNotIn(site, text)
+
+    def test_public_process_unknown_or_unpaired_secret_stays_generic(self):
+        messages = [
+            '[FATAL:private_secret.cc:123] SECRET /private/token',
+            '[FATAL:secret_credentials.cc:123] SECRET',
+            '[ERROR:credentials.cc:123] SECRET',
+            '[FATAL:unknown.cc:1] The SUID sandbox helper binary is missing:',
+            '[FATAL:unknown.cc:1] SECRET\nsetuid_sandbox_host.cc The SUID sandbox helper binary is missing:',
+        ]
+        for message in messages:
+            with self.subTest(message=message):
+                observation, text = self.observe(f'process.stderr.write({json.dumps(message)}); process.exit(23);')
+                self.assertEqual(observation['stderr_classes'], ['crash'] if 'FATAL:' in message else ['other'])
+                self.assertTrue(all(observation['cleanup'].values()))
+                self.assertNotIn('SECRET', text)
+                self.assertNotIn('.cc', text)
+
+    def test_public_process_fatal_after_stderr_prefix_bound_is_not_classified(self):
+        message = '[FATAL:credentials.cc:1] SECRET SetGidAndUidMaps(gid, uid)'
+        observation, text = self.observe(
+            "process.stderr.write('x'.repeat(65536) + " + json.dumps(message) + ", () => process.exit(23));")
+        self.assertEqual(observation['stderr_classes'], ['other'])
+        self.assertTrue(observation['stderr_truncated'])
+        self.assertTrue(all(observation['cleanup'].values()))
+        self.assertNotIn('SECRET', text)
 
     def test_ready_blank_target_uses_exact_production_arguments_and_removes_profile(self):
         observation, text = self.observe('''
