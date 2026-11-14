@@ -147,148 +147,130 @@ class Browser:
         print("PASS leaving plot clears inspection and guide")
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    commands = parser.add_subparsers(dest="command", required=True)
-    prepare = commands.add_parser("prepare")
-    prepare.add_argument("--root", type=Path, required=True)
-    check = commands.add_parser("check")
-    check.add_argument("--orca", required=True, help="Executable resolved by the Orca skill")
-    check.add_argument("--page", required=True, help="Your explicitly owned browser page ID")
-    check.add_argument("--base-url", required=True, help="Local preview root, ending in /")
-    check.add_argument("--case", choices=["nearest", "gap", "leave", "clamp", "scroll", "resize",
-                                         "edges", "zero", "narrow", "formatted", "fallback", "allzero",
-                                         "summary", "single", "sparse"],
-                       default="nearest")
-    args = parser.parse_args()
-    if args.command == "prepare":
-        refresh_and_build(args.root / "data-national",
-                          args.root / "www/national/monitorar-vacancias-perito-pf",
-                          source=ControlledArchive(national_resources()), clock=lambda: CHECK_TIME)
-        refresh_and_build(args.root / "data-zero",
-                          args.root / "www/zero/monitorar-vacancias-perito-pf",
-                          source=ControlledArchive({resource_url("2025-06"):
-                                                    monthly_resource("2025-06", 1195, 0)}),
-                          clock=lambda: CHECK_TIME)
-        refresh_and_build(args.root / "data-formatted",
-                          args.root / "www/formatted/monitorar-vacancias-perito-pf",
-                          source=ControlledArchive({
-                              resource_url("2025-06"): monthly_resource("2025-06", 50, 12345),
-                              resource_url("2025-08"): monthly_resource("2025-08", 1195, 0),
-                          }), clock=lambda: CHECK_TIME)
-        refresh_and_build(args.root / "data-allzero",
-                          args.root / "www/allzero/monitorar-vacancias-perito-pf",
-                          source=ControlledArchive({resource_url(month): monthly_resource(month, 0, 0)
-                                                    for month in ("2025-06", "2025-08", "2025-09")}),
-                          clock=lambda: CHECK_TIME)
-        for name, values in (("single", (("2025-06", 108, 12),)),
-                             ("sparse", (("2025-06", 108, 12), ("2025-09", 120, 0),
-                                         ("2027-02", 95, 25)))):
-            refresh_and_build(args.root / f"data-{name}",
-                              args.root / f"www/{name}/monitorar-vacancias-perito-pf",
-                              source=ControlledArchive({resource_url(month): monthly_resource(month, occupied, vacant)
-                                                        for month, occupied, vacant in values}),
-                              clock=lambda: CHECK_TIME)
-        fallback = args.root / "www/fallback/monitorar-vacancias-perito-pf"
-        shutil.copytree(args.root / "www/national/monitorar-vacancias-perito-pf",
-                        fallback, dirs_exist_ok=True)
-        (fallback / "assets/inspection.js").unlink()  # Simulate an unavailable optional asset.
-        print(args.root / "www")
-        return
-    assert urlsplit(args.base_url).hostname in {"127.0.0.1", "localhost"}, "Local preview only"
-    assert args.page != "fff658ce-af08-4721-b944-f11fa526a5c0", "Protected user page"
-    fixture = args.case if args.case in {"zero", "formatted", "fallback", "allzero", "single", "sparse"} else "national"
-    url = args.base_url.rstrip("/") + f"/{fixture}/monitorar-vacancias-perito-pf/"
-    browser = Browser(args.orca, args.page, url)
-    browser.setup(width=320 if args.case == "narrow" else 1440,
-                  height=800 if args.case == "narrow" else 1000)
-    if args.case == "summary":
-        for width in (1440, 320):
-            browser.command("viewport", "--width", str(width), "--height", "1000")
-            content = browser.content()
-            assert (content['count'], content['rate'], content['reference']) == ('87', '7,3%', '2026-09'), content
-            assert content['checked'] == '2026-11-13T12:00:00Z', content
-            assert content['checkedText'] == '13/11/2026 às 09:00 (Brasília, UTC−03:00)', content
-            assert '1.108' in content['context'] and '1.195' in content['context'], content
-            assert content['ticks'] == ['0', '40', '80', '120', '160'], content
-            assert (content['markers'], content['lines']) == (15, 1), content
-            assert [row[2] if len(row) == 5 else None for row in content['rows']] == [
-                '79', None, '84', '87', '93', '94', '99', '101', '105', '106', '110',
-                '112', '112', '121', '128', '87'], content
-            assert content['pageWidth'] == width, content
-            assert 'não representam vagas de concurso' in content['explanation'], content
-            assert 'A data da verificação não é a referência dos cargos.' in content['explanation'], content
-            assert 'data/history.json' in content['sources'] and 'data/status.json' in content['sources'], content
-            assert ('https://www.gov.br/servidor/pt-br/observatorio-de-pessoal-govbr/'
-                    'gestao-de-pessoas-executivo-federal-cargos-vagos') in content['sources'], content
-        # Read the public local bytes, not application state; digest the external document.
-        with urlopen(url + 'data/history.json') as response:
-            history = json.load(response)
-        with urlopen(url + 'data/status.json') as response:
-            status = json.load(response)
-        current = history['observations'][-1]
-        source = 'https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2026/CargosVagosVacancias_202609.ods'
-        assert (current['reference_month'], current['occupied'], current['vacant'], current['authorized']) == (
-            '2026-09', 1108, 87, 1195), current
-        assert current['source']['url'] == source and source in content['sources'], current
-        assert current['source']['sha256'] == sha256(national_resources()[source]).hexdigest(), current
-        assert current['source']['retrieved_at'] == status['last_successful_check'] == '2026-11-13T12:00:00Z'
-        print('PASS desktop/320px header, same-reference rate/context, vacancy axis/table, check vs reference and source bytes')
-        return
-    if args.case == "single":
+def prepare(root):
+    resources = {
+        "national": national_resources(),
+        "zero": {resource_url("2025-06"): monthly_resource("2025-06", 1195, 0)},
+        "formatted": {
+            resource_url("2025-06"): monthly_resource("2025-06", 50, 12345),
+            resource_url("2025-08"): monthly_resource("2025-08", 1195, 0),
+        },
+        "allzero": {resource_url(month): monthly_resource(month, 0, 0)
+                    for month in ("2025-06", "2025-08", "2025-09")},
+        "single": {resource_url("2025-06"): monthly_resource("2025-06", 108, 12)},
+        "sparse": {
+            resource_url("2025-06"): monthly_resource("2025-06", 108, 12),
+            resource_url("2025-09"): monthly_resource("2025-09", 120, 0),
+            resource_url("2027-02"): monthly_resource("2027-02", 95, 25),
+        },
+    }
+    for name, documents in resources.items():
+        refresh_and_build(root / f"data-{name}",
+                          root / f"www/{name}/monitorar-vacancias-perito-pf",
+                          source=ControlledArchive(documents), clock=lambda: CHECK_TIME)
+    fallback = root / "www/fallback/monitorar-vacancias-perito-pf"
+    shutil.copytree(root / "www/national/monitorar-vacancias-perito-pf",
+                    fallback, dirs_exist_ok=True)
+    (fallback / "assets/inspection.js").unlink()  # Simulate an unavailable optional asset.
+    print(root / "www")
+
+
+def check_summary(browser):
+    browser.setup()
+    for width in (1440, 320):
+        browser.command("viewport", "--width", str(width), "--height", "1000")
         content = browser.content()
-        assert (content['count'], content['rate'], content['reference']) == ('12', '10,0%', '2025-06'), content
-        assert content['ticks'] == ['0', '3', '6', '9', '12'], content
-        assert (content['markers'], content['lines']) == (1, 0), content
-        assert content['rows'][0][:4] == ['junho de 2025', '108', '12', '120'], content
-        assert 'um único ponto de cargos vagos, sem tendência' in content['explanation'], content
-        for fraction, height in ((0, .08), (.5, .92), (1, .08)):
-            browser.inspect(fraction, height, 'junho de 2025 — Cargos vagos: 12')
-            browser.guide(.5)
-            browser.contained()
-        browser.leave()
-        print('PASS single positive observation without invented trend')
-        return
-    if args.case == "sparse":
-        content = browser.content()
-        assert (content['markers'], content['lines'], len(content['rows'])) == (3, 0, 21), content
-        assert content['ticks'] == ['0', '7', '14', '21', '28'], content
-        for fraction, expected in ((1 / 20, 'julho de 2025 — dados indisponíveis'),
-                                   (2 / 20, 'agosto de 2025 — dados indisponíveis'),
-                                   (3 / 20, 'setembro de 2025 — Cargos vagos: 0')):
-            browser.inspect(fraction, .08, expected)
-            browser.inspect(fraction, .92, expected)
-            browser.guide(fraction)
-        browser.evaluate("document.querySelector('.chart-scroll').scrollLeft = 99999")
-        browser.inspect(19 / 20, .08, 'janeiro de 2027 — dados indisponíveis')
-        browser.guide(19 / 20)
-        browser.inspect(1, .92, 'fevereiro de 2027 — Cargos vagos: 25')
-        browser.guide(1)
+        assert (content['count'], content['rate'], content['reference']) == ('87', '7,3%', '2026-09'), content
+        assert content['checked'] == '2026-11-13T12:00:00Z', content
+        assert content['checkedText'] == '13/11/2026 às 09:00 (Brasília, UTC−03:00)', content
+        assert '1.108' in content['context'] and '1.195' in content['context'], content
+        assert content['ticks'] == ['0', '40', '80', '120', '160'], content
+        assert (content['markers'], content['lines']) == (15, 1), content
+        assert [row[2] if len(row) == 5 else None for row in content['rows']] == [
+            '79', None, '84', '87', '93', '94', '99', '101', '105', '106', '110',
+            '112', '112', '121', '128', '87'], content
+        assert content['pageWidth'] == width, content
+        assert 'não representam vagas de concurso' in content['explanation'], content
+        assert 'A data da verificação não é a referência dos cargos.' in content['explanation'], content
+        assert 'data/history.json' in content['sources'] and 'data/status.json' in content['sources'], content
+        assert ('https://www.gov.br/servidor/pt-br/observatorio-de-pessoal-govbr/'
+                'gestao-de-pessoas-executivo-federal-cargos-vagos') in content['sources'], content
+    # Read the public local bytes, not application state; digest the external document.
+    with urlopen(browser.url + 'data/history.json') as response:
+        history = json.load(response)
+    with urlopen(browser.url + 'data/status.json') as response:
+        status = json.load(response)
+    current = history['observations'][-1]
+    source = 'https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/2026/CargosVagosVacancias_202609.ods'
+    assert (current['reference_month'], current['occupied'], current['vacant'], current['authorized']) == (
+        '2026-09', 1108, 87, 1195), current
+    assert current['source']['url'] == source and source in content['sources'], current
+    assert current['source']['sha256'] == sha256(national_resources()[source]).hexdigest(), current
+    assert current['source']['retrieved_at'] == status['last_successful_check'] == '2026-11-13T12:00:00Z'
+    print('PASS desktop/320px header, same-reference rate/context, vacancy axis/table, check vs reference and source bytes')
+
+
+def check_single(browser):
+    browser.setup()
+    content = browser.content()
+    assert (content['count'], content['rate'], content['reference']) == ('12', '10,0%', '2025-06'), content
+    assert content['ticks'] == ['0', '3', '6', '9', '12'], content
+    assert (content['markers'], content['lines']) == (1, 0), content
+    assert content['rows'][0][:4] == ['junho de 2025', '108', '12', '120'], content
+    assert 'um único ponto de cargos vagos, sem tendência' in content['explanation'], content
+    for fraction, height in ((0, .08), (.5, .92), (1, .08)):
+        browser.inspect(fraction, height, 'junho de 2025 — Cargos vagos: 12')
+        browser.guide(.5)
         browser.contained()
-        browser.leave()
-        print('PASS consecutive/new-year gaps never bridge or fabricate zero')
-        return
-    if args.case == "narrow":
-        browser.inspect(0, .08, "junho de 2025 — Cargos vagos: 79")
-        browser.inspect(1 / 15 - .002, .92, "julho de 2025 — dados indisponíveis")
-        browser.contained()
-        browser.evaluate("document.querySelector('.chart-scroll').scrollLeft = 99999")
-        browser.command("wait", "--text", "setembro de 2026 — Cargos vagos: 87")
-        assert browser.tooltip() == "setembro de 2026 — Cargos vagos: 87", browser.tooltip()
-        browser.inspect(1, .08, "setembro de 2026 — Cargos vagos: 87")
-        browser.contained()
-        # Move the plot near the bottom of the viewport through ordinary page scrolling.
-        bottom = browser.point(1, .92)
-        browser.evaluate(f"window.scrollBy(0, {bottom['y']} - (innerHeight - 12))")
-        browser.inspect(1, .92, "setembro de 2026 — Cargos vagos: 87")
-        browser.contained()
-        browser.leave()
-        return
-    if args.case == "fallback":
-        point = browser.point(3 / 15, .08)
-        browser.move(point["x"], point["y"])
-        assert browser.tooltip() is None, "Optional script should be unavailable"
-        static = browser.evaluate("""(() => {
+    browser.leave()
+    print('PASS single positive observation without invented trend')
+
+
+def check_sparse(browser):
+    browser.setup()
+    content = browser.content()
+    assert (content['markers'], content['lines'], len(content['rows'])) == (3, 0, 21), content
+    assert content['ticks'] == ['0', '7', '14', '21', '28'], content
+    for fraction, expected in ((1 / 20, 'julho de 2025 — dados indisponíveis'),
+                               (2 / 20, 'agosto de 2025 — dados indisponíveis'),
+                               (3 / 20, 'setembro de 2025 — Cargos vagos: 0')):
+        browser.inspect(fraction, .08, expected)
+        browser.inspect(fraction, .92, expected)
+        browser.guide(fraction)
+    browser.evaluate("document.querySelector('.chart-scroll').scrollLeft = 99999")
+    browser.inspect(19 / 20, .08, 'janeiro de 2027 — dados indisponíveis')
+    browser.guide(19 / 20)
+    browser.inspect(1, .92, 'fevereiro de 2027 — Cargos vagos: 25')
+    browser.guide(1)
+    browser.contained()
+    browser.leave()
+    print('PASS consecutive/new-year gaps never bridge or fabricate zero')
+
+
+def check_narrow(browser):
+    browser.setup(width=320, height=800)
+    browser.inspect(0, .08, "junho de 2025 — Cargos vagos: 79")
+    browser.inspect(1 / 15 - .002, .92, "julho de 2025 — dados indisponíveis")
+    browser.contained()
+    browser.evaluate("document.querySelector('.chart-scroll').scrollLeft = 99999")
+    browser.command("wait", "--text", "setembro de 2026 — Cargos vagos: 87")
+    assert browser.tooltip() == "setembro de 2026 — Cargos vagos: 87", browser.tooltip()
+    browser.inspect(1, .08, "setembro de 2026 — Cargos vagos: 87")
+    browser.contained()
+    # Move the plot near the bottom of the viewport through ordinary page scrolling.
+    bottom = browser.point(1, .92)
+    browser.evaluate(f"window.scrollBy(0, {bottom['y']} - (innerHeight - 12))")
+    browser.inspect(1, .92, "setembro de 2026 — Cargos vagos: 87")
+    browser.contained()
+    browser.leave()
+
+
+def check_fallback(browser):
+    browser.setup()
+    point = browser.point(3 / 15, .08)
+    browser.move(point["x"], point["y"])
+    assert browser.tooltip() is None, "Optional script should be unavailable"
+    static = browser.evaluate("""(() => {
           const chart = document.querySelector('#history-chart');
           const table = document.querySelector('#history-values');
           return {title: chart.querySelector('title').textContent,
@@ -298,90 +280,158 @@ def main():
                   scrollers: Array.from(document.querySelectorAll('[role="region"]'))
                     .map(region => region.tabIndex)};
         })()""")
-        assert static["title"] == "Histórico de cargos vagos", static
-        assert static["markers"] == 15 and static["rows"] == 16, static
-        assert "julho de 2025: indisponível" in static["descriptions"], static
-        assert "setembro de 2026" in static["table"] and "87" in static["table"], static
-        assert static["scrollers"] == [0, 0], static
-        browser.setup(width=320, height=800)
-        point = browser.point(0, .08)
-        browser.move(point['x'], point['y'])
-        assert browser.tooltip() is None, 'No enhancement should appear on mobile either'
-        scroll = browser.evaluate("""(() => {
+    assert static["title"] == "Histórico de cargos vagos", static
+    assert static["markers"] == 15 and static["rows"] == 16, static
+    assert "julho de 2025: indisponível" in static["descriptions"], static
+    assert "setembro de 2026" in static["table"] and "87" in static["table"], static
+    assert static["scrollers"] == [0, 0], static
+    browser.setup(width=320, height=800)
+    point = browser.point(0, .08)
+    browser.move(point['x'], point['y'])
+    assert browser.tooltip() is None, 'No enhancement should appear on mobile either'
+    scroll = browser.evaluate("""(() => {
           const regions = Array.from(document.querySelectorAll('[role="region"]'));
           regions.forEach(region => { region.scrollLeft = 99999; });
           return {offsets: regions.map(region => region.scrollLeft),
                   names: regions.map(region => region.getAttribute('aria-label')),
                   pageWidth: document.documentElement.scrollWidth, pageX: scrollX};
         })()""")
-        assert all(offset > 0 for offset in scroll['offsets']), scroll
-        assert all(scroll['names']) and scroll['pageWidth'] == 320 and scroll['pageX'] == 0, scroll
-        print("PASS unavailable JS leaves useful static chart, equivalent table and named tab stops; independent 320px scrollers", scroll)
-        return
-    if args.case == "allzero":
-        content = browser.content()
-        assert (content['count'], content['rate'], content['reference']) == ('0', '—', '2025-09'), content
-        assert 'Taxa indisponível: total aprovado igual a zero.' in content['explanation'], content
-        assert content['ticks'] == ['0', '1', '2', '3', '4'], content
-        assert (content['markers'], content['lines']) == (3, 1), content
-        browser.inspect(0, .08, "junho de 2025 — Cargos vagos: 0")
-        browser.inspect(1 / 3, .92, "julho de 2025 — dados indisponíveis")
-        browser.guide(1 / 3)
-        browser.inspect(2 / 3, .08, "agosto de 2025 — Cargos vagos: 0")
-        browser.inspect(1, .92, "setembro de 2025 — Cargos vagos: 0")
+    assert all(offset > 0 for offset in scroll['offsets']), scroll
+    assert all(scroll['names']) and scroll['pageWidth'] == 320 and scroll['pageX'] == 0, scroll
+    print("PASS unavailable JS leaves useful static chart, equivalent table and named tab stops; independent 320px scrollers", scroll)
+
+
+def check_allzero(browser):
+    browser.setup()
+    content = browser.content()
+    assert (content['count'], content['rate'], content['reference']) == ('0', '—', '2025-09'), content
+    assert 'Taxa indisponível: total aprovado igual a zero.' in content['explanation'], content
+    assert content['ticks'] == ['0', '1', '2', '3', '4'], content
+    assert (content['markers'], content['lines']) == (3, 1), content
+    browser.inspect(0, .08, "junho de 2025 — Cargos vagos: 0")
+    browser.inspect(1 / 3, .92, "julho de 2025 — dados indisponíveis")
+    browser.guide(1 / 3)
+    browser.inspect(2 / 3, .08, "agosto de 2025 — Cargos vagos: 0")
+    browser.inspect(1, .92, "setembro de 2025 — Cargos vagos: 0")
+    browser.contained()
+    browser.leave()
+
+
+def check_formatted(browser):
+    browser.setup()
+    browser.inspect(0, .08, "junho de 2025 — Cargos vagos: 12.345")
+    browser.inspect(.5, .92, "julho de 2025 — dados indisponíveis")
+    browser.inspect(1, .08, "agosto de 2025 — Cargos vagos: 0")
+    browser.contained()
+    browser.command("viewport", "--width", "1000", "--height", "1000")
+    browser.inspect(.5, .08, "julho de 2025 — dados indisponíveis")
+    browser.inspect(0, .92, "junho de 2025 — Cargos vagos: 12.345")
+    browser.contained()
+    browser.leave()
+
+
+def check_zero(browser):
+    browser.setup()
+    for fraction, height in ((0, .08), (.5, .92), (1, .08)):
+        browser.inspect(fraction, height, "junho de 2025 — Cargos vagos: 0")
         browser.contained()
-        browser.leave()
-        return
-    if args.case == "formatted":
-        browser.inspect(0, .08, "junho de 2025 — Cargos vagos: 12.345")
-        browser.inspect(.5, .92, "julho de 2025 — dados indisponíveis")
-        browser.inspect(1, .08, "agosto de 2025 — Cargos vagos: 0")
-        browser.contained()
-        browser.command("viewport", "--width", "1000", "--height", "1000")
-        browser.inspect(.5, .08, "julho de 2025 — dados indisponíveis")
-        browser.inspect(0, .92, "junho de 2025 — Cargos vagos: 12.345")
-        browser.contained()
-        browser.leave()
-        return
-    if args.case == "zero":
-        for fraction, height in ((0, .08), (.5, .92), (1, .08)):
-            browser.inspect(fraction, height, "junho de 2025 — Cargos vagos: 0")
-            browser.contained()
-        browser.leave()
-        return
+    browser.leave()
+
+
+def check_nearest(browser):
+    browser.setup()
     # September 2025 is slot 3 of 16, away from every marker/line vertically.
     browser.inspect(3 / 15, .08, "setembro de 2025 — Cargos vagos: 87")
-    if args.case == "gap":
-        browser.inspect(1 / 15, .08, "julho de 2025 — dados indisponíveis")
-        browser.inspect(1 / 15, .92, "julho de 2025 — dados indisponíveis")
-        browser.guide(1 / 15)
-        browser.inspect(2 / 15, .92, "agosto de 2025 — Cargos vagos: 84")
-    if args.case == "leave":
-        browser.leave()
-    if args.case == "clamp":
-        browser.evaluate("document.querySelector('.chart-scroll').scrollLeft = 99999")
-        browser.inspect(1, .92, "setembro de 2026 — Cargos vagos: 87")
-        browser.contained()
-    if args.case == "scroll":
-        browser.evaluate("document.querySelector('.chart-scroll').scrollLeft = 341.333333")
-        browser.command("wait", "--text", "janeiro de 2026 — Cargos vagos: 101")
-        assert browser.tooltip() == "janeiro de 2026 — Cargos vagos: 101", browser.tooltip()
-        browser.contained()
-        browser.inspect(14 / 15, .08, "agosto de 2026 — Cargos vagos: 128")
-    if args.case == "edges":
-        browser.inspect(0, .08, "junho de 2025 — Cargos vagos: 79")
-        browser.inspect(7.5 / 15 - .001, .92, "janeiro de 2026 — Cargos vagos: 101")
-        browser.inspect(7.5 / 15, .08, "fevereiro de 2026 — Cargos vagos: 105")
-        browser.inspect(7.5 / 15 + .001, .92, "fevereiro de 2026 — Cargos vagos: 105")
-        browser.evaluate("document.querySelector('.chart-scroll').scrollLeft = 99999")
-        browser.inspect(1, .08, "setembro de 2026 — Cargos vagos: 87")
-        browser.leave()
-    if args.case == "resize":
-        browser.command("viewport", "--width", "1200", "--height", "1000")
-        browser.command("wait", "--text", "outubro de 2025 — Cargos vagos: 93")
-        assert browser.tooltip() == "outubro de 2025 — Cargos vagos: 93", browser.tooltip()
-        browser.contained()
-        browser.inspect(0, .92, "junho de 2025 — Cargos vagos: 79")
+
+
+def check_gap(browser):
+    check_nearest(browser)
+    browser.inspect(1 / 15, .08, "julho de 2025 — dados indisponíveis")
+    browser.inspect(1 / 15, .92, "julho de 2025 — dados indisponíveis")
+    browser.guide(1 / 15)
+    browser.inspect(2 / 15, .92, "agosto de 2025 — Cargos vagos: 84")
+
+
+def check_leave(browser):
+    check_nearest(browser)
+    browser.leave()
+
+
+def check_clamp(browser):
+    check_nearest(browser)
+    browser.evaluate("document.querySelector('.chart-scroll').scrollLeft = 99999")
+    browser.inspect(1, .92, "setembro de 2026 — Cargos vagos: 87")
+    browser.contained()
+
+
+def check_scroll(browser):
+    check_nearest(browser)
+    browser.evaluate("document.querySelector('.chart-scroll').scrollLeft = 341.333333")
+    browser.command("wait", "--text", "janeiro de 2026 — Cargos vagos: 101")
+    assert browser.tooltip() == "janeiro de 2026 — Cargos vagos: 101", browser.tooltip()
+    browser.contained()
+    browser.inspect(14 / 15, .08, "agosto de 2026 — Cargos vagos: 128")
+
+
+def check_edges(browser):
+    check_nearest(browser)
+    browser.inspect(0, .08, "junho de 2025 — Cargos vagos: 79")
+    browser.inspect(7.5 / 15 - .001, .92, "janeiro de 2026 — Cargos vagos: 101")
+    browser.inspect(7.5 / 15, .08, "fevereiro de 2026 — Cargos vagos: 105")
+    browser.inspect(7.5 / 15 + .001, .92, "fevereiro de 2026 — Cargos vagos: 105")
+    browser.evaluate("document.querySelector('.chart-scroll').scrollLeft = 99999")
+    browser.inspect(1, .08, "setembro de 2026 — Cargos vagos: 87")
+    browser.leave()
+
+
+def check_resize(browser):
+    check_nearest(browser)
+    browser.command("viewport", "--width", "1200", "--height", "1000")
+    browser.command("wait", "--text", "outubro de 2025 — Cargos vagos: 93")
+    assert browser.tooltip() == "outubro de 2025 — Cargos vagos: 93", browser.tooltip()
+    browser.contained()
+    browser.inspect(0, .92, "junho de 2025 — Cargos vagos: 79")
+
+
+# Every selectable case names both its documents and its complete check.
+CASES = {
+    "nearest": ("national", check_nearest),
+    "gap": ("national", check_gap),
+    "leave": ("national", check_leave),
+    "clamp": ("national", check_clamp),
+    "scroll": ("national", check_scroll),
+    "resize": ("national", check_resize),
+    "edges": ("national", check_edges),
+    "zero": ("zero", check_zero),
+    "narrow": ("national", check_narrow),
+    "formatted": ("formatted", check_formatted),
+    "fallback": ("fallback", check_fallback),
+    "allzero": ("allzero", check_allzero),
+    "summary": ("national", check_summary),
+    "single": ("single", check_single),
+    "sparse": ("sparse", check_sparse),
+}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+    prepare_command = commands.add_parser("prepare")
+    prepare_command.add_argument("--root", type=Path, required=True)
+    check = commands.add_parser("check")
+    check.add_argument("--orca", required=True, help="Executable resolved by the Orca skill")
+    check.add_argument("--page", required=True, help="Your explicitly owned browser page ID")
+    check.add_argument("--base-url", required=True, help="Local preview root, ending in /")
+    check.add_argument("--case", choices=CASES, default="nearest")
+    args = parser.parse_args()
+    if args.command == "prepare":
+        prepare(args.root)
+        return
+    assert urlsplit(args.base_url).hostname in {"127.0.0.1", "localhost"}, "Local preview only"
+    assert args.page != "fff658ce-af08-4721-b944-f11fa526a5c0", "Protected user page"
+    fixture, run_check = CASES[args.case]
+    url = args.base_url.rstrip("/") + f"/{fixture}/monitorar-vacancias-perito-pf/"
+    run_check(Browser(args.orca, args.page, url))
 
 
 if __name__ == "__main__":

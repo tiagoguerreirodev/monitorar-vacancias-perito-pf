@@ -66,6 +66,11 @@ class Page(HTMLParser):
     def text(self, tag=None, **attrs):
         return " ".join(self.one(tag, **attrs)["text"].split())
 
+    def axis_labels(self):
+        chart = self.one("svg", id="history-chart")
+        return [node["text"] for node in self.matching("text", **{"text-anchor": "end"})
+                if chart in node["parents"]]
+
 
 class DashboardTests(unittest.TestCase):
     def setUp(self):
@@ -144,9 +149,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("set/2026", chart["text"])
         self.assertNotIn("Ocupados", chart["text"])
         self.assertIn("Vagos: 87 — setembro de 2026", chart["text"])
-        ticks = [n["text"] for n in page.matching("text", **{"text-anchor": "end"})
-                 if chart in n["parents"]]
-        self.assertEqual(ticks, ["0", "30", "60", "90", "120"])
+        self.assertEqual(page.axis_labels(), ["0", "30", "60", "90", "120"])
         self.assertFalse([n for n in page.matching("circle") if chart in n["parents"]])
         self.assertEqual(len([n for n in page.matching("rect") if chart in n["parents"]]), 1)
         self.assertFalse([n for n in page.matching("polyline") if chart in n["parents"]])
@@ -370,8 +373,7 @@ class DashboardTests(unittest.TestCase):
             self.assertTrue([n for n in page.matching("a", href=url) if row in n["parents"]])
             self.assertEqual(observation["source"]["sha256"], hashlib.sha256(resources[url]).hexdigest())
         self.assertNotIn("Ocupados", chart["text"])
-        self.assertEqual([n["text"] for n in page.matching("text", **{"text-anchor": "end"})
-                          if chart in n["parents"]], ["0", "40", "80", "120", "160"])
+        self.assertEqual(page.axis_labels(), ["0", "40", "80", "120", "160"])
         squares = [n for n in page.matching("rect") if chart in n["parents"]]
         self.assertEqual(len(squares), 15)
         xs = [float(n["attrs"]["x"]) + 4 for n in squares]
@@ -402,8 +404,7 @@ class DashboardTests(unittest.TestCase):
             resource_url("2025-09"): monthly_resource("2025-09", 1195, 0),
         }))
         chart = page.one("svg", id="history-chart")
-        self.assertEqual([n["text"] for n in page.matching("text", **{"text-anchor": "end"})
-                          if chart in n["parents"]], ["0", "1", "2", "3", "4"])
+        self.assertEqual(page.axis_labels(), ["0", "1", "2", "3", "4"])
         points = [n for n in page.matching("rect") if chart in n["parents"]]
         self.assertEqual(len(points), 3)
         self.assertEqual([float(n["attrs"]["y"]) + 4 for n in points], [270, 270, 270])
@@ -447,8 +448,7 @@ class DashboardTests(unittest.TestCase):
                 if not vacant:
                     point = [n for n in page.matching("rect") if chart in n["parents"]][0]
                     self.assertEqual(float(point["attrs"]["y"]) + 4, 270)
-                    self.assertEqual([n["text"] for n in page.matching("text", **{"text-anchor": "end"})
-                                      if chart in n["parents"]], ["0", "1", "2", "3", "4"])
+                    self.assertEqual(page.axis_labels(), ["0", "1", "2", "3", "4"])
 
     def test_empty_first_import_and_later_invalid_source_never_publish_fake_data(self):
         with self.assertRaisesRegex(ValueError, "eligible|observation"):
