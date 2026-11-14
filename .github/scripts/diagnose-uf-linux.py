@@ -46,34 +46,78 @@ def receipt(executables, pins):
     return result
 
 
+def validated_observations(stdout):
+    if len(stdout.encode('utf-8')) > 16384:
+        raise ValueError('helper report bound')
+    records = json.loads(stdout)
+    if not isinstance(records, list) or not 1 <= len(records) <= 3:
+        raise ValueError('helper report shape')
+    boolean_fields = {'launched', 'port_file_seen', 'port_alive', 'readiness', 'stderr_truncated'}
+    fields = boolean_fields | {'outcome', 'stderr_classes', 'exit_code', 'signal', 'cleanup'}
+    outcomes = {'startup_timeout', 'spawn_failed', 'early_exit', 'invalid_port_file',
+                'invalid_readiness', 'ready', 'owner_interrupted', 'helper_failed'}
+    signals = {None, 'SIGTERM', 'SIGKILL', 'SIGABRT', 'SIGSEGV', 'SIGTRAP', 'SIGILL', 'SIGBUS', 'other'}
+    classes = {'sandbox_refusal', 'missing_library', 'permission_denied', 'crash', 'other', 'none'}
+    for record in records:
+        if not isinstance(record, dict) or set(record) != fields:
+            raise ValueError('helper record shape')
+        if any(type(record[key]) is not bool for key in boolean_fields):
+            raise ValueError('helper boolean')
+        if not isinstance(record['outcome'], str) or record['outcome'] not in outcomes:
+            raise ValueError('helper outcome')
+        if record['signal'] is not None and (
+                not isinstance(record['signal'], str) or record['signal'] not in signals):
+            raise ValueError('helper signal')
+        code = record['exit_code']
+        if code is not None and (type(code) is not int or not 0 <= code <= 255):
+            raise ValueError('helper exit code')
+        labels = record['stderr_classes']
+        if (not isinstance(labels, list) or not 1 <= len(labels) <= 4
+                or any(not isinstance(label, str) or label not in classes for label in labels)
+                or len(set(labels)) != len(labels)):
+            raise ValueError('helper classification')
+        cleanup = record['cleanup']
+        if (not isinstance(cleanup, dict)
+                or set(cleanup) != {'process_group_stopped', 'owned_directory_removed'}
+                or any(type(value) is not bool for value in cleanup.values())):
+            raise ValueError('helper cleanup')
+    return records
+
+
 def observations(node, chrome, version):
     process = subprocess.Popen([node, str(HELPER), chrome, version], stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE, text=True, start_new_session=True)
     previous = {}
+    shutting_down = False
     def interrupt(_signum, _frame):
-        raise KeyboardInterrupt
+        if not shutting_down:
+            raise KeyboardInterrupt
     for signum in (signal.SIGTERM, signal.SIGINT):
         previous[signum] = signal.signal(signum, interrupt)
     try:
         stdout, _ = process.communicate(timeout=90)
     except (subprocess.TimeoutExpired, KeyboardInterrupt):
+        shutting_down = True
         # Node handles termination by stopping its currently owned Chrome group.
         try:
             os.killpg(process.pid, signal.SIGTERM)
         except ProcessLookupError:
             pass
         try:
-            process.communicate(timeout=10)
+            stdout, _ = process.communicate(timeout=10)
         except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGKILL)
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
             process.communicate()
-        raise ValueError('helper interrupted or deadline') from None
+            raise ValueError('helper interrupted or deadline') from None
     finally:
         for signum, handler in previous.items():
             signal.signal(signum, handler)
-    if process.returncode or len(stdout) > 16384:
+    if process.returncode:
         raise ValueError('helper failed')
-    return json.loads(stdout)
+    return validated_observations(stdout)
 
 
 def main():
