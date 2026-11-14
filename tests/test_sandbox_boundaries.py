@@ -33,11 +33,18 @@ for line in sys.stdin:
 '''
 OBSERVER = '''import json, sys, signal, time, os
 from pathlib import Path
-if os.environ['TMPDIR'] != str(Path(sys.argv[-1]).parent / 'profiles'):
- sys.exit(8)
 trace = Path(sys.argv[1])
 mode = sys.argv[2]
 with trace.open('a') as stream: stream.write('observe:' + sys.argv[-1] + '\\n')
+# Inspect the real external-process environment independently of report fixtures.
+temporary = os.environ['TMPDIR']
+trace.with_suffix('.tmpdir.json').write_text(json.dumps({
+ 'path': temporary,
+ 'socket_bytes': [len((temporary + suffix).encode()) for suffix in (
+  '/org.chromium.Chromium.XXXXXX/SingletonSocket',
+  '/com.google.Chrome.XXXXXX/SingletonSocket')]}))
+if temporary != str(Path(sys.argv[-1]).parent / 'p'):
+ sys.exit(8)
 if mode == 'interrupt':
  signal.signal(signal.SIGTERM, lambda *_: sys.exit(2))
  while True: time.sleep(0.01)
@@ -66,6 +73,12 @@ class BoundaryTests(unittest.TestCase):
             observer.write_text(OBSERVER)
             result = api().experiment([sys.executable, str(owner), str(trace), owner_mode],
                                       [sys.executable, str(observer), str(trace), observer_mode])
+            if trace.with_suffix('.tmpdir.json').exists():
+                temporary = json.loads(trace.with_suffix('.tmpdir.json').read_text())
+                self.assertEqual(temporary['socket_bytes'], [106, 102])
+                self.assertTrue(all(size <= 107 for size in temporary['socket_bytes']))
+                self.assertEqual(temporary['path'],
+                                 '/usr/lib/perito-uf-sandbox-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/p')
             return result, trace.read_text().splitlines()
 
     def test_only_exact_dedicated_namespace_can_reach_observation(self):

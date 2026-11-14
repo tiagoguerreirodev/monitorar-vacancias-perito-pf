@@ -88,8 +88,27 @@ def remove(path, *args, **kwargs):
             real['chmod'](entry, 0o700)
     return rmtree(physical, *args, **kwargs)
 def chown(path, target_uid, target_gid, **kwargs):
-    assert str(path) == '/usr/lib/' + name + '/profiles'
+    info = real['stat'](mapped(path))
+    # Observe the actual owner syscall argument, not an Owner attribute.
+    (root / 'temporary-sibling.json').write_text(json.dumps({
+        'path': str(path), 'mode': stat.S_IMODE(info.st_mode),
+        'caller_owned': (info.st_uid, info.st_gid) == (uid, gid),
+        'requested_owner': (target_uid, target_gid) == (uid, gid),
+        'socket_bytes': [len((str(path) + suffix).encode()) for suffix in (
+            '/org.chromium.Chromium.XXXXXX/SingletonSocket',
+            '/com.google.Chrome.XXXXXX/SingletonSocket')],
+    }))
+    assert str(path) == '/usr/lib/' + name + '/p'
     assert (target_uid, target_gid) == (uid, gid)
+    assert not (mapped(path).parent / 'profiles').exists()
+    assert mapped(path).parent != mapped(Path('/usr/lib/' + name + '/runtime'))
+    runtime = mapped(Path('/usr/lib/' + name + '/runtime'))
+    assert not real['stat'](runtime).st_mode & 0o022
+    assert (mapped(path).parent / 'profile').read_text() == (
+        'abi <abi/4.0>,\ninclude <tunables/global>\n\n'
+        'profile perito-uf-sandbox-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa '
+        '"/usr/lib/perito-uf-sandbox-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/runtime/chrome-linux64/chrome" '
+        'flags=(unconfined) {\n  userns,\n}\n')
     chown_calls.append(str(path))
 parents = [root, root / 'opt', root / 'usr', root / 'usr/lib', root / 'usr/lib/jvm']
 before = [(p.read_bytes(), p.stat().st_mode) for p in [competitor / 'sentinel']]
@@ -128,6 +147,17 @@ class ProtectedParentTests(unittest.TestCase):
                                      capture_output=True, text=True, timeout=10)
             self.assertEqual(process.returncode, 0, process.stderr)
             self.assertEqual(process.stderr, '')
+            if mode == 'safe':
+                sibling = json.loads((Path(directory) / 'temporary-sibling.json').read_text())
+                # Pinned Linux sun_path[108] reserves one byte for NUL. These
+                # literal budgets are independent of the changed implementation.
+                self.assertEqual(sibling['socket_bytes'], [106, 102])
+                self.assertTrue(all(size <= 107 for size in sibling['socket_bytes']))
+                self.assertEqual(sibling['path'],
+                                 '/usr/lib/perito-uf-sandbox-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/p')
+                self.assertEqual(sibling['mode'], 0o700)
+                self.assertTrue(sibling['caller_owned'])
+                self.assertTrue(sibling['requested_owner'])
             return [json.loads(line) for line in process.stdout.splitlines()]
 
     def test_actual_permission_pattern_stages_under_protected_usr_lib_and_cleans(self):
