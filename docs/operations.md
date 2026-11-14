@@ -40,6 +40,64 @@ python3 -m http.server --bind 127.0.0.1 --directory "$PREVIEW" 8000
 # Abrir http://127.0.0.1:8000/monitorar-vacancias-perito-pf/
 ```
 
+## Aceitação local com mouse real (#20)
+
+A inspeção é um aprimoramento opcional, sem fetch: lê os meses e valores já
+renderizados na tabela, inclusive lacunas desde junho/2025. A posição horizontal
+no plot escolhe o mês calendário mais próximo, com empate para o posterior;
+a altura não precisa coincidir com um ponto ou linha. Uma guia vertical identifica
+o mês (sem criar ponto na lacuna), e a caixa mostra o mês em pt-BR e o valor
+formatado exato ou “dados indisponíveis”. Zero aceito continua zero. A seleção
+atualiza com movimento, rolagem e redimensionamento e limpa ao sair do plot.
+A caixa fica dentro da parte visível do gráfico e da janela; pode quebrar linhas
+e aparecer acima do mouse. Não há novos controles de teclado/toque. Descrições,
+tabela equivalente e regiões roláveis existentes continuam disponíveis sem JS.
+
+`tests/browser_mouse.py` é aceitação **opcional local**, não um teste de CI nem
+prova de Pages publicado. Usa apenas stdlib e o Orca já disponível: resolve-se o
+executável e lê-se seu guia versionado conforme a skill `orca-cli` antes de usar
+os comandos abaixo (exemplos com `orca`). Não instalar framework de browser.
+As fixtures passam pelo `refresh_and_build` público, com ODS controlados e relógio
+fixo; não modificam `data/`. O mouse é movido por `orca mouse move --x --y --page
+--expect-url`, nunca por eventos sintéticos ou handlers privados. Avaliação DOM
+mede/lê elementos e altera apenas a rolagem. Use somente página e terminal próprios.
+
+```sh
+PREVIEW=$(mktemp -d)
+python3 -m tests.browser_mouse prepare --root "$PREVIEW"
+# Em um terminal dedicado, guardar o handle retornado para encerrá-lo ao final:
+orca terminal create --title 'Aceitação local do mouse' --command \
+  "python3 -m http.server --bind 127.0.0.1 --directory '$PREVIEW/www' 8000" --json
+BASE=http://127.0.0.1:8000
+CURRENT=$BASE/national/monitorar-vacancias-perito-pf/
+orca tab create --url "$CURRENT" --json
+# Copiar SOMENTE o browserPageId recém-criado:
+PAGE=ID_DA_PAGINA_PROPRIA
+for CASE in nearest gap leave clamp scroll resize edges narrow; do
+  python3 -m tests.browser_mouse check --orca orca --page "$PAGE" \
+    --base-url "$BASE/" --case "$CASE" || break
+done
+for CASE in zero formatted allzero fallback; do
+  NEXT=$BASE/$CASE/monitorar-vacancias-perito-pf/
+  orca goto --page "$PAGE" --expect-url "$CURRENT" --url "$NEXT" --json
+  CURRENT=$NEXT
+  python3 -m tests.browser_mouse check --orca orca --page "$PAGE" \
+    --base-url "$BASE/" --case "$CASE" || break
+done
+```
+
+Os casos cobrem valores literais nacionais, alturas longe dos marcadores, lacuna,
+saída, extremos, empate e seus dois lados, mouse parado durante scroll/resize,
+escala SVG, tela de 320 px, caixa junto à borda inferior, zero isolado, série toda
+zero e `12.345` sem arredondamento. `fallback` remove apenas o JS da cópia local:
+o 404 esperado simula ativo indisponível e o gráfico/tabela estáticos permanecem.
+O teste determinístico existente de subcaminho também busca todo `src`/`href` local,
+incluindo o script; a suíte Python não executa o JS. Ao final, fechar somente
+`orca tab close --page "$PAGE"`, interromper o servidor e fechar seu terminal
+pelo handle guardado, seguindo o guia. Apagar apenas o diretório temporário próprio.
+Para #21, repetir no artefato revisado e no Pages real, comparar também
+`assets/inspection.js` e não confundir esta aceitação local com publicação.
+
 ## Confiança, persistência e publicação
 
 `validate.yml` roda somente a suíte determinística em `push`/`pull_request`, com

@@ -61,8 +61,13 @@ da mesma referência; ocupados e aprovados ficam como contexto secundário. O
 histórico SVG mostra apenas cargos vagos, em quantidade e com eixo partindo de
 zero, acompanhado de tabela e descrições em pt-BR. Um único mês é mostrado como
 ponto, sem tendência; lacunas interrompem a linha. O histórico rola horizontalmente
-sem reduzir os rótulos conforme a série cresce. Todos os ativos e JSON são locais,
-com caminhos relativos ao subcaminho de Pages.
+sem reduzir os rótulos conforme a série cresce. Com JavaScript, mover o mouse em
+qualquer altura dentro do plot inspeciona o mês calendário mais próximo na
+horizontal (empates escolhem o posterior): mês em pt-BR e quantidade exata, ou
+“dados indisponíveis” na lacuna, sem confundir com zero. A seleção desaparece ao
+sair do plot; gráfico e tabela continuam úteis sem JavaScript. Todos os ativos e
+JSON são locais, com caminhos relativos ao subcaminho de Pages. A verificação
+opcional com mouse real está descrita em [operação](docs/operations.md#aceitação-local-com-mouse-real-20).
 
 A coleta usa timeout de 30 s por tentativa e até três tentativas por requisição
 em falhas transitórias (esperas de 0,1 e 0,2 s); erros de validação não são
