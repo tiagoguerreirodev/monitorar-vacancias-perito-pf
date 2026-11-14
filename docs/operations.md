@@ -84,7 +84,7 @@ gravação e antes do deploy, mas não uma transação atômica entre Git e Page
 `history.json` contém agregados, mês oficial (não um dia inventado), identificadores
 PF/PCF, URL, SHA-256 do ODS e instante de coleta UTC. `status.json` registra a última
 verificação bem-sucedida, não a data de referência dos cargos. Somente meses a
-partir de **2026-09**, inclusive; lacunas ficam indisponíveis, nunca interpoladas.
+partir de **2025-06**, inclusive; lacunas ficam indisponíveis, nunca interpoladas.
 Não há registros individuais nem números de vagas anunciadas em concurso.
 
 A reconciliação de #4 está implementada: retém observações aceitas mesmo se os
