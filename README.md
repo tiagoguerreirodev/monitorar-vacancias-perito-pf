@@ -56,11 +56,13 @@ mesmo se os totais não mudarem. Nomes oficiais mistos ou minúsculos são aceit
 sem reescrever a URL. Recursos concorrentes do mesmo mês, inclusive variantes de
 caixa, são recusados para revisão humana, sem escolher uma versão arbitrariamente.
 
-O painel inclui pizza com proporções, histórico de ocupados/vagos, tabelas e
-descrições acessíveis em pt-BR, pistas além da cor e layout mobile. Um único mês
-é mostrado como pontos, sem tendência; lacunas interrompem as linhas. O histórico
-rola horizontalmente sem reduzir os rótulos conforme a série cresce. Todos os
-ativos e JSON são locais, com caminhos relativos ao subcaminho de Pages.
+O painel destaca a quantidade de cargos vagos e a taxa sobre o total aprovado
+da mesma referência; ocupados e aprovados ficam como contexto secundário. O
+histórico SVG mostra apenas cargos vagos, em quantidade e com eixo partindo de
+zero, acompanhado de tabela e descrições em pt-BR. Um único mês é mostrado como
+ponto, sem tendência; lacunas interrompem a linha. O histórico rola horizontalmente
+sem reduzir os rótulos conforme a série cresce. Todos os ativos e JSON são locais,
+com caminhos relativos ao subcaminho de Pages.
 
 A coleta usa timeout de 30 s por tentativa e até três tentativas por requisição
 em falhas transitórias (esperas de 0,1 e 0,2 s); erros de validação não são

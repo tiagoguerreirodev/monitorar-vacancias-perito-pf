@@ -22,9 +22,13 @@ valida o recorte PF/PCF e constrói um candidato completo. Exit 0 significa
 construção/promoção local bem-sucedida, **não** publicação. Exit 1 inclui diagnóstico
 em stderr. O CLI não grava no Git. `site/` contém HTML, dados locais e ativos do
 renderer; funciona sob o subcaminho do repositório, sem acesso do navegador à
-fonte oficial. Inclui pizza e histórico SVG com descrições, tabelas equivalentes,
-pistas além da cor e regiões roláveis por teclado em telas pequenas. Um mês gera
-pontos isolados; meses ausentes interrompem as linhas, sem fabricar zeros.
+fonte oficial. Destaca cargos vagos e a taxa sobre o total aprovado da mesma
+referência, com ocupados e aprovados como contexto secundário. O histórico SVG
+mostra somente a quantidade de cargos vagos, com eixo iniciado em zero,
+descrições, tabela equivalente, pistas além da cor e regiões roláveis por teclado
+em telas pequenas. Um mês gera um ponto isolado; meses ausentes interrompem a
+linha, sem fabricar zeros. Total aprovado igual a zero deixa a taxa indisponível,
+com explicação visível.
 
 Para conferir o mesmo artefato sob o subcaminho, sem publicar:
 
