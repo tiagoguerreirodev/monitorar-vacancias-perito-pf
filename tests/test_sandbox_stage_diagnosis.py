@@ -40,7 +40,7 @@ def host_lstat(path, *args, **kwargs):
     fields = list(info)
     fields[4] = 0
     fields[0] &= ~0o022
-    if mode == 'known' and path == root / 'opt':
+    if mode == 'known' and path in (root / 'opt', root / 'usr/lib'):
         fields[0] |= 0o020
     return os.stat_result(fields)
 def chmod_boundary(path, *args, **kwargs):
@@ -85,7 +85,7 @@ class StageDiagnosisTests(unittest.TestCase):
             result = api().experiment(self.command(root, 'unknown'), ['never-observe'])
             self.assertEqual(result['owner_failure'], {'action': 'stage', 'reason': 'unexpected_error'})
             self.assertTrue(all(result['cleanup'].values()))
-            self.assertEqual(list((root / 'opt').iterdir()), [])
+            self.assertEqual(list((root / 'usr/lib').iterdir()), [])
             for secret in ('SECRET', '/private', 'cookie', 'devtools', str(root)):
                 self.assertNotIn(secret, json.dumps(result))
 
@@ -137,7 +137,7 @@ class StageDiagnosisTests(unittest.TestCase):
             self.assertEqual(result['owner_failure'], {'action': 'stage', 'reason': 'unexpected_error'})
             self.assertEqual(result['cleanup'], {'profile_removed': True, 'runtime_removed': False,
                                                  'processes_stopped': True})
-            self.assertEqual(len(list((root / 'opt').iterdir())), 1)
+            self.assertEqual(len(list((root / 'usr/lib').iterdir())), 1)
             self.assertNotIn('SECRET', json.dumps(result))
 
     def test_non_os_secret_exception_is_generic_at_real_syscall_boundary(self):
@@ -146,7 +146,7 @@ class StageDiagnosisTests(unittest.TestCase):
             result = api().experiment(self.command(root, 'runtime_error'), ['never-observe'])
             self.assertEqual(result['owner_failure'], {'action': 'stage', 'reason': 'unexpected_error'})
             self.assertTrue(all(result['cleanup'].values()))
-            self.assertEqual(list((root / 'opt').iterdir()), [])
+            self.assertEqual(list((root / 'usr/lib').iterdir()), [])
             self.assertNotIn('SECRET', json.dumps(result))
 
 
@@ -171,7 +171,7 @@ import json, os, subprocess, sys, time
 from pathlib import Path
 root, payload, mode = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
 sys.stdin.readline()
-print('{"ok":true,"runtime":"/opt/perito-uf-sandbox-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/runtime","tree_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}', flush=True)
+print('{"ok":true,"runtime":"/usr/lib/perito-uf-sandbox-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/runtime","tree_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}', flush=True)
 while not (root / 'observing').exists():
     time.sleep(.005)
 os.close(0)
@@ -212,7 +212,7 @@ for line in sys.stdin:
     with trace.open('a') as stream:
         stream.write(action + '\n')
     if action == 'stage':
-        print('{"ok":true,"runtime":"/opt/perito-uf-sandbox-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/runtime","tree_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}', flush=True)
+        print('{"ok":true,"runtime":"/usr/lib/perito-uf-sandbox-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/runtime","tree_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}', flush=True)
     elif action == 'cleanup':
         print(sys.argv[2], flush=True)
         break
