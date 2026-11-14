@@ -55,6 +55,24 @@ Ranked falsifiable hypotheses, retained from the primary-source investigation:
   defines `--add` (collision fails), `--remove` and `-K` (no caching). The probe
   never replaces a profile, reloads a service/directory, or changes global policy.
 
+## Actual pre-stage result and bounded follow-up (#28)
+
+Trusted manual-main run **43614843495**, code
+**d44b753b40e3e8e14d691bcfa2007b54d09e8ae3**, completed successfully only as
+report collection. Its independently verified artifact records `experiment_failed`,
+`tree_sha256: null`, empty phases, all three cleanup booleans true, matching
+before/after runtime receipts, seven matching code resources, and unchanged
+supporting host facts. The owner failed/refused before a successful stage receipt;
+**the cause is unknown**. No browser phase ran. A writable `/opt` ancestor is a
+hypothesis, not an observation or justification to move staging or weaken a guard.
+Other hypotheses remain source canonical/ownership/inventory/pin refusal,
+policy-list access, and another owner precondition.
+
+The follow-up adds no remedy, policy change, runtime change or Gov request. The
+next actual reviewed no-Gov artifact must supply classified evidence before a
+destination or production remedy is considered. Offline fixtures below do not
+establish actual Linux/root behavior or causation.
+
 ## Prepared experiment and safety boundaries
 
 Workflow `.github/workflows/sandbox-experiment.yml` is manual-only, exact-repo,
@@ -139,6 +157,43 @@ Fixed schema version 1:
 - experiment: copied-tree SHA256, A1/B/A2 existing sanitized observations,
   fixed status, and explicit profile/runtime/process cleanup booleans.
 
+Success schemas remain unchanged. On an owner failure only, its final protocol
+receipt has exactly `ok`, `profile_removed`, `runtime_removed`,
+`processes_stopped`, `failure`, `candidate_ancestors`. `ok: true` means this is a
+cleanup receipt, **not successful staging**; each cleanup boolean is independently
+checked. `failure` has exactly `action` and `reason`. Actions are `stage`, `load`,
+`unload`, `cleanup`, `protocol`; the driver requires the requested action or
+`protocol`. The exact reason whitelist is:
+
+`ancestor_unprotected`, `source_ownership`, `collision`, `inventory_refused`,
+`copy_integrity`, `executable_integrity`, `policy_refused`, `parser_untrusted`,
+`not_staged`, `runtime_changed`, `process_visibility`, `browser_running`,
+`policy_removal`, `policy_absent`, `invalid_request`, `interrupted`,
+`unexpected_error`.
+
+Only explicit typed owner refusals use known literal codes; all other exceptions
+become `unexpected_error` without stringification. Signals become `interrupted`.
+Inventory and policy refusals deliberately group multiple literal checks; they
+are discriminators, not causal diagnoses. No exception text, stderr, path, PID or
+profile list is emitted. A failed cleanup is retained as false flags even if the
+owner has already exited; receipt retention never converts refusal to success.
+
+`candidate_ancestors` has exactly fixed labels `root`, `opt`, `usr`, `usr_lib`
+for `/`, `/opt`, `/usr`, `/usr/lib`. Each has exactly `directory`, `non_symlink`,
+`root_owned`, `group_or_world_writable`, each boolean or null on inaccessible
+metadata. These are read-only `lstat` facts, not arbitrary paths, scans, a new
+staging destination, or a complete protection proof. No ancestor is repaired.
+
+After strict whole-receipt validation the artifact's `experiment` additionally
+retains `owner_failure` (the same `failure` object) and `candidate_ancestors`.
+Malformed/oversize/duplicate-key/unknown-code/extra-field/wrong-type receipts
+retain neither classification nor cleanup claims. Owner responses remain bounded
+to 4096 bytes; protocol input is bounded to 128 characters. An independent valid
+cleanup receipt remains admissible. Old successful and cleanup-only schemas are
+still accepted; existing top-level schema version 1 is unchanged. The external
+verifier must explicitly allow these two optional failure-only experiment fields
+before collecting the next reviewed run.
+
 A green workflow is not a green B and is not source qualification. Even a
 reversible effect is evidence only for this scoped allowance on this runner/path,
 not universal AppArmor attribution. Actual B-green/A-red reversal must be reviewed
@@ -153,6 +208,14 @@ A/B/A sequencing and identical paths, non-reproduction, collisions/refused loads
 invalid/private output, browser-cleanup failure, owner-cleanup failure, nonzero
 observer status, symlink/ownership/mode/integrity boundaries and repeated SIGTERM.
 These are orchestration/privacy checks, **not Linux/AppArmor execution proof**.
+
+`python3 -m unittest tests.test_sandbox_stage_diagnosis -v` additionally exercises
+the actual owner main/protocol with temporary unprivileged paths and host trust
+metadata adaptations. Real staging refusal, exclusive creation, copy and cleanup
+logic are not replaced. Injected chmod/unlink syscall failures test generic secret
+redaction and actual incomplete removal. External malformed-receipt stand-ins test
+the driver's whole-receipt validation; actual four-signal ownership and collision
+regressions remain in `tests/test_sandbox_owner_signals.py`.
 
 After the reviewed experiment, remove this workflow, the two sandbox scripts,
 their two test modules and this temporary note (or retain a separately reviewed
