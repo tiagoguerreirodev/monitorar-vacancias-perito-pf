@@ -50,7 +50,12 @@ premissa geográfica e a evidência local. O [seam UF](docs/uf-seam.md) especifi
 o coletor público, os schemas e a composição independente implementados na #13.
 UF de lotação continua premissa do projeto, não confirmação oficial; não há
 inferência de vagas por UF nem exigência de igualdade com o total nacional.
-Barras/UI (#14), histórico UF (#9) e prova confiável/workflow (#15) ficam separados.
+A [visualização UF (#14)](docs/uf-view.md) mostra somente o retrato mais recente:
+27 UFs/DF em barras horizontais decrescentes, contagens exatas e tabela acessível,
+com referência, verificação e fonte próprias e premissa geográfica visível.
+Pessoas ativas não são cargos legais ocupados nem vagas estaduais. Histórico UF
+(#9) e prova confiável/workflow (#15) continuam separados; implementação local
+não comprova publicação.
 
 O histórico guarda mês `YYYY-MM`, totais, identificadores, URL, SHA-256 dos bytes
 do ODS e instante de coleta UTC. `status.json` guarda separadamente a última

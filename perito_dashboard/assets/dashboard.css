@@ -37,6 +37,16 @@ th, td { padding: .75rem .6rem; text-align: right; border-bottom: 1px solid #cad
 th:first-child { text-align: left; }
 thead { background: #edf3f6; }
 .total { font-weight: 700; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.uf-assumption { background: #fff2ca; border-left: 4px solid #795517; padding: 1rem; }
+.uf-bars { list-style: none; padding: 0; margin: 1rem 0; }
+.uf-bars li { display: grid; grid-template-columns: minmax(10rem, 15rem) minmax(0, 1fr) 4ch; gap: .75rem; align-items: center; padding: .35rem 0; border-bottom: 1px solid #edf3f6; }
+.uf-label { font-weight: 600; }
+.uf-count { text-align: right; font-variant-numeric: tabular-nums; }
+.uf-track { display: block; height: .9rem; border-left: 1px solid #435c6c; }
+.uf-track > span { display: block; height: 100%; background: #145b79; }
+.uf-provenance { margin-top: 1.5rem; overflow-wrap: anywhere; }
+.uf-provenance code { font-size: .9rem; }
 .chart-scroll, .table-scroll { overflow-x: auto; max-width: 100%; }
 .chart-scroll svg { display: block; width: 100%; min-width: 38rem; font-size: 15px; fill: #182d3b; }
 .table-scroll table { min-width: 36rem; }
@@ -52,6 +62,8 @@ footer { font-size: .9rem; color: #435c6c; padding-block: 1rem; }
 @media (max-width: 44rem) {
   .current-layout { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
   .site-header { padding-block: 1.5rem; }
+  .uf-bars li { grid-template-columns: minmax(0, 1fr) 4ch; gap: .25rem .75rem; padding-block: .6rem; }
+  .uf-label { grid-column: 1 / -1; }
   th, td { padding: .65rem .35rem; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
