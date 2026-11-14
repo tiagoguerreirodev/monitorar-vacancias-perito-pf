@@ -32,7 +32,33 @@ acceptance can still advance while both previous UF files remain byte-for-byte.
 
 `PERITO_RUNTIME_ROOT` selects the owned managed-runtime directory in the two
 trusted workflow collection steps only (not their offline test steps). Node and
-Chrome install/verify there *inside* the UF call. Python is needed by both feeds,
+Chrome install/verify there *inside* the UF call. The packaged capsule then stages
+one exclusive root-owned `/usr/lib/perito-uf-sandbox-<32hex>/runtime` copy,
+validates protected ancestors, inventory and executable pins, and loads only its
+exact Chrome-path AppArmor userns exception. Node and Chrome remain the caller's
+unprivileged processes. The non-executable caller-owned `0700` sibling `p` is
+both their actual `TMPDIR` and the parent of two fresh run/profile directories.
+The complete UTF-8 singleton paths are preflighted against Linux's 107-byte
+limit (pinned Chrome suffixes: 106/102 bytes; profile layout independently tested).
+No setuid/helper mode, global policy/sysctl or seven-argument launch change occurs.
+
+`runtime.runtime_capsule()` owns both exports and agreement. It hashes and runs
+`--version` on the **protected executables actually used**, before and after,
+then asks the owner to verify the protected tree before deletion. Only after
+complete policy/process/profile/runtime cleanup, whole bounded typed final
+receipt and owner exit zero may `OfficialUF` publish exports, proof or
+`runtime_receipt`. The receipt binds protected-tree before/after and final cleanup;
+qualification consumes it directly and hashes both new packaged resources
+(`_capsule.py`, `collector/runtime-owner.py`), not just a checkout wrapper/cache.
+All setup, privilege, policy, integrity and cleanup failures remain UF-local;
+shared publication failures still roll back both feeds. Four handled signals
+request cooperative cleanup/reaping, never forcibly kill a privileged cleaner.
+
+Managed elevation is refused outside the exact repository/main hosted Ubuntu
+workflow identities (`qualify-uf.yml` manual; `pages.yml` manual/schedule), or
+when the application is root. Environment checks prevent accidental use, not
+forged-environment authorization: sudo remains the OS privilege boundary.
+Python is needed by both feeds,
 so its verified installation necessarily precedes the application. Local explicit
 `PERITO_NODE` / `PERITO_CHROME` discovery remains available; it is not trusted
 Ubuntu qualification, and does not bypass repeat/export checks.
@@ -50,9 +76,11 @@ archive and executable SHA256, publisher provenance). Runner label:
 recorded in proof. No pip/npm/package manager, unbounded install, system Chrome
 fallback, `--no-sandbox`, global AppArmor disable or browser/header/auth bypass.
 The ordinary Chrome sandbox is preserved. Ubuntu AppArmor/user-namespace and
-shared-library compatibility remain unproven until the trusted job. If sandbox
-policy blocks this exact Chrome path, stop: diagnose and review a narrowly scoped
-owned-exact-path profile separately, never disable a global policy or sandbox.
+shared-library **source-flow** compatibility remain unproven until final-code
+trusted qualification. Trusted no-Gov run 43624804937 established reversible
+same-path A-red/B-ready/A-red startup with a real port and complete cleanup;
+this authorizes the exact-path capsule adoption, not Gov-source qualification.
+If that exact exception fails, stop; never disable global policy or sandbox.
 
 | Asset | Version | SHA256 of downloaded archive |
 | --- | --- | --- |
@@ -116,7 +144,8 @@ Artifact `uf-qualification-SHA-RUN_ID-ATTEMPT` (14 days):
 - `proof.json`: both centrally accepted aggregate snapshots (actual month, rows,
   27 UFs, counts, own source total, raw SHA, canonical semantic SHA, selections,
   native DPF mapping), safe isolation/WS/download receipts, owner-observed Node/run
-  cleanup plus browser/profile cleanup, actual versions/executable SHA, manifest
+  cleanup plus browser/profile cleanup, protected-tree/final-owner cleanup,
+  actual versions/executable SHA, manifest
   pins and unchanged collector-resource hashes. `runtime_verification.before` and
   `.after` contain matching SHA/version observations of the exact resolved
   Python/Node/Chrome executables used by the collector; the qualifier does not
@@ -153,8 +182,9 @@ Each collector call closes the owned Chrome, waits/kills only its new process
 group, and removes its owned profile/run/download/log directory before returning
 bytes. The proof records successful owner-observed cleanup; failure never advances
 UF acceptance. Failed proof staging is also deleted. Verified runtime assets live
-only in the ephemeral runner's `RUNNER_TEMP`; GitHub removes the runner after the
-job. For deliberate cleanup **after** use, remove only the known owned
+in the unprivileged ephemeral runner cache; the protected execution copy and its
+policy/private sibling are deleted before any UF result is accepted. GitHub
+removes the runner cache after the job. For deliberate cleanup **after** use, remove only the known owned
 `$RUNNER_TEMP/perito-uf-runtime` and the exact Python install parent exposed in
 `PYTHONHOME` (check it is `$RUNNER_TEMP/perito-python-*/runtime` first); never glob
 unrelated profiles/processes. Retained proof is intentionally removed separately

@@ -19,6 +19,10 @@ from zipfile import BadZipFile, ZipFile
 MANIFEST = Path(__file__).resolve().with_name('collector') / 'runtime.json'
 
 
+class UFBlocked(ValueError):
+    """An unprivileged local collector executable is unavailable."""
+
+
 class UFRuntimeError(ValueError):
     """The required pinned runtime could not be prepared; never fall back."""
 
@@ -27,12 +31,16 @@ class UFRuntimeIntegrityError(UFRuntimeError):
     """Pinned archive/executable bytes or version did not match."""
 
 
-def _digest(path):
+def file_digest(path):
+    """Return the SHA256 of a file without loading the whole file into memory."""
     digest = hashlib.sha256()
-    with path.open('rb') as stream:
+    with Path(path).open('rb') as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b''):
             digest.update(block)
     return digest.hexdigest()
+
+
+_digest = file_digest
 
 
 def _download(spec, path, deadline):
@@ -50,6 +58,18 @@ def _download(spec, path, deadline):
             output.write(block)
     if ('size' in spec and count != spec['size']) or _digest(path) != spec['sha256']:
         raise UFRuntimeIntegrityError('Pinned UF runtime archive checksum/length mismatch')
+
+
+def runtime_capsule():
+    """Own one unprivileged collection runtime through verified final cleanup.
+
+    The yielded capsule provides exact executable paths, child environment and
+    temporary parent. Its sanitized receipt is usable only after context exit.
+    Managed installation/elevation is restricted to trusted hosted main workflows.
+    Local discovery never elevates and is not runtime qualification.
+    """
+    from ._capsule import open_capsule
+    return open_capsule()
 
 
 def ensure_runtime(directory):

@@ -1,4 +1,4 @@
-"""Internal policy values and aggregate JSON serialization shared by refresh/build."""
+"""Unprivileged shared policy and serialization helpers."""
 import json
 
 

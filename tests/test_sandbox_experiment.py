@@ -102,7 +102,7 @@ raise SystemExit(1)
             self.assertTrue(all(result['cleanup'].values()))
 
     def test_owned_tree_integrity_rejects_external_symlinks_and_privileged_modes(self):
-        spec = importlib.util.spec_from_file_location('sandbox_owner', SCRIPT.with_name('sandbox-owner.py'))
+        spec = importlib.util.spec_from_file_location('sandbox_owner', ROOT / 'perito_dashboard/collector/runtime-owner.py')
         owner = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(owner)
         with tempfile.TemporaryDirectory() as directory:

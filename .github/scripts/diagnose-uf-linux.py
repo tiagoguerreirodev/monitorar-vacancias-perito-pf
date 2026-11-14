@@ -1,6 +1,5 @@
-"""[DEBUG-uf-linux] Temporary trusted no-Gov startup diagnostic; not qualification."""
+"""[DEBUG-uf-linux] Retained trusted no-Gov startup diagnostic; not qualification."""
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -12,17 +11,9 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-from perito_dashboard.runtime import MANIFEST, ensure_runtime  # noqa: E402
+from perito_dashboard.runtime import MANIFEST, ensure_runtime, file_digest as digest  # noqa: E402
 
 HELPER = Path(__file__).with_name('uf-linux-startup.mjs')
-
-
-def digest(path):
-    value = hashlib.sha256()
-    with Path(path).open('rb') as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b''):
-            value.update(block)
-    return value.hexdigest()
 
 
 def receipt(executables, pins):
@@ -144,6 +135,8 @@ def main():
               'resources_sha256': {name: digest(path) for name, path in {
                   'startup_helper': HELPER, 'diagnostic_driver': Path(__file__),
                   'runtime_manifest': MANIFEST, 'runtime_installer': ROOT / 'perito_dashboard/runtime.py',
+                  'capsule_client': ROOT / 'perito_dashboard/_capsule.py',
+                  'packaged_owner': ROOT / 'perito_dashboard/collector/runtime-owner.py',
                   'production_launch_recipe': ROOT / 'perito_dashboard/collector/browser-probe.mjs',
               }.items()}}
     report['provenance'] = {}
