@@ -19,6 +19,42 @@ import time
 PARSER = Path('/sbin/apparmor_parser')
 PROFILES = Path('/sys/kernel/security/apparmor/profiles')
 HANDLED_SIGNALS = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGALRM)
+FAILURE_REASONS = frozenset({
+    'ancestor_unprotected', 'source_ownership', 'collision', 'inventory_refused',
+    'copy_integrity', 'executable_integrity', 'policy_refused', 'parser_untrusted',
+    'not_staged', 'runtime_changed', 'process_visibility', 'browser_running',
+    'policy_removal', 'policy_absent', 'invalid_request', 'interrupted', 'unexpected_error',
+})
+
+
+class Refusal(ValueError):
+    """Only explicit owner refusals may become fixed public reason codes."""
+
+
+def candidate_ancestors():
+    """Fixed read-only lstat facts, not a destination choice or protection proof."""
+    result = {}
+    for label, path in [('root', '/'), ('opt', '/opt'), ('usr', '/usr'), ('usr_lib', '/usr/lib')]:
+        facts = dict.fromkeys(('directory', 'non_symlink', 'root_owned', 'group_or_world_writable'))
+        try:
+            info = Path(path).lstat()
+            facts = {'directory': stat.S_ISDIR(info.st_mode),
+                     'non_symlink': not stat.S_ISLNK(info.st_mode),
+                     'root_owned': info.st_uid == 0,
+                     'group_or_world_writable': bool(info.st_mode & 0o022)}
+        except OSError:
+            pass
+        result[label] = facts
+    return result
+
+
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('duplicate key')
+        result[key] = value
+    return result
 
 
 def digest(path):
@@ -35,39 +71,39 @@ def protected_ancestors(path):
         info = entry.lstat()
         if (not stat.S_ISDIR(info.st_mode) or info.st_uid != 0
                 or info.st_mode & 0o022):
-            raise ValueError('unprotected ancestor')
+            raise Refusal('ancestor_unprotected')
 
 
 def tree_inventory(root, protected=False):
     """Bounded filesystem seam, preserving only internal relative symlinks."""
     root = Path(root)
     if root.is_symlink() or not root.is_dir():
-        raise ValueError('tree root')
+        raise Refusal('inventory_refused')
     items = []
     size = 0
     for path in [root, *sorted(root.rglob('*'))]:
         if len(items) > 50000:
-            raise ValueError('tree count')
+            raise Refusal('inventory_refused')
         info = path.lstat()
         if info.st_mode & 0o6000:
-            raise ValueError('privileged file')
+            raise Refusal('inventory_refused')
         if protected and (info.st_uid != 0 or (not path.is_symlink() and info.st_mode & 0o022)):
-            raise ValueError('unprotected tree')
+            raise Refusal('inventory_refused')
         name = path.relative_to(root).as_posix()
         if path.is_symlink():
             target = os.readlink(path)
             if os.path.isabs(target) or not path.resolve(strict=True).is_relative_to(root.resolve()):
-                raise ValueError('external symlink')
+                raise Refusal('inventory_refused')
             items.append([name, 'symlink', target])
         elif stat.S_ISDIR(info.st_mode):
             items.append([name, 'directory'])
         elif stat.S_ISREG(info.st_mode):
             size += info.st_size
             if size > 2_000_000_000:
-                raise ValueError('tree size')
+                raise Refusal('inventory_refused')
             items.append([name, 'file', bool(info.st_mode & 0o111), digest(path)])
         else:
-            raise ValueError('special file')
+            raise Refusal('inventory_refused')
     return hashlib.sha256(json.dumps(items, separators=(',', ':')).encode()).hexdigest()
 
 
@@ -75,9 +111,9 @@ def policy_text(name, chrome):
     # Both values are generated here, not supplied by a workflow input.
     import re
     if not re.fullmatch(r'perito-uf-sandbox-[0-9a-f]{32}', name):
-        raise ValueError('policy name')
+        raise Refusal('policy_refused')
     if str(chrome) != '/opt/' + name + '/runtime/chrome-linux64/chrome':
-        raise ValueError('policy attachment')
+        raise Refusal('policy_refused')
     return ('abi <abi/4.0>,\ninclude <tunables/global>\n\n'
             f'profile {name} "{chrome}" flags=(unconfined) {{\n  userns,\n}}\n')
 
@@ -100,7 +136,7 @@ class Owner:
         with PROFILES.open('rb') as stream:
             content = stream.read(4_000_001)
         if len(content) > 4_000_000:
-            raise ValueError('policy list bound')
+            raise Refusal('policy_refused')
         # Never retain or emit the profile list.
         return any(line.split(b' ', 1)[0] == self.name.encode() for line in content.splitlines())
 
@@ -108,7 +144,7 @@ class Owner:
         protected_ancestors(PARSER.resolve().parent)
         info = PARSER.resolve().stat()
         if info.st_uid != 0 or info.st_mode & 0o022 or not stat.S_ISREG(info.st_mode):
-            raise ValueError('untrusted parser')
+            raise Refusal('parser_untrusted')
         subprocess.run([str(PARSER), '--config-file', '/dev/null', '-K', '-j1', action, str(self.policy)],
                        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                        stderr=subprocess.DEVNULL, check=True, timeout=20,
@@ -117,9 +153,9 @@ class Owner:
     def stage(self):
         protected_ancestors(Path('/opt'))
         if self.source != self.source.resolve(strict=True) or self.source.stat().st_uid != self.uid:
-            raise ValueError('source ownership')
+            raise Refusal('source_ownership')
         if self.loaded() or self.base.exists() or self.base.is_symlink():
-            raise ValueError('collision')
+            raise Refusal('collision')
         original = tree_inventory(self.source)
         previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, HANDLED_SIGNALS)
         try:
@@ -136,13 +172,13 @@ class Owner:
         protected_ancestors(self.runtime)
         copied = tree_inventory(self.runtime, protected=True)
         if copied != original or tree_inventory(self.source) != original:
-            raise ValueError('copy integrity')
+            raise Refusal('copy_integrity')
         # Independently verify executable pins without executing anything as root.
         pins = json.loads((Path(__file__).resolve().parents[2] / 'perito_dashboard/collector/runtime.json').read_text())
         for key, relative in [('node', 'node/bin/node'), ('chrome', 'chrome-linux64/chrome')]:
             executable = self.runtime / relative
             if executable.is_symlink() or digest(executable) != pins[key]['executable_sha256']:
-                raise ValueError('executable integrity')
+                raise Refusal('executable_integrity')
         self.tree_hash = copied
         with self.policy.open('x') as stream:
             stream.write(policy_text(self.name, self.runtime / 'chrome-linux64/chrome'))
@@ -154,12 +190,12 @@ class Owner:
 
     def validate(self):
         if not self.created or self.tree_hash is None:
-            raise ValueError('not staged')
+            raise Refusal('not_staged')
         protected_ancestors(self.runtime)
         if tree_inventory(self.runtime, protected=True) != self.tree_hash:
-            raise ValueError('runtime changed')
+            raise Refusal('runtime_changed')
         if self.policy.read_text() != policy_text(self.name, self.runtime / 'chrome-linux64/chrome'):
-            raise ValueError('policy changed')
+            raise Refusal('policy_refused')
 
     def own_processes(self):
         """Only processes executing this unique immutable runtime, never names/PIDs from input."""
@@ -177,28 +213,28 @@ class Owner:
                 continue
             except PermissionError:
                 # Cannot prove absence: fail closed rather than delete under a live browser.
-                raise ValueError('process visibility') from None
+                raise Refusal('process_visibility') from None
         return found
 
     def unload(self):
         self.validate()
         if self.own_processes():
-            raise ValueError('browser still running')
+            raise Refusal('browser_running')
         if self.policy_owned and self.loaded():
             self.parser('--remove')
         if self.loaded():
-            raise ValueError('policy removal')
+            raise Refusal('policy_removal')
         self.policy_owned = False
         return {'ok': True}
 
     def load(self):
         self.validate()
         if self.own_processes() or self.loaded():
-            raise ValueError('policy collision or live browser')
+            raise Refusal('collision')
         self.policy_owned = True  # Cleanup even if the parser times out after loading.
         self.parser('--add')  # Never replace existing policy; never reload a directory/service.
         if not self.loaded():
-            raise ValueError('policy absent')
+            raise Refusal('policy_absent')
         return {'ok': True}
 
     def cleanup(self):
@@ -259,28 +295,46 @@ def main():
             raise KeyboardInterrupt
     for signum in HANDLED_SIGNALS:
         signal.signal(signum, interrupt)
+    action = 'protocol'
+    failure = None
     try:
-        for line in sys.stdin:
+        while True:
+            line = sys.stdin.readline(130)
+            if not line:
+                break
+            action = 'protocol'
             if len(line) > 128:
-                break
-            command = json.loads(line)
-            if set(command) != {'action'}:
-                break
+                raise Refusal('invalid_request')
+            try:
+                command = json.loads(line, object_pairs_hook=unique_object)
+            except ValueError:
+                raise Refusal('invalid_request') from None
+            if (not isinstance(command, dict) or set(command) != {'action'}
+                    or not isinstance(command['action'], str)
+                    or command['action'] not in {'stage', 'load', 'unload', 'cleanup'}):
+                raise Refusal('invalid_request')
             action = command['action']
             if action == 'cleanup':
                 break
-            if action not in {'stage', 'load', 'unload'} or (action == 'stage' and owner.created):
-                break
+            if action == 'stage' and owner.created:
+                raise Refusal('invalid_request')
             signal.alarm(150)
             response = getattr(owner, action)()
             signal.alarm(0)
             print(json.dumps(response), flush=True)
-    except (ValueError, OSError, subprocess.SubprocessError, KeyboardInterrupt):
-        pass
+    except (Exception, KeyboardInterrupt) as error:
+        # Never stringify unknown errors (including syscall/parser exceptions).
+        reason = ('interrupted' if isinstance(error, KeyboardInterrupt) else
+                  error.args[0] if type(error) is Refusal and len(error.args) == 1
+                  and isinstance(error.args[0], str) and error.args[0] in FAILURE_REASONS else 'unexpected_error')
+        failure = {'action': action, 'reason': reason}
     finally:
         cleaning = True
         signal.alarm(0)
         result = owner.cleanup()
+        if failure is not None:
+            result['failure'] = failure
+            result['candidate_ancestors'] = candidate_ancestors()
         try:
             print(json.dumps(result), flush=True)
         except BrokenPipeError:
