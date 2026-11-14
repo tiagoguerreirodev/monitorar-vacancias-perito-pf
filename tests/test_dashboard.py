@@ -16,7 +16,7 @@ from urllib.request import urlopen
 from perito_dashboard import refresh_and_build
 from tests.sources import (
     CHECK_TIME, ControlledArchive, SEPTEMBER, SEPTEMBER_URL, ScriptedArchive,
-    monthly_resource as dated_resource, pf_classes, resource_url, set_cell, variant,
+    monthly_resource as dated_resource, national_resources, pf_classes, resource_url, set_cell, variant,
 )
 
 
@@ -79,6 +79,13 @@ class DashboardTests(unittest.TestCase):
         refresh_and_build(self.data, self.site,
                           source=source if source is not None else ControlledArchive(), clock=clock)
         return Page((self.site / "index.html").read_text(encoding="utf-8"))
+
+    def _after_leading_unavailable_gap(self, rows):
+        self.assertEqual(len(rows), 20)
+        self.assertIn("junho de 2025", rows[0]["text"])
+        self.assertIn("agosto de 2026", rows[14]["text"])
+        self.assertTrue(all("Indisponível" in row["text"] for row in rows[:15]))
+        return rows[15:]
 
     def test_current_pie_explains_official_counts_proportions_and_dates(self):
         page = self.refresh()
@@ -150,6 +157,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("novembro de 2026: indisponível", chart["text"])
         table = page.one("table", id="history-values")
         rows = [n for n in page.matching("tr") if table in n["parents"]][1:]
+        rows = self._after_leading_unavailable_gap(rows)
         self.assertEqual(len(rows), 5)
         for row, label in zip(rows, ("setembro de 2026", "outubro de 2026", "novembro de 2026",
                                      "dezembro de 2026", "janeiro de 2027")):
@@ -243,6 +251,7 @@ class DashboardTests(unittest.TestCase):
         chart = page.one("svg", id="history-chart")
         table = page.one("table", id="history-values")
         rows = [n for n in page.matching("tr") if table in n["parents"]][1:]
+        rows = self._after_leading_unavailable_gap(rows)
         self.assertEqual(len(rows), 5)
         for index, month, label, occupied, vacant in (
             (0, "2026-09", "setembro de 2026", "1.109", "86"),
@@ -268,6 +277,98 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(json.loads((self.site / "data/history.json").read_text()), history)
         self.assertEqual((self.site / "data/status.json").read_bytes(),
                          (self.data / "status.json").read_bytes())
+
+    def test_authentic_national_backfill_matches_all_fifteen_months_and_keeps_july_gap(self):
+        # Independent literal research expectations, not calculated from input rows.
+        expected = [
+            ("2025-06", 1195, 1195, 1116, 79),
+            ("2025-08", 1195, 1195, 1111, 84),
+            ("2025-09", 1195, 1195, 1108, 87),
+            ("2025-10", 1195, 1195, 1102, 93),
+            ("2025-11", 1195, 1195, 1101, 94),
+            ("2025-12", 1195, 1195, 1096, 99),
+            ("2026-01", 1195, 1195, 1094, 101),
+            ("2026-02", 1195, 1195, 1090, 105),
+            ("2026-03", 1195, 1195, 1089, 106),
+            ("2026-04", 1195, 1195, 1085, 110),
+            ("2026-05", 1195, 1195, 1083, 112),
+            ("2026-06", 1195, 1195, 1083, 112),
+            ("2026-07", 1195, 1195, 1074, 121),
+            ("2026-08", 1195, 1195, 1067, 128),
+            ("2026-09", 1195, 1195, 1108, 87),
+        ]
+        labels = ("junho de 2025", "agosto de 2025", "setembro de 2025",
+                  "outubro de 2025", "novembro de 2025", "dezembro de 2025",
+                  "janeiro de 2026", "fevereiro de 2026", "março de 2026",
+                  "abril de 2026", "maio de 2026", "junho de 2026",
+                  "julho de 2026", "agosto de 2026", "setembro de 2026")
+        self.refresh()
+        september = json.loads((self.data / "history.json").read_text())["observations"][0]
+        resources = national_resources()
+        page = self.refresh(ControlledArchive(resources),
+                            clock=lambda: CHECK_TIME + timedelta(days=1))
+        history = json.loads((self.data / "history.json").read_text())
+        observations = history["observations"]
+        self.assertEqual([tuple(row[key] for key in
+                                ("reference_month", "authorized", "distributed", "occupied", "vacant"))
+                          for row in observations], expected)
+        self.assertEqual(observations[-1], september, "Backfill must not renew September provenance")
+        self.assertEqual(history.get("corrections", []), [])
+        self.assertEqual(page.text("time", datetime="2026-09"), "setembro de 2026")
+        self.assertIn("1.108", page.text("table", id="current-values"))
+        self.assertIn("Histórico a partir de junho de 2025", page.text("body"))
+        chart = page.one("svg", id="history-chart")
+        # The scrollable timeline must not scale its 15px labels down as months grow.
+        minimum_width = float(chart["attrs"]["style"].split(":")[1].strip().removesuffix("px"))
+        self.assertGreaterEqual(minimum_width, float(chart["attrs"]["viewbox"].split()[2]),
+                                "Keep chart labels at their intended size; scroll instead of shrinking")
+        table = page.one("table", id="history-values")
+        rows = [n for n in page.matching("tr") if table in n["parents"]][1:]
+        self.assertEqual(len(rows), 16)
+        self.assertIn("julho de 2025", rows[1]["text"])
+        self.assertIn("Indisponível", rows[1]["text"])
+        self.assertFalse([n for n in page.matching("td")
+                          if rows[1] in n["parents"] and n["text"].strip() == "0"])
+        self.assertFalse([n for n in page.matching("a") if rows[1] in n["parents"]])
+        self.assertIn("julho de 2025: indisponível", chart["text"])
+        accepted_rows = rows[:1] + rows[2:]
+        for row, observation, counts, label in zip(accepted_rows, observations, expected, labels):
+            cells = [n["text"] for n in page.nodes
+                     if n["tag"] in ("th", "td") and row in n["parents"]]
+            occupied = f"{counts[3]:,}".replace(",", ".")
+            self.assertEqual(cells[:4], [label, occupied, str(counts[4]), "1.195"])
+            self.assertIn(f"Ocupados: {occupied} — {label}", chart["text"])
+            self.assertIn(f"Vagos: {counts[4]} — {label}", chart["text"])
+            url = observation["source"]["url"]
+            self.assertIn(url, resources, "Source casing must remain as actually published")
+            self.assertTrue([n for n in page.matching("a", href=url) if row in n["parents"]])
+            self.assertEqual(observation["source"]["sha256"], hashlib.sha256(resources[url]).hexdigest())
+        circles = [n for n in page.matching("circle") if chart in n["parents"]]
+        squares = [n for n in page.matching("rect") if chart in n["parents"]]
+        self.assertEqual((len(circles), len(squares)), (15, 15))
+        xs = [float(n["attrs"]["cx"]) for n in circles]
+        self.assertAlmostEqual(xs[1] - xs[0], 2 * (xs[2] - xs[1]))
+        for series in ("Ocupados", "Vagos"):
+            lines = [n for n in page.matching("polyline", **{"aria-label": series})
+                     if chart in n["parents"]]
+            self.assertEqual(len(lines), 1)
+            vertices = [tuple(map(float, point.split(",")))
+                        for point in lines[0]["attrs"]["points"].split()]
+            markers = ([(float(n["attrs"]["cx"]), float(n["attrs"]["cy"])) for n in circles]
+                       if series == "Ocupados" else
+                       [(float(n["attrs"]["x"]) + 4, float(n["attrs"]["y"]) + 4) for n in squares])
+            self.assertEqual(len(vertices), 14, "The isolated June point must not connect across July")
+            for vertex, marker in zip(vertices, markers[1:]):
+                self.assertAlmostEqual(vertex[0], marker[0])
+                self.assertAlmostEqual(vertex[1], marker[1])
+        before = (self.data / "history.json").read_bytes()
+        self.refresh(ControlledArchive(resources), clock=lambda: CHECK_TIME + timedelta(days=2))
+        self.assertEqual((self.data / "history.json").read_bytes(), before)
+        self.assertEqual((self.site / "data/history.json").read_bytes(), before)
+        self.assertEqual((self.site / "data/status.json").read_bytes(),
+                         (self.data / "status.json").read_bytes())
+        self.assertEqual(json.loads((self.data / "status.json").read_text())[
+            "last_successful_check"], "2026-11-15T12:00:00Z")
 
     def test_zero_counts_and_zero_total_do_not_invent_proportions_or_sectors(self):
         for occupied, vacant in ((0, 0), (1195, 0), (0, 1195)):
@@ -320,17 +421,20 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("13/11/2026", page.text("time", datetime="2026-11-13T12:00:00Z"))
 
     def test_failed_incremental_candidate_preserves_dashboard_and_can_be_retried(self):
-        self.refresh()
+        accepted = national_resources()
+        self.refresh(ControlledArchive(accepted))
+        accepted_history = json.loads((self.data / "history.json").read_text())["observations"]
+        self.assertEqual(len(accepted_history), 15)
         before = {path.relative_to(self.root): path.read_bytes()
                   for path in self.root.rglob("*") if path.is_file()}
         october_url = resource_url("2026-10")
         october = monthly_resource("2026-10", 1110, 85)
         corrected = monthly_resource("2026-09", 1109, 86)
-        resources = {SEPTEMBER_URL: corrected, october_url: october}
+        resources = {**accepted, SEPTEMBER_URL: corrected, october_url: october}
         scenarios = (
             (ScriptedArchive({october_url: [TimeoutError("controlled outage")] * 3}, resources),
              "after 3 attempt"),
-            (ControlledArchive({SEPTEMBER_URL: corrected, october_url: b"truncated ODS"}),
+            (ControlledArchive({**resources, october_url: b"truncated ODS"}),
              "Invalid spreadsheet"),
         )
         for source, diagnostic in scenarios:
@@ -359,7 +463,9 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("Ocupados: 1.110 (92,9%)", page.text("svg", id="current-pie"))
         history = json.loads((self.site / "data/history.json").read_text())
         self.assertEqual([row["reference_month"] for row in history["observations"]],
-                         ["2026-09", "2026-10"])
+                         [row["reference_month"] for row in accepted_history] + ["2026-10"])
+        self.assertEqual(history["observations"][:-2], accepted_history[:-1],
+                         "Retry must preserve all fourteen unchanged historical observations")
         self.assertEqual(len(history["corrections"]), 1)
         self.assertEqual(history["corrections"][0]["superseded"]["occupied"], 1108)
         self.assertEqual((self.site / "data/history.json").read_bytes(),

@@ -101,16 +101,47 @@ class RefreshTests(unittest.TestCase):
         self.assertFalse(self.site.exists())
 
     def test_cutoff_is_inclusive_and_empty_eligible_archive_cannot_publish(self):
-        august_url = ARCHIVE_URL + "2026/CargosVagosVacancias_202608.ods"
-        old_year_url = ARCHIVE_URL + "2025/CargosVagosVacancias_202509.ods"
-        earlier = {august_url: b"excluded, not downloaded", old_year_url: b"excluded"}
-        with self.assertRaisesRegex(ValueError, "eligible.*2026-09"):
+        may_url = ARCHIVE_URL + "2025/CargosVagosVacancias_202505.ods"
+        old_year_url = ARCHIVE_URL + "2024/CargosVagosVacancias_202412.ods"
+        earlier = {may_url: b"excluded, not downloaded", old_year_url: b"excluded"}
+        with self.assertRaisesRegex(ValueError, "eligible.*2025-06"):
             self.refresh(ControlledArchive(earlier))
         self.assertFalse(self.data.exists())
         self.assertFalse(self.site.exists())
-        self.refresh(ControlledArchive({**earlier, SEPTEMBER_URL: SEPTEMBER}))
+        june_url = ARCHIVE_URL + "2025/CargosVagosVacancias_202506.ods"
+        june = Path(__file__).parent.joinpath("fixtures/national/CargosVagosVacancias_202506.ods").read_bytes()
+        self.refresh(ControlledArchive({**earlier, june_url: june}))
         history = json.loads((self.data / "history.json").read_text())
-        self.assertEqual([row["reference_month"] for row in history["observations"]], ["2026-09"])
+        self.assertEqual([row["reference_month"] for row in history["observations"]], ["2025-06"])
+        row = history["observations"][0]
+        self.assertEqual((row["authorized"], row["distributed"], row["occupied"], row["vacant"]),
+                         (1195, 1195, 1116, 79))
+        self.assertEqual(row["source"]["url"], june_url)
+        self.assertEqual(json.loads((self.site / "data/history.json").read_text()), history)
+        html = (self.site / "index.html").read_text()
+        for expected in ("junho de 2025", "1.116", "79", june_url):
+            self.assertIn(expected, html)
+
+    def test_lowercase_official_filename_retains_original_url_across_rechecks(self):
+        url = ARCHIVE_URL + "2025/cargosvagosvacancias_202508.ods"
+        content = Path(__file__).parent.joinpath("fixtures/national/cargosvagosvacancias_202508.ods").read_bytes()
+        source = ControlledArchive({url: content})
+        self.refresh(source)
+        history = json.loads((self.data / "history.json").read_text())
+        row = history["observations"][0]
+        self.assertEqual((row["reference_month"], row["occupied"], row["vacant"]),
+                         ("2025-08", 1111, 84))
+        self.assertEqual(row["source"], {
+            "url": url, "sha256": hashlib.sha256(content).hexdigest(),
+            "retrieved_at": "2026-11-13T12:00:00Z",
+        })
+        before = (self.data / "history.json").read_bytes()
+        self.refresh(source, clock=lambda: CHECK_TIME + timedelta(days=1))
+        self.assertEqual((self.data / "history.json").read_bytes(), before)
+        self.assertEqual(json.loads((self.site / "data/history.json").read_text()), history)
+        self.assertIn(url, (self.site / "index.html").read_text())
+        self.assertEqual(json.loads((self.data / "status.json").read_text())[
+            "last_successful_check"], "2026-11-14T12:00:00Z")
 
     def test_failed_build_keeps_previous_accepted_data_and_site(self):
         self.refresh()

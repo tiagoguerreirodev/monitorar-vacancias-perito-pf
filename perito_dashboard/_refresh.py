@@ -104,6 +104,10 @@ def _index(fetch, url):
     return sorted(set(listing.links))
 
 
+def _canonical_basename(month):
+    return "cargosvagosvacancias_" + month.replace("-", "") + ".ods"
+
+
 def _discover(source):
     resources = []
     for year in _index(source.archive_index, ARCHIVE_URL):
@@ -121,8 +125,7 @@ def _discover(source):
                     continue
                 if match[1] != year[:4]:
                     raise ValueError(f"Resource month/year directory mismatch: {year}{name}")
-                canonical = f"CargosVagosVacancias_{match[1]}{match[2]}.ods"
-                if name != canonical:
+                if name.lower() != _canonical_basename(month):
                     raise ValueError(f"Conflicting noncanonical resource for {month}; maintainer review required: {name}")
                 resources.append((month, ARCHIVE_URL + year + name))
             elif name.lower().startswith("cargosvagosvacancias_"):
@@ -337,8 +340,10 @@ def _timestamp(value):
 
 
 def _validate_source(source, month, successful_check):
-    canonical = ARCHIVE_URL + month[:4] + "/CargosVagosVacancias_" + month.replace("-", "") + ".ods"
-    if not isinstance(source, dict) or source["url"] != canonical:
+    directory = ARCHIVE_URL + month[:4] + "/"
+    if (not isinstance(source, dict) or not isinstance(source["url"], str)
+            or not source["url"].startswith(directory)
+            or source["url"][len(directory):].lower() != _canonical_basename(month)):
         raise ValueError(f"Invalid saved source URL for {month}")
     if not isinstance(source["sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", source["sha256"]):
         raise ValueError(f"Invalid saved source fingerprint for {month}")

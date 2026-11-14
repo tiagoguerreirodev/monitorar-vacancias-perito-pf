@@ -2,7 +2,7 @@
 
 Painel nacional de cargos de **Perito Criminal Federal — Polícia Federal**, com
 as quatro classes somadas. Fonte: [Cargos Vagos e Vacâncias, arquivo oficial](https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/).
-O histórico começa em **setembro de 2026**, inclusive. São retratos mensais de
+O histórico começa em **junho de 2025**, inclusive. São retratos mensais de
 cargos aprovados, ocupados e vagos, não vagas de concurso nem dados em tempo real.
 Somente agregados e proveniência são publicados; não há backend nem login.
 
@@ -43,7 +43,7 @@ Veja também o [dicionário oficial](https://repositorio.dados.gov.br/segrt/carg
 O histórico guarda mês `YYYY-MM`, totais, identificadores, URL, SHA-256 dos bytes
 do ODS e instante de coleta UTC. `status.json` guarda separadamente a última
 verificação bem-sucedida. Não se inventam meses nem valores para preencher
-lacunas; a primeira importação sem observação válida desde setembro de 2026 falha.
+lacunas; a primeira importação sem observação válida desde junho de 2025 falha.
 A origem da planilha oficial reduzida usada pelos testes está em
 [`tests/fixtures/README.md`](tests/fixtures/README.md).
 
@@ -52,12 +52,14 @@ verificação inalterada atualiza apenas o status: não duplica pontos nem renov
 proveniência. Novos meses e backfills entram em ordem cronológica; a referência
 atual é sempre a maior. Mudança nos bytes da planilha canônica do mesmo mês
 registra uma correção, com valores/proveniência supersedidos em `corrections`,
-mesmo se os totais não mudarem. Recursos concorrentes não canônicos são recusados
-para revisão humana, sem escolher uma versão arbitrariamente.
+mesmo se os totais não mudarem. Nomes oficiais mistos ou minúsculos são aceitos,
+sem reescrever a URL. Recursos concorrentes do mesmo mês, inclusive variantes de
+caixa, são recusados para revisão humana, sem escolher uma versão arbitrariamente.
 
 O painel inclui pizza com proporções, histórico de ocupados/vagos, tabelas e
 descrições acessíveis em pt-BR, pistas além da cor e layout mobile. Um único mês
-é mostrado como pontos, sem tendência; lacunas interrompem as linhas. Todos os
+é mostrado como pontos, sem tendência; lacunas interrompem as linhas. O histórico
+rola horizontalmente sem reduzir os rótulos conforme a série cresce. Todos os
 ativos e JSON são locais, com caminhos relativos ao subcaminho de Pages.
 
 A coleta usa timeout de 30 s por tentativa e até três tentativas por requisição
