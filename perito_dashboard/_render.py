@@ -104,7 +104,8 @@ def _history(observations):
 <title id="history-chart-title">Histórico de cargos vagos</title>
 <desc id="history-description">{note} {gaps} {" ".join(missing)} Vagos: quadrados e linha tracejada. Os valores exatos estão na tabela abaixo.</desc>
 <text x="85" y="18">Cargos vagos (quantidade)</text>{"".join(graphics)}
-<text x="{width / 2}" y="343" text-anchor="middle">Mês de referência oficial</text></svg></div>
+<text x="{width / 2}" y="343" text-anchor="middle">Mês de referência oficial</text>
+<path id="history-plot" d="M85 30H{right}V270H85Z" fill="transparent" pointer-events="none"/></svg></div>
 <figcaption><span class="legend-item">■ ┄ Cargos vagos (quadrados e linha tracejada)</span></figcaption></figure>
 <div class="table-scroll" tabindex="0" role="region" aria-label="Tabela histórica; role horizontalmente em telas pequenas">
 <table id="history-values"><caption>Cargos por mês de referência</caption>
@@ -131,7 +132,8 @@ def render_site(history, status, destination):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Cargos aprovados, ocupados e vagos de Perito Criminal Federal na Polícia Federal. Dados oficiais mensais, em totais nacionais.">
 <title>Perito Criminal Federal — Polícia Federal</title>
-<link rel="stylesheet" href="assets/dashboard.css"></head>
+<link rel="stylesheet" href="assets/dashboard.css">
+<script src="assets/inspection.js" defer></script></head>
 <body><a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
 <header class="site-header"><div class="wrap"><p class="eyebrow">Quadro da carreira · Dados oficiais</p>
 <h1>Perito Criminal Federal — Polícia Federal</h1>
