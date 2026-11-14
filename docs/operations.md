@@ -11,12 +11,18 @@ node --check perito_dashboard/assets/inspection.js
 python3 -m perito_dashboard --data-dir data --site-dir site
 ```
 
-A aplicação requer Python >=3.9 e somente biblioteca padrão; Actions seleciona
-**Python 3.13** em `ubuntu-latest`. As ações atuais são checkout **v7**,
-setup-python **v7**, upload-pages-artifact **v5** e deploy-pages **v5**. As ações
-JavaScript usam Node 24; o runner hospedado fornece esse runtime, separado do
-Python da aplicação. A coleta nacional e os testes Python não exigem Node; a
-coleta UF exige o runtime Node/Chrome qualificado descrito em [uf-runtime.md](uf-runtime.md).
+A aplicação requer Python >=3.9 e somente biblioteca padrão. O job de produção
+`refresh` de `pages.yml` usa **ubuntu-24.04** e **Python 3.13.18**, fixado em
+`perito_dashboard/collector/runtime.json` e instalado por
+`.github/scripts/setup-python.sh`, com verificação SHA-256 do arquivo e do
+executável. Já o workflow Validate usa `ubuntu-latest` e setup-python **v7**
+com Python **3.13**; o job `deploy` de Pages usa `ubuntu-latest` apenas para
+publicar o artefato, sem executar o coletor. As ações atuais são checkout **v7**,
+upload-pages-artifact **v5** e deploy-pages **v5** (fixadas por SHA em Pages).
+As ações JavaScript usam Node 24, fornecido pelo runner hospedado e separado do
+Python da aplicação e do Node fixado para o coletor UF. A coleta nacional e os
+testes Python não exigem Node; a coleta UF exige o runtime Node/Chrome descrito
+em [uf-runtime.md](uf-runtime.md), cuja qualificação real é específica ao código.
 A checagem de sintaxe JS usa o Node disponível no runner, sem instalar pacotes. Ela não executa o comportamento do navegador.
 Os workflows `.yml` usam JSON, um subconjunto de YAML aceito por Actions, para
 permitir validação do contrato com o próprio stdlib, sem parser YAML adicional.
