@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 from tests.test_sandbox_experiment import api
@@ -147,6 +148,209 @@ class StageDiagnosisTests(unittest.TestCase):
             self.assertTrue(all(result['cleanup'].values()))
             self.assertEqual(list((root / 'opt').iterdir()), [])
             self.assertNotIn('SECRET', json.dumps(result))
+
+
+# Independent protocol literals: these stand-ins do not import owner/driver parsing.
+FINAL_FACTS = {
+    'root': {'directory': True, 'non_symlink': True, 'root_owned': True,
+             'group_or_world_writable': False},
+    'opt': {'directory': True, 'non_symlink': True, 'root_owned': True,
+            'group_or_world_writable': False},
+    'usr': {'directory': True, 'non_symlink': True, 'root_owned': True,
+            'group_or_world_writable': False},
+    'usr_lib': {'directory': None, 'non_symlink': None, 'root_owned': None,
+                'group_or_world_writable': None},
+}
+UNREAD_FINAL = {
+    'ok': True, 'profile_removed': True, 'runtime_removed': False, 'processes_stopped': True,
+    'failure': {'action': 'protocol', 'reason': 'unexpected_error'},
+    'candidate_ancestors': FINAL_FACTS,
+}
+BOUNDARY_OWNER = r'''
+import json, os, subprocess, sys, time
+from pathlib import Path
+root, payload, mode = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+sys.stdin.readline()
+print('{"ok":true,"runtime":"/opt/perito-uf-sandbox-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/runtime","tree_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}', flush=True)
+while not (root / 'observing').exists():
+    time.sleep(.005)
+os.close(0)
+sys.stdout.write(payload)
+sys.stdout.flush()
+if mode == 'held_stdout':
+    subprocess.Popen([sys.executable, '-c', """import sys, time
+from pathlib import Path
+deadline = time.monotonic() + 8
+while time.monotonic() < deadline and not Path(sys.argv[1]).exists():
+    time.sleep(.01)
+""", str(root / 'release')], stdin=subprocess.DEVNULL)
+(root / 'finished').touch()
+if mode == 'hold':
+    time.sleep(2)
+elif mode == 'suffix':
+    time.sleep(.05)
+    sys.stdout.write('SECRET /private/path')
+    sys.stdout.flush()
+'''
+BOUNDARY_OBSERVER = r'''
+import sys, time
+from pathlib import Path
+root = Path(sys.argv[1])
+(root / 'observing').touch()
+while not (root / 'finished').exists():
+    time.sleep(.005)
+print('[{"outcome":"ready","launched":true,"port_file_seen":true,"port_alive":true,"readiness":true,"stderr_classes":["none"],"stderr_truncated":false,"exit_code":0,"signal":null,"cleanup":{"process_group_stopped":true,"owned_directory_removed":true}},{"outcome":"ready","launched":true,"port_file_seen":true,"port_alive":true,"readiness":true,"stderr_classes":["none"],"stderr_truncated":false,"exit_code":0,"signal":null,"cleanup":{"process_group_stopped":true,"owned_directory_removed":true}},{"outcome":"ready","launched":true,"port_file_seen":true,"port_alive":true,"readiness":true,"stderr_classes":["none"],"stderr_truncated":false,"exit_code":0,"signal":null,"cleanup":{"process_group_stopped":true,"owned_directory_removed":true}}]')
+'''
+
+
+CLEANUP_OWNER = r'''
+import json, sys
+from pathlib import Path
+trace = Path(sys.argv[1])
+for line in sys.stdin:
+    action = json.loads(line)['action']
+    with trace.open('a') as stream:
+        stream.write(action + '\n')
+    if action == 'stage':
+        print('{"ok":true,"runtime":"/opt/perito-uf-sandbox-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/runtime","tree_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}', flush=True)
+    elif action == 'cleanup':
+        print(sys.argv[2], flush=True)
+        break
+    else:
+        print('{"ok":true}', flush=True)
+'''
+CLEANUP_OBSERVER = r'''
+import json, sys
+from pathlib import Path
+loaded = Path(sys.argv[1]).read_text().splitlines()[-1] == 'load'
+if sys.argv[2] == 'baseline' or loaded:
+    record = {'outcome': 'ready', 'launched': True, 'port_file_seen': True,
+              'port_alive': True, 'readiness': True, 'stderr_classes': ['none'],
+              'stderr_truncated': False, 'exit_code': 0, 'signal': None,
+              'cleanup': {'process_group_stopped': True, 'owned_directory_removed': True}}
+else:
+    record = {'outcome': 'early_exit', 'launched': True, 'port_file_seen': False,
+              'port_alive': False, 'readiness': False, 'stderr_classes': ['sandbox_refusal'],
+              'stderr_truncated': False, 'exit_code': None, 'signal': 'SIGABRT',
+              'cleanup': {'process_group_stopped': True, 'owned_directory_removed': True}}
+print(json.dumps([record, record, record]))
+'''
+
+
+class FinalReceiptTests(unittest.TestCase):
+    def unread_result(self, payload, mode='exit'):
+        with tempfile.TemporaryDirectory() as directory:
+            return api().experiment(
+                [sys.executable, '-c', BOUNDARY_OWNER, directory, payload, mode],
+                [sys.executable, '-c', BOUNDARY_OBSERVER, directory])
+
+    def test_unread_final_after_observation_retains_true_and_false_cleanup(self):
+        result = self.unread_result(json.dumps(UNREAD_FINAL) + '\n')
+        self.assertEqual(result['status'], 'cleanup_failed')
+        self.assertEqual(result['cleanup'], {'profile_removed': True, 'runtime_removed': False,
+                                             'processes_stopped': True})
+        self.assertEqual(result['owner_failure'], {'action': 'protocol', 'reason': 'unexpected_error'})
+        self.assertEqual(result['candidate_ancestors'], FINAL_FACTS)
+        self.assertEqual(list(result['phases']), ['A1'])
+
+    def test_unread_malformed_final_is_wholly_rejected_without_claims_or_leaks(self):
+        payloads = [
+            json.dumps({**UNREAD_FINAL, 'failure': {'action': 'protocol', 'reason': 'SECRET'}}),
+            json.dumps({**UNREAD_FINAL, 'failure': {'action': 'load', 'reason': 'collision'}}),
+            json.dumps({**UNREAD_FINAL, 'runtime_removed': 1}),
+            json.dumps({**UNREAD_FINAL, 'candidate_ancestors': {'raw': 'SECRET /private'}}),
+            json.dumps({**UNREAD_FINAL, 'raw': 'SECRET /private'}),
+            json.dumps(UNREAD_FINAL)[:-1] + ',"runtime_removed":true}',
+            '{"ok":', 'SECRET /private ' * 500, '[' * 1500 + ']' * 1500,
+        ]
+        for payload in payloads:
+            with self.subTest(payload=payload[:40]):
+                result = self.unread_result(payload + '\n')
+                self.assertEqual(result['status'], 'cleanup_failed')
+                self.assertEqual(result['cleanup'], {'profile_removed': False, 'runtime_removed': False,
+                                                     'processes_stopped': False})
+                self.assertNotIn('owner_failure', result)
+                self.assertNotIn('candidate_ancestors', result)
+                self.assertNotIn('SECRET', json.dumps(result))
+                self.assertNotIn('/private', json.dumps(result))
+
+    def test_recovery_requires_whole_final_not_just_valid_first_line(self):
+        result = self.unread_result(json.dumps(UNREAD_FINAL) + '\n', 'suffix')
+        self.assertEqual(result['cleanup'], {'profile_removed': False, 'runtime_removed': False,
+                                             'processes_stopped': False})
+        self.assertNotIn('owner_failure', result)
+        self.assertNotIn('SECRET', json.dumps(result))
+
+    def test_closed_input_with_live_owner_and_held_stdout_finishes_boundedly(self):
+        start = time.monotonic()
+        result = self.unread_result('', 'hold')
+        self.assertLess(time.monotonic() - start, 5)
+        self.assertEqual(result['status'], 'cleanup_failed')
+        self.assertFalse(any(result['cleanup'].values()))
+        self.assertNotIn('owner_failure', result)
+
+    def test_exited_owner_with_inherited_stdout_cannot_block_recovery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            # The owner exits, but its separate pipe holder cannot close stdout
+            # until this outer watchdog releases it. No driver internals patched.
+            command = [sys.executable, '-c',
+                       'import json, sys; from tests.test_sandbox_experiment import api; '
+                       'print(json.dumps(api().experiment(json.loads(sys.argv[1]), json.loads(sys.argv[2]))))',
+                       json.dumps([sys.executable, '-c', BOUNDARY_OWNER, directory, '', 'held_stdout']),
+                       json.dumps([sys.executable, '-c', BOUNDARY_OBSERVER, directory])]
+            start = time.monotonic()
+            try:
+                process = subprocess.run(command, capture_output=True, text=True, timeout=5)
+                self.assertLess(time.monotonic() - start, 3)
+                self.assertEqual(process.returncode, 0, process.stderr)
+                result = json.loads(process.stdout)
+                self.assertEqual(result['status'], 'cleanup_failed')
+                self.assertFalse(any(result['cleanup'].values()))
+                self.assertNotIn('owner_failure', result)
+            finally:
+                (Path(directory) / 'release').touch()
+
+    def test_unread_all_true_failure_cannot_preserve_baseline_status(self):
+        receipt = {**UNREAD_FINAL, 'runtime_removed': True}
+        result = self.unread_result(json.dumps(receipt) + '\n')
+        self.assertEqual(result['status'], 'experiment_failed')
+        self.assertEqual(result['owner_failure'], {'action': 'protocol', 'reason': 'unexpected_error'})
+        self.assertEqual(result['cleanup'], {'profile_removed': True, 'runtime_removed': True,
+                                             'processes_stopped': True})
+
+    def cleanup_result(self, payload, mode):
+        with tempfile.TemporaryDirectory() as directory:
+            trace = str(Path(directory) / 'trace')
+            return api().experiment(
+                [sys.executable, '-c', CLEANUP_OWNER, trace, json.dumps(payload)],
+                [sys.executable, '-c', CLEANUP_OBSERVER, trace, mode])
+
+    def test_cleanup_failure_overrides_baseline_and_would_be_reversible_effect(self):
+        receipt = {'ok': True, 'profile_removed': True, 'runtime_removed': True,
+                   'processes_stopped': True,
+                   'failure': {'action': 'cleanup', 'reason': 'unexpected_error'},
+                   'candidate_ancestors': FINAL_FACTS}
+        for mode, phases in [('baseline', ['A1']), ('aba', ['A1', 'B', 'A2'])]:
+            with self.subTest(mode=mode):
+                result = self.cleanup_result(receipt, mode)
+                self.assertEqual(result['status'], 'experiment_failed')
+                self.assertEqual(result['cleanup'], {'profile_removed': True, 'runtime_removed': True,
+                                                     'processes_stopped': True})
+                self.assertEqual(result['owner_failure'], {'action': 'cleanup', 'reason': 'unexpected_error'})
+                self.assertEqual(result['candidate_ancestors'], FINAL_FACTS)
+                self.assertEqual(list(result['phases']), phases)
+
+    def test_ordinary_cleanup_preserves_baseline_and_reversible_effect(self):
+        receipt = {'ok': True, 'profile_removed': True, 'runtime_removed': True,
+                   'processes_stopped': True}
+        for mode, status in [('baseline', 'baseline_not_reproduced'), ('aba', 'reversible_effect')]:
+            with self.subTest(mode=mode):
+                result = self.cleanup_result(receipt, mode)
+                self.assertEqual(result['status'], status)
+                self.assertEqual(result['cleanup'], {'profile_removed': True, 'runtime_removed': True,
+                                                     'processes_stopped': True})
+                self.assertNotIn('owner_failure', result)
+                self.assertNotIn('candidate_ancestors', result)
 
 
 if __name__ == '__main__':
