@@ -20,6 +20,47 @@ spec = importlib.util.spec_from_file_location('linux_diagnosis', Path(__file__).
 diagnostic = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(diagnostic)
 OWNED_ROOT = r'/opt/perito-uf-sandbox-[0-9a-f]{32}/runtime'
+OWNER_FAILURE_REASONS = frozenset({
+    'ancestor_unprotected', 'source_ownership', 'collision', 'inventory_refused',
+    'copy_integrity', 'executable_integrity', 'policy_refused', 'parser_untrusted',
+    'not_staged', 'runtime_changed', 'process_visibility', 'browser_running',
+    'policy_removal', 'policy_absent', 'invalid_request', 'interrupted', 'unexpected_error',
+})
+
+
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('duplicate key')
+        result[key] = value
+    return result
+
+
+def validated_owner_final(response, action):
+    """Validate the entire bounded receipt before retaining ANY cleanup/failure facts."""
+    cleanup_keys = {'profile_removed', 'runtime_removed', 'processes_stopped'}
+    if not isinstance(response, dict) or response.get('ok') is not True:
+        raise ValueError('owner final')
+    expected = {'ok', *cleanup_keys}
+    if 'failure' in response:
+        expected |= {'failure', 'candidate_ancestors'}
+        failure = response['failure']
+        if (not isinstance(failure, dict) or set(failure) != {'action', 'reason'}
+                or not isinstance(failure['action'], str) or failure['action'] not in {action, 'protocol'}
+                or not isinstance(failure['reason'], str) or failure['reason'] not in OWNER_FAILURE_REASONS):
+            raise ValueError('owner failure')
+        candidates = response.get('candidate_ancestors')
+        if not isinstance(candidates, dict) or set(candidates) != {'root', 'opt', 'usr', 'usr_lib'}:
+            raise ValueError('owner candidates')
+        for facts in candidates.values():
+            if (not isinstance(facts, dict)
+                    or set(facts) != {'directory', 'non_symlink', 'root_owned', 'group_or_world_writable'}
+                    or any(value is not None and type(value) is not bool for value in facts.values())):
+                raise ValueError('owner candidate facts')
+    if set(response) != expected or any(type(response[key]) is not bool for key in cleanup_keys):
+        raise ValueError('owner cleanup')
+    return response
 
 
 def trusted():
@@ -122,13 +163,20 @@ def experiment(privileged_command, observer_command):
             data += block
         if len(data) > 4096 or not data.endswith(b'\n'):
             raise ValueError('owner report bound')
-        response = json.loads(data)
+        try:
+            response = json.loads(data, object_pairs_hook=unique_object)
+        except RecursionError:
+            raise ValueError('owner report nesting') from None
         if not isinstance(response, dict) or response.get('ok') is not True:
             raise ValueError('owner refused')
-        if action != 'cleanup' and set(response) == {'ok', *result['cleanup']}:
-            if all(type(response[key]) is bool for key in result['cleanup']):
-                owner_cleanup = response
-            raise ValueError('owner entered finally')
+        if action == 'cleanup' or 'failure' in response or set(response) == {'ok', *result['cleanup']}:
+            final = validated_owner_final(response, action)
+            owner_cleanup = final
+            if 'failure' in final:
+                result['owner_failure'] = final['failure']
+                result['candidate_ancestors'] = final['candidate_ancestors']
+            if action != 'cleanup':
+                raise ValueError('owner entered finally')
         if action in {'load', 'unload'} and set(response) != {'ok'}:
             raise ValueError('owner transition failed')
         return response
@@ -197,14 +245,14 @@ def experiment(privileged_command, observer_command):
         if owner is not None:
             try:
                 cleanup = owner_cleanup if owner_cleanup is not None else request('cleanup')
-                if (set(cleanup) != {'ok', *result['cleanup']}
-                        or any(type(cleanup[key]) is not bool for key in result['cleanup'])):
-                    raise ValueError('cleanup report')
                 result['cleanup'] = {key: cleanup[key] for key in result['cleanup']}
-            except (ValueError, OSError, subprocess.SubprocessError):
+            except (ValueError, OSError, subprocess.SubprocessError, UnicodeError):
                 pass
             finally:
-                owner.stdin.close()  # EOF also triggers the privileged owner's finally.
+                try:
+                    owner.stdin.close()  # EOF also triggers the privileged owner's finally.
+                except OSError:
+                    pass
                 try:
                     owner.wait(timeout=30)
                 except subprocess.TimeoutExpired:
