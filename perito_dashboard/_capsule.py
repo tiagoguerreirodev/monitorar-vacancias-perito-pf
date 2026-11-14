@@ -114,6 +114,12 @@ class OwnerClient:
             self.final = validated_owner_final(response, action)
             if action != 'cleanup':
                 raise ValueError('owner entered finally')
+        elif action == 'stage':
+            runtime, tree = response.get('runtime'), response.get('tree_sha256')
+            if (set(response) != {'ok', 'runtime', 'tree_sha256'} or not isinstance(runtime, str)
+                    or not re.fullmatch(OWNED_ROOT, runtime) or not isinstance(tree, str)
+                    or not re.fullmatch(r'[0-9a-f]{64}', tree)):
+                raise UFRuntimeError('UF protected stage receipt failed')
         elif action in {'load', 'unload'} and response != {'ok': True}:
             raise ValueError('owner transition failed')
         return response
@@ -282,11 +288,7 @@ def open_capsule():
             if interrupted:
                 raise UFRuntimeError('UF protected runtime interrupted')
             staged = client.request('stage')
-            runtime, tree = staged.get('runtime'), staged.get('tree_sha256')
-            if (set(staged) != {'ok', 'runtime', 'tree_sha256'} or not isinstance(runtime, str)
-                    or not re.fullmatch(OWNED_ROOT, runtime) or not isinstance(tree, str)
-                    or not re.fullmatch(r'[0-9a-f]{64}', tree)):
-                raise UFRuntimeError('UF protected stage receipt failed')
+            runtime, tree = staged['runtime'], staged['tree_sha256']
             parent = Path(runtime).parent / 'p'
             capsule = Capsule(str(Path(runtime) / 'node/bin/node'),
                               str(Path(runtime) / 'chrome-linux64/chrome'), parent,

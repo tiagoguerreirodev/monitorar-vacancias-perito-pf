@@ -11,13 +11,19 @@ node --check perito_dashboard/assets/inspection.js
 python3 -m perito_dashboard --data-dir data --site-dir site
 ```
 
-A aplicação requer Python >=3.9 e somente biblioteca padrão; Actions seleciona
-**Python 3.13** em `ubuntu-latest`. As ações atuais são checkout **v7**,
-setup-python **v7**, upload-pages-artifact **v5** e deploy-pages **v5**. As ações
-JavaScript usam Node 24; o runner hospedado fornece esse runtime, separado do
-Python da aplicação. Não é preciso instalar Node localmente para coletar ou rodar
-os testes Python; a checagem de sintaxe do ativo JS usa o Node disponível no runner,
-sem instalar pacotes. Ela não executa o comportamento do navegador.
+A aplicação requer Python >=3.9 e somente biblioteca padrão. O job de produção
+`refresh` de `pages.yml` usa **ubuntu-24.04** e **Python 3.13.18**, fixado em
+`perito_dashboard/collector/runtime.json` e instalado por
+`.github/scripts/setup-python.sh`, com verificação SHA-256 do arquivo e do
+executável. Já o workflow Validate usa `ubuntu-latest` e setup-python **v7**
+com Python **3.13**; o job `deploy` de Pages usa `ubuntu-latest` apenas para
+publicar o artefato, sem executar o coletor. As ações atuais são checkout **v7**,
+upload-pages-artifact **v5** e deploy-pages **v5** (fixadas por SHA em Pages).
+As ações JavaScript usam Node 24, fornecido pelo runner hospedado e separado do
+Python da aplicação e do Node fixado para o coletor UF. A coleta nacional e os
+testes Python não exigem Node; a coleta UF exige o runtime Node/Chrome descrito
+em [uf-runtime.md](uf-runtime.md), cuja qualificação real é específica ao código.
+A checagem de sintaxe JS usa o Node disponível no runner, sem instalar pacotes. Ela não executa o comportamento do navegador.
 Os workflows `.yml` usam JSON, um subconjunto de YAML aceito por Actions, para
 permitir validação do contrato com o próprio stdlib, sem parser YAML adicional.
 
@@ -149,7 +155,8 @@ tem sua própria guarda. O fluxo é:
 2. Refresh/build via o mesmo CLI, produzindo o candidato completo antes de gravar.
 3. `persist-data.sh` exige HEAD igual ao checkout validado, índice vazio e `main`
    remoto ainda nessa revisão, inclusive quando os JSON não mudaram. Adiciona
-   **somente** `data/history.json` e `data/status.json`; não usa `git add .`.
+   **somente** `data/history.json`, `data/status.json`, `data/uf.json` e
+   `data/uf-status.json` (pares existentes e válidos); não usa `git add .`.
    Sem alterações, não cria commit. Com alterações, faz push normal, nunca force,
    rebase ou merge automático de um candidato obsoleto. Uma corrida após o fetch
    pode causar rejeição do push e falha do run, em vez de sobrescrever outro commit.
@@ -222,10 +229,13 @@ git log -p -- data/history.json data/status.json
 
 ## Falhas e recuperação
 
-Coleta/validação/build com falha não chega ao passo de commit/upload/deploy.
-O candidato completo é construído antes da promoção local; erros de fonte mantêm
-os agregados, o site e a última verificação anteriores, mesmo se um recurso válido
-já tiver sido processado antes de outro falhar. Há timeout configurado de
+As fontes nacional e UF são independentes. Uma fonte válida pode avançar e
+produzir publicação **parcial** (exit 0) enquanto a outra mantém seus agregados,
+proveniência e última verificação bem-sucedida; primeira ausência é indisponível,
+não zero. Se ambas falham, ou se validação/build compartilhado falha, não há
+promoção nem commit/upload/deploy: todos os dados/site anteriores são preservados.
+O candidato composto é construído antes da promoção local. Veja a
+[matriz de aceitação e recuperação](composed-acceptance.md). Há timeout configurado de
 **30 segundos por tentativa** e **até três tentativas por requisição** de índice
 ou planilha, com esperas de **0,1 e 0,2 segundos**. São retentados timeout, erro de
 conexão/URL, leitura incompleta, HTTP 429 e HTTP 5xx. Outros HTTP (por exemplo 404)
