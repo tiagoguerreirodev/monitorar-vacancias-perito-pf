@@ -50,7 +50,7 @@ trace = Path(sys.argv[1])
 for line in sys.stdin:
     action = json.loads(line)['action']
     with trace.open('a') as stream: stream.write(action + '\\n')
-    if action == 'stage': result = {'ok': True, 'runtime': '/opt/perito-uf-sandbox-' + 'a'*32 + '/runtime', 'tree_sha256': 'b'*64}
+    if action == 'stage': result = {'ok': True, 'runtime': '/usr/lib/perito-uf-sandbox-' + 'a'*32 + '/runtime', 'tree_sha256': 'b'*64}
     elif action == 'cleanup': result = {'ok': True, 'profile_removed': True, 'runtime_removed': True, 'processes_stopped': True}
     else: result = {'ok': True}
     print(json.dumps(result), flush=True)
@@ -74,7 +74,7 @@ print(json.dumps([record]*3))
             self.assertEqual(list(result['phases']), ['A1', 'B', 'A2'])
             self.assertEqual(trace.read_text().splitlines(), ['stage', 'load', 'unload', 'cleanup'])
             self.assertTrue(all(result['cleanup'].values()))
-            self.assertNotIn('/opt/', json.dumps(result))
+            self.assertNotIn('/usr/lib/', json.dumps(result))
 
     def test_failed_observer_cannot_supply_success_records(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -83,7 +83,7 @@ print(json.dumps([record]*3))
             owner.write_text('''import json, sys
 for line in sys.stdin:
  action = json.loads(line)['action']
- if action == 'stage': result = {'ok': True, 'runtime': '/opt/perito-uf-sandbox-'+'a'*32+'/runtime', 'tree_sha256': 'b'*64}
+ if action == 'stage': result = {'ok': True, 'runtime': '/usr/lib/perito-uf-sandbox-'+'a'*32+'/runtime', 'tree_sha256': 'b'*64}
  elif action == 'cleanup': result = {'ok': True, 'profile_removed': True, 'runtime_removed': True, 'processes_stopped': True}
  else: result = {'ok': True}
  print(json.dumps(result), flush=True)
@@ -128,7 +128,7 @@ raise SystemExit(1)
             with self.assertRaises(ValueError):
                 owner.protected_ancestors(root)
         name = 'perito-uf-sandbox-' + 'a'*32
-        policy = owner.policy_text(name, Path('/opt') / name / 'runtime/chrome-linux64/chrome')
+        policy = owner.policy_text(name, Path('/usr/lib') / name / 'runtime/chrome-linux64/chrome')
         self.assertIn('abi <abi/4.0>,', policy)
         self.assertIn('flags=(unconfined)', policy)
         self.assertIn('  userns,', policy)

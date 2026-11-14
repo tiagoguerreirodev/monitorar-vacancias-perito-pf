@@ -19,7 +19,7 @@ from perito_dashboard.runtime import MANIFEST, ensure_runtime  # noqa: E402
 spec = importlib.util.spec_from_file_location('linux_diagnosis', Path(__file__).with_name('diagnose-uf-linux.py'))
 diagnostic = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(diagnostic)
-OWNED_ROOT = r'/opt/perito-uf-sandbox-[0-9a-f]{32}/runtime'
+OWNED_ROOT = r'/usr/lib/perito-uf-sandbox-[0-9a-f]{32}/runtime'
 OWNER_FAILURE_REASONS = frozenset({
     'ancestor_unprotected', 'source_ownership', 'collision', 'inventory_refused',
     'copy_integrity', 'executable_integrity', 'policy_refused', 'parser_untrusted',

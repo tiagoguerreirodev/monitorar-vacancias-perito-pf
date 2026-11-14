@@ -16,6 +16,7 @@ import subprocess
 import sys
 import time
 
+SANDBOX_PARENT = '/usr/lib'
 PARSER = Path('/sbin/apparmor_parser')
 PROFILES = Path('/sys/kernel/security/apparmor/profiles')
 HANDLED_SIGNALS = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGALRM)
@@ -112,7 +113,7 @@ def policy_text(name, chrome):
     import re
     if not re.fullmatch(r'perito-uf-sandbox-[0-9a-f]{32}', name):
         raise Refusal('policy_refused')
-    if str(chrome) != '/opt/' + name + '/runtime/chrome-linux64/chrome':
+    if str(chrome) != SANDBOX_PARENT + '/' + name + '/runtime/chrome-linux64/chrome':
         raise Refusal('policy_refused')
     return ('abi <abi/4.0>,\ninclude <tunables/global>\n\n'
             f'profile {name} "{chrome}" flags=(unconfined) {{\n  userns,\n}}\n')
@@ -124,7 +125,7 @@ class Owner:
         self.uid = uid
         self.gid = gid
         self.name = 'perito-uf-sandbox-' + secrets.token_hex(16)
-        self.base = Path('/opt') / self.name
+        self.base = Path(SANDBOX_PARENT) / self.name
         self.runtime = self.base / 'runtime'
         self.policy = self.base / 'profile'
         self.profiles = self.base / 'profiles'
@@ -151,7 +152,7 @@ class Owner:
                        env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'LANG': 'C'})
 
     def stage(self):
-        protected_ancestors(Path('/opt'))
+        protected_ancestors(Path(SANDBOX_PARENT))
         if self.source != self.source.resolve(strict=True) or self.source.stat().st_uid != self.uid:
             raise Refusal('source_ownership')
         if self.loaded() or self.base.exists() or self.base.is_symlink():
