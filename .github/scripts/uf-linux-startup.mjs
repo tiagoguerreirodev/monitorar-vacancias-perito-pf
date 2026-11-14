@@ -62,8 +62,8 @@ export async function observeStartup(chrome, expectedVersion, startupMs = 15000)
   };
   let browser, stderr = '', interrupted = false, spawnFailed = false;
   const interrupt = () => { interrupted = true; };
-  process.once('SIGTERM', interrupt);
-  process.once('SIGINT', interrupt);
+  process.on('SIGTERM', interrupt);
+  process.on('SIGINT', interrupt);
   try {
     // Exact production browser-probe.mjs launch recipe; about:blank is the ONLY target.
     browser = spawn(chrome, ['--headless=new', '--user-data-dir=' + profile,
@@ -129,6 +129,7 @@ export async function observeStartup(chrome, expectedVersion, startupMs = 15000)
       try { fs.rmSync(owned, {recursive: true, force: true}); } catch { /* Report failed removal below. */ }
     }
     record.cleanup.owned_directory_removed = !fs.existsSync(owned);
+    if (interrupted) record.outcome = 'owner_interrupted';
     process.removeListener('SIGTERM', interrupt);
     process.removeListener('SIGINT', interrupt);
   }

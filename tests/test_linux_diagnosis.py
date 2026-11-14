@@ -3,8 +3,11 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import subprocess
+import sys
 import tempfile
+import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,6 +52,94 @@ class DiagnosticWorkflowTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 1)
                 self.assertEqual(result.stderr, '[DEBUG-uf-linux] trusted manual main context required\n')
                 self.assertFalse(output.exists())
+
+
+class DiagnosticShutdownTests(unittest.TestCase):
+    def shutdown_report(self, payload, repeat_signal=False):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            marker = root / 'helper-started'
+            executable = root / 'external-node'
+            executable.write_text(f'#!{sys.executable}\n' + '''import os, signal, time
+from pathlib import Path
+
+def terminate(signum, frame):
+    time.sleep(0.2)
+    print(os.environ['REPORT'], flush=True)
+    raise SystemExit(0)
+
+signal.signal(signal.SIGTERM, terminate)
+Path(os.environ['START_MARKER']).touch()
+while True:
+    time.sleep(0.01)
+''')
+            executable.chmod(0o755)
+            driver = root / 'driver.py'
+            driver.write_text(
+                'import json, runpy\n'
+                f'api = runpy.run_path({str(ROOT / ".github/scripts/diagnose-uf-linux.py")!r})\n'
+                f'print(json.dumps(api["observations"]({str(executable)!r}, '
+                '"/unused-chrome", "157.0.8103.78")))\n')
+            process = subprocess.Popen([sys.executable, str(driver)], stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE, text=True,
+                                       env={**os.environ, 'REPORT': payload, 'START_MARKER': str(marker)})
+            try:
+                deadline = time.monotonic() + 5
+                while not marker.exists() and time.monotonic() < deadline:
+                    time.sleep(0.01)
+                self.assertTrue(marker.exists(), 'external helper did not start')
+                process.send_signal(signal.SIGTERM)
+                if repeat_signal:
+                    time.sleep(0.05)
+                    process.send_signal(signal.SIGTERM)
+                return process.communicate(timeout=15), process.returncode
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.communicate()
+
+    def test_cooperative_shutdown_retains_prior_observation_and_cleanup(self):
+        completed = {
+            'outcome': 'early_exit', 'launched': True, 'port_file_seen': False,
+            'port_alive': False, 'readiness': False, 'stderr_classes': ['sandbox_refusal'],
+            'stderr_truncated': False, 'exit_code': 23, 'signal': None,
+            'cleanup': {'process_group_stopped': True, 'owned_directory_removed': True},
+        }
+        interrupted = {**completed, 'outcome': 'owner_interrupted', 'exit_code': None,
+                       'signal': 'SIGTERM', 'stderr_classes': ['none']}
+        expected = [completed, interrupted]
+        for repeat_signal in (False, True):
+            with self.subTest(repeat_signal=repeat_signal):
+                (stdout, stderr), code = self.shutdown_report(json.dumps(expected), repeat_signal)
+                self.assertEqual(code, 0, stderr)
+                self.assertEqual(json.loads(stdout), expected)
+                self.assertEqual(stderr, '')
+
+    def test_cooperative_shutdown_rejects_unbounded_or_unvalidated_output(self):
+        record = {
+            'outcome': 'owner_interrupted', 'launched': True, 'port_file_seen': False,
+            'port_alive': False, 'readiness': False, 'stderr_classes': ['none'],
+            'stderr_truncated': False, 'exit_code': None, 'signal': 'SIGTERM',
+            'cleanup': {'process_group_stopped': True, 'owned_directory_removed': True},
+        }
+        invalid = [
+            '', 'SECRET raw browser output', '{}', '[]', json.dumps([record] * 4),
+            json.dumps([record]) + ' ' * 16384,
+        ]
+        for changes in (
+            {'raw_output': 'SECRET'}, {'outcome': 'SECRET'}, {'signal': 'SECRET'},
+            {'stderr_classes': ['SECRET']}, {'stderr_classes': ['none'] * 5},
+            {'cleanup': {**record['cleanup'], 'path': 'SECRET'}},
+            {'cleanup': {'process_group_stopped': 1, 'owned_directory_removed': True}},
+            {'readiness': 'SECRET'}, {'exit_code': True}, {'exit_code': 256},
+        ):
+            invalid.append(json.dumps([{**record, **changes}]))
+        for index, payload in enumerate(invalid):
+            with self.subTest(case=index):
+                (stdout, stderr), code = self.shutdown_report(payload)
+                self.assertNotEqual(code, 0)
+                self.assertEqual(stdout, '')
+                self.assertNotIn('SECRET', stderr)
 
 
 @unittest.skipUnless(shutil.which('node'), 'Node required for offline process stand-ins')
@@ -110,6 +201,52 @@ process.on('SIGTERM', () => {
         self.assertTrue(observation['readiness'])
         self.assertTrue(all(observation['cleanup'].values()))
         self.assertNotIn('SECRET', text)
+
+    def test_sigterm_during_group_cleanup_stops_further_observations(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            marker = root / 'cleanup-started'
+            launches = root / 'launches'
+            chrome = root / 'external-chrome'
+            chrome.write_text('''#!/usr/bin/env node
+const fs = require('node:fs');
+const profile = process.argv.find(x => x.startsWith('--user-data-dir=')).slice(16);
+fs.appendFileSync(process.env.LAUNCHES, profile + '\\n');
+const server = require('node:http').createServer((req, res) => res.end(JSON.stringify(
+  req.url === '/json/version' ? {Browser: 'Chrome/157.0.8103.78'}
+  : [{type: 'page', url: 'about:blank'}])));
+server.listen(0, '127.0.0.1', () => fs.writeFileSync(
+  profile + '/DevToolsActivePort', server.address().port + '\\n/unused'));
+process.on('SIGTERM', () => {
+  fs.writeFileSync(process.env.CLEANUP_MARKER, 'ready');
+  setTimeout(() => process.exit(0), 500);
+});
+''')
+            chrome.chmod(0o755)
+            process = subprocess.Popen(['node', str(HELPER), str(chrome), '157.0.8103.78'],
+                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                       env={**os.environ, 'LAUNCHES': str(launches),
+                                            'CLEANUP_MARKER': str(marker)})
+            try:
+                deadline = time.monotonic() + 5
+                while not marker.exists() and time.monotonic() < deadline:
+                    time.sleep(0.01)
+                self.assertTrue(marker.exists(), 'external Chrome never received cleanup TERM')
+                process.send_signal(signal.SIGTERM)
+                time.sleep(0.05)
+                process.send_signal(signal.SIGTERM)
+                stdout, stderr = process.communicate(timeout=10)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.communicate()
+            self.assertEqual(process.returncode, 0, stderr)
+            observations = json.loads(stdout)
+            self.assertEqual(observations[0]['outcome'], 'owner_interrupted')
+            self.assertEqual(len(observations), 1)
+            self.assertEqual(len(launches.read_text().splitlines()), 1)
+            self.assertTrue(all(observations[0]['cleanup'].values()))
+            self.assertFalse(Path(launches.read_text().strip()).exists())
 
     def test_bounded_hung_startup_is_killed_and_stderr_is_not_retained(self):
         observation, text = self.observe('''
