@@ -25,6 +25,7 @@ import zlib
 from ._render import render_site
 from ._shared import CUTOFF, PF_ORGANIZATION, write_json
 from ._uf import accept_export, load_saved, UFInvalidExport, UFSourceDenied
+from ._uf_history import load_history, retain
 from ._collector import OfficialUF, UFBlocked
 from .runtime import UFRuntimeError, UFRuntimeIntegrityError
 
@@ -364,7 +365,7 @@ def refresh_and_build(data_dir, site_dir, *, source=None, uf_source=None, clock=
 
 
 def _output_state(target):
-    """Content signature to detect edits by writers not honoring our locks."""
+    """Byte/mode signature to detect writers not honoring our locks."""
     if not target.exists():
         return None
     result = []
@@ -373,9 +374,9 @@ def _output_state(target):
         if path.is_symlink():
             result.append((relative, "symlink", os.readlink(path)))
         elif path.is_file():
-            result.append((relative, "file", hashlib.sha256(path.read_bytes()).hexdigest()))
+            result.append((relative, "file", path.stat().st_mode, hashlib.sha256(path.read_bytes()).hexdigest()))
         else:
-            result.append((relative, "directory"))
+            result.append((relative, "directory", path.stat().st_mode))
     return result
 
 
@@ -488,10 +489,11 @@ def _refresh_locked(data_dir, site_dir, source, uf_source, clock):
     checked_at = now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     history, successful_check = _saved_history(data_dir)
     uf, uf_status = load_saved(data_dir, _timestamp)
+    uf_history = load_history(data_dir, uf, uf_status, _timestamp)
     for check in (successful_check, _timestamp(uf_status['last_successful_check']) if uf_status else None):
         if check is not None and now < check:
             raise ValueError("Stale refresh: clock predates the last successful check")
-    allowed = {'history.json', 'status.json', 'uf.json', 'uf-status.json'}
+    allowed = {'history.json', 'status.json', 'uf.json', 'uf-status.json', 'uf-history.json'}
     if data_dir.exists() and any(p.name not in allowed or not p.is_file() or p.is_symlink() for p in data_dir.iterdir()):
         raise ValueError('Unknown saved data files; nothing published')
     status = json.loads((data_dir / 'status.json').read_text()) if successful_check else None
@@ -515,6 +517,7 @@ def _refresh_locked(data_dir, site_dir, source, uf_source, clock):
         current = accept_export(export, uf_checked_at)
         if uf and current['reference_month'] < uf['current']['reference_month']:
             raise ValueError('UF source reference month is older than accepted latest')
+        candidate_uf_history = retain(uf_history, current, uf_checked_at)
         changed = uf is None or current['semantic_identity'] != uf['current']['semantic_identity']
         if changed:
             corrections = []
@@ -522,6 +525,9 @@ def _refresh_locked(data_dir, site_dir, source, uf_source, clock):
                 corrections = uf['corrections'] + [{'superseded': uf['current'], 'corrected_at': uf_checked_at}]
             uf = {'schema_version': 1, 'current': current, 'corrections': corrections}
             documents['uf.json'] = uf
+        if candidate_uf_history != uf_history or not (data_dir / 'uf-history.json').exists():
+            documents['uf-history.json'] = candidate_uf_history
+        uf_history = candidate_uf_history
         uf_status = {'schema_version': 1, 'last_successful_check': uf_checked_at, 'last_export': current}
         documents['uf-status.json'] = uf_status
         outcomes['uf'] = 'updated' if changed else 'unchanged'
@@ -548,12 +554,23 @@ def _refresh_locked(data_dir, site_dir, source, uf_source, clock):
             if name in documents:
                 write_json(staged[0][0] / name, documents[name])
             elif (data_dir / name).exists():
-                shutil.copyfile(data_dir / name, staged[0][0] / name)
-        render_site(history if status else None, status, staged[1][0], uf=uf, uf_status=uf_status)
+                shutil.copy2(data_dir / name, staged[0][0] / name)
+        # Validate the serialized candidate, including migrated state, before any promotion.
+        _saved_history(staged[0][0])
+        saved_uf, saved_status = load_saved(staged[0][0], _timestamp)
+        saved_archive = load_history(staged[0][0], saved_uf, saved_status, _timestamp)
+        render_site(history if status else None, status, staged[1][0], uf=uf, uf_status=uf_status,
+                    uf_history=saved_archive if (staged[0][0] / 'uf-history.json').exists() else None)
         # Rendered JSON is the exact accepted byte representation, including a failed feed.
         for name in allowed:
             if (staged[0][0] / name).exists():
-                shutil.copyfile(staged[0][0] / name, staged[1][0] / 'data' / name)
+                public = site_dir / 'data' / name
+                origin = staged[0][0] / name
+                if name.startswith('uf') and outcomes['uf'] in ('failed', 'blocked') and public.is_file():
+                    if public.read_bytes() != origin.read_bytes():
+                        raise ValueError('Saved public UF copy differs from accepted data; nothing promoted')
+                    origin = public
+                shutil.copy2(origin, staged[1][0] / 'data' / name)
         if before != (_output_state(data_dir), _output_state(site_dir)):
             raise ValueError("Stale refresh: accepted outputs changed during refresh; nothing promoted")
         _promote(staged)

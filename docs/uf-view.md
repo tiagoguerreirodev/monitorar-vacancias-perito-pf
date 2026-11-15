@@ -3,7 +3,8 @@
 A página estática mantém cargos vagos e histórico **nacionais** como primeira
 leitura. A seção separada “Pessoal ativo por UF” usa exclusivamente o retrato UF
 aceito pelo [seam público](uf-seam.md), sem consultar o governo no navegador.
-Não altera coletor, schema, critérios de aceitação ou workflows.
+O painel de #14 não alterou coleta ou critérios de aceitação. #39/#9 acrescenta
+somente o link/explicação da retenção prospectiva, mantendo esse último retrato.
 
 - **Pessoas ativas**, não cargos aprovados/ocupados/vagos, distribuição legal ou
   vagas de concurso estaduais. Todas as classes PCF combinadas, população DPF /
@@ -25,13 +26,19 @@ Não altera coletor, schema, critérios de aceitação ou workflows.
   contagens e datas aceitas; primeira ausência mostra indisponibilidade, sem
   gráfico, números ou links JSON UF fictícios. Uma primeira falha nacional não
   esconde UF válida nem inventa check nacional.
-- Apenas o último retrato UF é desenhado, sem seletor, série ou arquivo histórico
-  UF. A auditoria de correções no JSON não se transforma em histórico visual.
+- Apenas o último retrato UF é desenhado: as mesmas 27 barras/tabela, sem seletor,
+  novo gráfico ou tabela histórica. A inspeção nacional com mouse não muda.
+- `data/uf-history.json` é um link relativo, válido sob subcaminho; a página informa
+  início/fim reais e lacunas entre meses aceitos, que **não são zeros**. Um único
+  mês não permite inferir tendência. A retenção é prospectiva, não uma consulta
+  retrospectiva nem inferência de fluxos de pessoal. A origem genuína é somente
+  setembro/2026 (1.108, DF 324), não os 15 meses nacionais. A migração não recupera
+  versões nunca retidas. Ver [schema e limites](uf-seam.md).
 
 ## Verificação determinística
 
 ```sh
-python3 -m unittest -v tests.test_uf_dashboard
+python3 -m unittest -v tests.test_uf_dashboard tests.test_uf_history tests.test_uf_history_delivery
 python3 -m unittest discover -v
 node --check perito_dashboard/assets/inspection.js
 python3 -m compileall -q perito_dashboard tests
@@ -75,7 +82,8 @@ PNGs ficam em `$PREVIEW/evidence`: abrir os arquivos, não apenas gerar capturas
 Ao terminar, fechar somente a página e o terminal próprios e interromper o servidor
 pelo handle guardado. Preservar os PNGs/logs necessários ao relatório.
 
-Essa é evidência local com fixtures, não qualificação de runtime confiável,
-prova de Actions/Pages ou certificação WCAG/foco/teclado nativo. Não adiciona
-inspeção por teclado/toque. #15/#16 e aceitação/publicação de #8/#21 continuam
-com seus gates próprios; histórico UF (#9) permanece fora deste escopo.
+Esse procedimento/evidência de #14 é histórico: fixtures locais não qualificam
+runtime, Actions/Pages nem WCAG/foco/teclado nativo. Não adiciona inspeção por
+teclado/toque. #8/#16 foram posteriormente aceitas; a retenção #39/#9 exige nova
+verificação do coordenador. Este documento não afirma execução desse browser
+sobre a implementação nova.

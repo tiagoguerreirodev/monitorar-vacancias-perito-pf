@@ -1,8 +1,9 @@
 # UF core seam — native #13
 
-Successors: #14 owns UF bars/ranking and presentation; #15 owns workflow wiring,
-pins, trusted Ubuntu/Python 3.13 anonymous acquisition proof. #9 owns any UF time
-series. This core adds neither that UI/history nor a runtime qualification claim.
+The original #13 core was followed by #14 presentation and #15 runtime proof.
+#8/#16 are accepted; #39 under #9 now adds private **prospective retention**, not a
+retrospective collector or historical chart. Earlier evidence below remains
+historical and does not qualify this changed code.
 Existing national ODS history/status schemas, guards, byte-sensitive national
 correction rules and vacancy-first/real-mouse UI are unchanged.
 
@@ -74,12 +75,12 @@ cases for healthy/failing national and UF pairs and exact byte-preservation chec
 ### Renderer integration for #14
 
 The existing **private** rendering boundary is now
-`render_site(history, status, destination, *, uf=None, uf_status=None)`.
+`render_site(history, status, destination, *, uf=None, uf_status=None, uf_history=None)`.
 `history`/`status` may both be `None` for first national absence; `uf`/`uf_status`
 are a paired accepted `uf.json`/`uf-status.json` mapping or both `None`.
 The orchestrator invokes it once against the staging site with the independently
 selected new/last-good bundles; rendering must not collect, accept or advance checks.
-#14 can replace the minimal `uf_content` summary using
+The latest 27-UF bars/table use
 `uf['current']['counts_by_uf']`, `uf['current']['reference_month']` and
 `uf_status['last_successful_check']`. Keep missing bundles distinct from explicit
 zero and preserve the national markup/assets/inspection behavior. This is not a
@@ -89,17 +90,21 @@ new public renderer/parser API; tests still enter `refresh_and_build`.
 
 National and UF candidates are built independently, then one site is rendered
 and data/site directories are promoted under the existing locks/signature checks
-and rollback. A failed feed retains **both** accepted dataset and successful-check
-file byte-for-byte in data and `site/data`. It cannot advance its check, block a
+and rollback. A failed feed retains its accepted dataset and successful-check
+file byte-for-byte in data and `site/data`; UF also retains `uf-history.json`,
+including its absence during an unsuccessful migration and existing file modes. It cannot advance its check, block a
 healthy feed, fabricate zeros, force national/UF equality or delete last-good data.
 On first-run absence the missing pair is not written; the composed page says the
 feed/check is unavailable and does not link nonexistent national JSON files.
 A shared storage/build/promotion error is never treated as source partial success.
 
-Only `history.json`, `status.json`, `uf.json`, `uf-status.json` are accepted in the
-saved data directory. Saved UF documents must be a paired valid schema; identities,
-scope, sums, coverage, provenance, correction references and checks are validated
-before collection. Unknown schema or corruption is not silently reset/migrated.
+Only `history.json`, `status.json`, `uf.json`, `uf-status.json`, `uf-history.json`
+are accepted in the saved data directory and persistence allowlist. Saved UF
+pair/archive/status identities, scope, sums, ordered coverage, provenance, full
+correction chains, compatibility projection and checks are validated **before
+either source is invoked**. The serialized staged candidate is read back through
+those validators before rendering/promotion. Unknown schema or corruption is
+never silently reset; a standalone archive or incomplete pair is invalid.
 
 ## Exact version-1 files
 
@@ -168,8 +173,53 @@ Thus ZIP timestamp/metadata/raw hash noise does not change business identity.
 A semantically identical export leaves `uf.json` byte-identical, advances only its
 successful-check/provenance file (`last_export` records the new raw hash/retrieval).
 A same-period semantic change appends the superseded snapshot plus correction
-time. A newer period replaces current and clears same-period correction audit:
-this is latest-only, **not** UF history. Older candidate periods are rejected.
+time to the compatibility `uf.json` audit. A newer period replaces current and
+clears only that latest-period compatibility audit; the archive below retains all
+observations/audits. Older candidate periods are rejected without advancing the UF
+check. Rechecks preserve the archive's original full snapshot/provenance too.
+
+### Prospective `uf-history.json` — #39 / #9
+
+Exactly one additional accepted filename, schema version 1:
+
+```text
+{
+  "schema_version": 1,
+  "observations": [Snapshot, ...],
+  "coverage": {
+    "available_months": ["YYYY-MM", ...],
+    "start": "YYYY-MM", "end": "YYYY-MM",
+    "missing_months": ["YYYY-MM", ...]
+  },
+  "corrections": [{"superseded": Snapshot, "replacement": Snapshot,
+                   "corrected_at": aware-ISO-timestamp}, ...],
+  "legacy_corrections": [{"superseded": Snapshot,
+                          "corrected_at": aware-ISO-timestamp}, ...]
+}
+```
+
+Canonical observations are unique, sorted by month; coverage is derived exactly
+from them, with gaps only between the first and last actual observations. Latest
+is the greatest accepted month and must exactly equal `uf.json.current`. Each
+prospective correction has full before/after evidence, the same month, differing
+business identities and a chronological, continuous chain ending at its canonical
+snapshot. Audits survive rollover; only latest-month audits project into the
+compatibility `uf.json`. Repeating the same facts adds no correction.
+
+Without an archive, a valid UFv1 pair bootstraps **in memory only**, from its actual
+current B (or C) with untouched source evidence. Existing superseded A records
+are copied losslessly to `legacy_corrections`, without invented replacement
+links. If current is C, a lost canonical B is not reconstructed; cross-month
+legacy audits remain invalid. A new same-month C within that migration transaction
+retains bootstrap B and a genuine B→C transition; if acquisition/publication fails,
+no migration is persisted. A new month appends without erasing previous months.
+
+The genuine initial coverage is September 2026 only (1,108, DF 324), not June 2025
+or the national 15 observations. A single point implies no trend. Missing months
+are unavailable, not zero. The production collector still selects only the latest
+eligible native month and qualifies two fresh sequential exports. There is no
+historical range query/backfill or late-old-month correction discovery. UF meaning
+remains `project_assumption` / `officially_verified:false`.
 
 For the authentic fixture: September 2026, 88 explicit rows, all 27 UFs, DF 324,
 total 1,108; national controlled acceptance remains 1,195. See fixture provenance
@@ -260,4 +310,5 @@ acquisition was **accepted for #15** in run 43633428483; see [evidence and
 limits](composed-acceptance.md). The [manual trusted-main workflow and operator
 runbook](uf-runtime.md) exercise that same two-export production path, retain both
 raw aggregate XLSX and sanitized evidence/provenance, and never publish a site.
-Offline tests are not trusted runtime proof; #16/publication remain separate.
+Offline tests are not trusted runtime proof. #16/publication was subsequently
+accepted; new code still needs coordinator qualification and publication checks.

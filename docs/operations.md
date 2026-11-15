@@ -119,6 +119,9 @@ Para #21, repetir no artefato revisado e no Pages real, comparar também
 
 ### Evidência local de #21 — não é aceite de publicação
 
+Registro histórico abaixo, anterior ao aceite atual de #8/#16 e à autorização de
+#9/#39; os estados/gates então descritos não representam bloqueios atuais.
+
 Em 14/11/2026 (UTC), repetição independente dos 12 casos existentes e dos três
 complementos acima, passando pelo `refresh_and_build` completo e mouse real em
 página Orca própria, sob `/monitorar-vacancias-perito-pf/`: **15 casos verdes**.
@@ -155,8 +158,9 @@ tem sua própria guarda. O fluxo é:
 2. Refresh/build via o mesmo CLI, produzindo o candidato completo antes de gravar.
 3. `persist-data.sh` exige HEAD igual ao checkout validado, índice vazio e `main`
    remoto ainda nessa revisão, inclusive quando os JSON não mudaram. Adiciona
-   **somente** `data/history.json`, `data/status.json`, `data/uf.json` e
-   `data/uf-status.json` (pares existentes e válidos); não usa `git add .`.
+   **somente** `data/history.json`, `data/status.json`, `data/uf.json`,
+   `data/uf-status.json` e `data/uf-history.json` (arquivos aceitos existentes);
+   não usa `git add .` nem um glob de JSON.
    Sem alterações, não cria commit. Com alterações, faz push normal, nunca force,
    rebase ou merge automático de um candidato obsoleto. Uma corrida após o fetch
    pode causar rejeição do push e falha do run, em vez de sobrescrever outro commit.
@@ -227,6 +231,41 @@ novo. O histórico versionado no Git também permite inspecionar alterações:
 git log -p -- data/history.json data/status.json
 ```
 
+### Retenção UF prospectiva (#39 sob #9)
+
+O aceite de #8/#16 já ocorreu. O terceiro arquivo UF, `uf-history.json`, retém
+snapshots completos e cobertura dos meses realmente aceitos. A cobertura inicial
+genuína é **setembro de 2026, 1.108 pessoas, DF 324**. Não herda junho/2025 nem
+os 15 meses nacionais. Lacunas entre meses ficam indisponíveis; um ponto não
+implica tendência. Não há consulta retrospectiva, preenchimento de zeros nem
+inferência de fluxos. UF de lotação continua premissa não verificada oficialmente.
+
+Rechecks com a mesma identidade de negócio preservam a proveniência da observação;
+`uf-status.json` avança com a nova exportação. Correções prospectivas retêm antes,
+depois e instante, inclusive após avanço de mês. `uf.json` continua compatível,
+com o último retrato e apenas a auditoria do mês atual. Tentativas com mês anterior
+ao maior aceito falham no feed UF; não se promete descobrir correções tardias de
+meses antigos por um coletor que só obtém o último mês.
+
+Uma migração UFv1 válida começa apenas no `current` real e é preparada em memória.
+Auditorias antigas ficam legadas sem inventar substitutos/links; não se recupera
+B perdido se só há C. Corrupção/pares incompletos/status divergente são fatais
+**antes de qualquer coleta**, não motivo para zerar dados. Não apagar o arquivo
+para normalizar inconsistência. Falha UF preserva os três arquivos, checks,
+cópias públicas e modos existentes, ou a ausência do arquivo novo. Nacional
+saudável pode avançar. Falha compartilhada/stale/lock impede toda promoção.
+Staging inclui leitura/validação do candidato serializado e cópias públicas exatas.
+A página só acrescenta link JSON relativo, cobertura e explicação de lacunas;
+as 27 barras/tabela UF e o gráfico nacional com mouse permanecem.
+
+```sh
+python3 -m unittest -v tests.test_uf_history tests.test_uf_history_delivery
+```
+
+Ver [schema/invariantes/limites de migração](uf-seam.md) e [visualização](uf-view.md).
+Os recursos do coletor/runtime não foram requalificados por testes offline;
+qualificação e browser/Pages novos cabem ao coordenador antes do aceite final.
+
 ## Falhas e recuperação
 
 As fontes nacional e UF são independentes. Uma fonte válida pode avançar e
@@ -252,7 +291,7 @@ Os arquivos de lock ficam no diretório temporário do sistema, em
 Isso não é um lock de Git, de outro host nem de caminhos diferentes/ancestrais;
 não impede editores que ignorem o protocolo. O runtime depende de `fcntl`/POSIX.
 
-Uma assinatura dos conteúdos detecta mudanças nas saídas durante coleta/build,
+Uma assinatura dos conteúdos e modos detecta mudanças nas saídas durante coleta/build,
 antes da promoção. Relógio sem fuso ou anterior ao último check também é recusado.
 Isso não é compare-and-swap: existe uma janela entre a última checagem e a troca
 de diretórios. A promoção tenta reverter erros ordinários de I/O, mas não garante
