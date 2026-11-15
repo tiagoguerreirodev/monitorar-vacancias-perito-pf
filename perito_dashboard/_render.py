@@ -124,6 +124,21 @@ UF_NAMES = {
 }
 
 
+def _uf_archive(archive):
+    if archive is None:
+        return '<p>Arquivo UF prospectivo ainda indisponível; nenhum mês anterior foi reconstruído.</p>'
+    coverage = archive['coverage']
+    months = coverage['available_months']
+    gaps = ', '.join(_month(month) for month in coverage['missing_months'])
+    gap_text = ('Meses indisponíveis entre observações: ' + gaps + '; ausências não são zeros.'
+                if gaps else 'Sem lacunas entre os meses aceitos; não se presume cobertura anterior ao início.')
+    single = (' Uma única observação não permite inferir tendência.' if len(months) == 1 else '')
+    return (f'<p id="uf-coverage">Retenção prospectiva UF: {len(months)} mês(es) aceito(s), '
+            f'de {_month(coverage["start"])} a {_month(coverage["end"])}. '
+            f'{gap_text}{single} Não há consulta retrospectiva nem inferência de fluxos de pessoal. '
+            '<a href="data/uf-history.json">Arquivo mensal UF em JSON</a>.</p>')
+
+
 def _uf_panel(uf, status):
     current = uf['current']
     ranked = sorted(current['counts_by_uf'].items(), key=lambda item: (-item[1], item[0]))
@@ -146,7 +161,7 @@ Total: {_number(current['total'])} PCFs ativos — 27 UFs, incluindo o Distrito 
 <p id="uf-assumption" class="uf-assumption"><strong>Premissa do projeto (não verificada oficialmente):</strong>
 interpretamos o campo <strong>UF Servidores</strong> como UF de lotação. Esta é uma premissa do projeto, não uma definição oficial confirmada.</p>
 <p>Pessoas ativas não são cargos ocupados ou vagas estaduais. Não se inferem cargos aprovados, cargos vagos ou taxa de vacância por UF.</p>
-<p>Somente o retrato mais recente aceito, sem série histórica UF. Todas as classes PCF combinadas, população DPF / Ativo.
+<p>Visualização do último retrato aceito, sem série histórica UF desenhada. Todas as classes PCF combinadas, população DPF / Ativo.
 Classes ausentes por UF não são zeros; ausência, supressão ou UF desconhecida não são convertidas em zero.</p>
 <figure aria-labelledby="uf-bars-title"><h3 id="uf-bars-title">Pessoas ativas por UF — ordem decrescente</h3>
 <p>Contagens exatas; empates em ordem alfabética da sigla. Barras partem de zero.</p>
@@ -165,7 +180,7 @@ Verificação e obtenção não são o mês de referência.</p>
 <p>A identidade do painel, os filtros, as classes e a evidência de coleta estão nos JSON locais.</p></details></div></section>'''
 
 
-def render_site(history, status, destination, *, uf=None, uf_status=None):
+def render_site(history, status, destination, *, uf=None, uf_status=None, uf_history=None):
     """Build a complete artifact; never fetch sources, read a clock or mutate inputs."""
     destination = Path(destination)
     (destination / "data").mkdir(parents=True, exist_ok=True)
@@ -187,7 +202,7 @@ def render_site(history, status, destination, *, uf=None, uf_status=None):
                      f'{_check_time(status["last_successful_check"])}</time></strong>.</p>')
     uf_content = '<section class="panel"><h2>Pessoal ativo por UF</h2><p>Indisponível — sem observação aceita; ausência não é zero.</p></section>'
     if uf is not None:
-        uf_content = _uf_panel(uf, uf_status)
+        uf_content = _uf_panel(uf, uf_status) + _uf_archive(uf_history)
     national_links = ('<p>Dados para consulta: <a href="data/history.json">histórico em JSON</a> e '
                       '<a href="data/status.json">última verificação em JSON</a>.</p>' if status else
                       '<p>Fonte nacional indisponível; nenhum retrato nacional aceito.</p>')

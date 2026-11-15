@@ -28,7 +28,7 @@ fi
 
 # First-run partial acceptance may legitimately have only one feed's pair.
 # Never stage the data directory, glob matches, source documents or proof files.
-for path in data/history.json data/status.json data/uf.json data/uf-status.json; do
+for path in data/history.json data/status.json data/uf.json data/uf-status.json data/uf-history.json; do
   if [[ -e "$path" ]] || git ls-files --error-unmatch "$path" >/dev/null 2>&1; then
     git add -- "$path"
   fi

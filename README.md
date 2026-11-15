@@ -2,7 +2,7 @@
 
 Painel nacional de cargos de **Perito Criminal Federal — Polícia Federal**, com
 as quatro classes somadas. Fonte: [Cargos Vagos e Vacâncias, arquivo oficial](https://repositorio.dados.gov.br/segrt/cargos%20vagos%20e%20vacancia/).
-O histórico começa em **junho de 2025**, inclusive. São retratos mensais de
+O histórico **nacional** começa em **junho de 2025**, inclusive. São retratos mensais de
 cargos aprovados, ocupados e vagos, não vagas de concurso nem dados em tempo real.
 Somente agregados e proveniência são publicados; não há backend nem login.
 
@@ -32,8 +32,8 @@ construção retorna 1, com diagnóstico em stderr. Não faz commit, push nem de
 
 `data` e `site` devem ser diretórios dedicados, distintos e não aninhados: a
 promoção substitui seus conteúdos. `data/history.json` e `data/status.json` são
-versionados; o par UF aceito usa `uf.json` e `uf-status.json`, também na allowlist
-de persistência de CI. `site/` é gerado e ignorado pelo Git. O navegador usa somente o
+versionados; UF usa `uf.json`, `uf-status.json` e o arquivo prospectivo
+`uf-history.json`, todos na allowlist de persistência de CI. `site/` é gerado e ignorado pelo Git. O navegador usa somente o
 artefato estático, sem consultar o governo. A referência oficial e a última
 verificação bem-sucedida são informações diferentes.
 
@@ -54,9 +54,21 @@ inferência de vagas por UF nem exigência de igualdade com o total nacional.
 A [visualização UF (#14)](docs/uf-view.md) mostra somente o retrato mais recente:
 27 UFs/DF em barras horizontais decrescentes, contagens exatas e tabela acessível,
 com referência, verificação e fonte próprias e premissa geográfica visível.
-Pessoas ativas não são cargos legais ocupados nem vagas estaduais. Histórico UF
-(#9) permanece fora do escopo inicial. A [qualificação confiável aceita e a
-aceitação composta local](docs/composed-acceptance.md) não comprovam publicação UF.
+Pessoas ativas não são cargos legais ocupados nem vagas estaduais. A aceitação de
+#8/#16 já foi concluída; a [evidência anterior](docs/composed-acceptance.md) continua
+histórica. A retenção **prospectiva** UF (#9/#39) começa apenas no retrato realmente
+aceito: **setembro de 2026, 1.108 pessoas, DF 324**. Não há 15 meses UF nem corte
+UF em junho de 2025. `uf-history.json` guarda um retrato completo por mês, cobertura
+e lacunas entre meses aceitos, sem interpolar zeros ou inferir tendência de um ponto.
+A página oferece o arquivo JSON, sem novo gráfico, seletor ou tabela histórica UF.
+
+Rechecks semanticamente iguais preservam a proveniência original. Correções UF
+prospectivas guardam os retratos completos anterior e substituto e o instante da
+correção; seus registros sobrevivem ao avanço de mês. Na migração UFv1, apenas o
+`current` real vira observação: auditorias antigas ficam explicitamente legadas,
+sem inventar ligações ou reconstruir versões perdidas. A coleta continua somente
+do último mês: tentativas regressivas são rejeitadas; correções tardias de meses
+anteriores não podem ser descobertas. Ver [schema e limites](docs/uf-seam.md).
 
 O histórico guarda mês `YYYY-MM`, totais, identificadores, URL, SHA-256 dos bytes
 do ODS e instante de coleta UTC. `status.json` guarda separadamente a última

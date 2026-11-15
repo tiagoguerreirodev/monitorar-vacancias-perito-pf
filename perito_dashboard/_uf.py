@@ -201,6 +201,26 @@ def accept_export(export, checked_at):
         raise UFInvalidExport(f'Invalid UF export: {type(exc).__name__}') from exc
 
 
+def _validate_saved_snapshot(current, check, timestamp):
+    aggregate = _aggregate(current['rows'])
+    _require(set(current) == set(aggregate) | {'source'} and
+             json.dumps({k: current[k] for k in aggregate}, sort_keys=True) == json.dumps(aggregate, sort_keys=True), 'saved aggregate identity')
+    source = current['source']
+    _require(set(source) == {'url', 'app_id', 'table', 'retrieved_at', 'download_guid', 'own_source_total', 'sha256', 'evidence_sha256',
+                                     'filters', 'organization_mapping', 'anonymous_session'}
+             and source['url'] == ENTRY and source['app_id'] == APP and source['table'] == 'Dwnkq'
+             and re.fullmatch('[0-9a-f]{64}', source['evidence_sha256']) is not None
+             and type(source['own_source_total']) is int and source['own_source_total'] == current['total']
+             and re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', source['download_guid']) is not None
+             and re.fullmatch('[0-9a-f]{64}', source['sha256']) is not None
+             and timestamp(source['retrieved_at']) <= check, 'saved source provenance')
+    year, month = current['reference_month'].split('-')
+    _require(source['filters'] == _expected_filters(MONTHS[int(month)-1] + ' ' + year)
+             and source['organization_mapping'] == ORGANIZATION_MAPPING
+             and json.dumps(source['anonymous_session'], sort_keys=True) ==
+                 '{"cookie_count_before_navigation": 0, "websocket_status": 101}', 'saved source outcomes')
+
+
 def load_saved(data_dir, timestamp):
     paths = [data_dir / 'uf.json', data_dir / 'uf-status.json']
     if not any(p.exists() for p in paths):
@@ -213,29 +233,18 @@ def load_saved(data_dir, timestamp):
                  and type(status['schema_version']) is int and status['schema_version'] == 1, 'saved schema')
         check = timestamp(status['last_successful_check'])
         def validate(current):
-            aggregate = _aggregate(current['rows'])
-            _require(set(current) == set(aggregate) | {'source'} and
-                     json.dumps({k: current[k] for k in aggregate}, sort_keys=True) == json.dumps(aggregate, sort_keys=True), 'saved aggregate identity')
-            source = current['source']
-            _require(set(source) == {'url', 'app_id', 'table', 'retrieved_at', 'download_guid', 'own_source_total', 'sha256', 'evidence_sha256',
-                                             'filters', 'organization_mapping', 'anonymous_session'}
-                     and source['url'] == ENTRY and source['app_id'] == APP and source['table'] == 'Dwnkq'
-                     and re.fullmatch('[0-9a-f]{64}', source['evidence_sha256']) is not None
-                     and type(source['own_source_total']) is int and source['own_source_total'] == current['total']
-                     and re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', source['download_guid']) is not None
-                     and re.fullmatch('[0-9a-f]{64}', source['sha256']) is not None
-                     and timestamp(source['retrieved_at']) <= check, 'saved source provenance')
-            year, month = current['reference_month'].split('-')
-            _require(source['filters'] == _expected_filters(MONTHS[int(month)-1] + ' ' + year)
-                     and source['organization_mapping'] == ORGANIZATION_MAPPING
-                     and json.dumps(source['anonymous_session'], sort_keys=True) ==
-                         '{"cookie_count_before_navigation": 0, "websocket_status": 101}', 'saved source outcomes')
+            _validate_saved_snapshot(current, check, timestamp)
         validate(data['current'])
         _require(isinstance(data['corrections'], list), 'saved corrections')
+        previous_time = None
         for correction in data['corrections']:
+            _require(set(correction) == {'superseded', 'corrected_at'}, 'saved correction keys')
             validate(correction['superseded'])
+            instant = timestamp(correction['corrected_at'])
             _require(correction['superseded']['reference_month'] == data['current']['reference_month']
-                     and timestamp(correction['corrected_at']) <= check, 'saved correction audit')
+                     and timestamp(correction['superseded']['source']['retrieved_at']) <= instant <= check
+                     and (previous_time is None or previous_time <= instant), 'saved correction audit')
+            previous_time = instant
         validate(status['last_export'])
         _require(status['last_export']['semantic_identity'] == data['current']['semantic_identity'], 'saved status identity')
         return data, status
