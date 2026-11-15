@@ -147,20 +147,12 @@ def check_uf(browser, only_uf=False):
           return {x: (r.left+r.right)/2, y: (r.top+r.bottom)/2};})()""")
         browser.move(point['x'], point['y'])
         browser.evaluate("document.querySelector('#uf-values').scrollIntoView({block:'start'}); document.querySelector('.uf-table').scrollLeft=0")
-        geometry = browser.evaluate("""(() => {
-          const table = document.querySelector('#uf-values'), region = table.parentElement;
-          const box = region.getBoundingClientRect(), rows = Array.from(table.tBodies[0].rows);
-          return {labels: rows.map(row => row.cells[0].textContent),
-            cellsFit: rows.every(row => Array.from(row.cells).every(cell => {
-              const range = document.createRange(); range.selectNodeContents(cell);
-              return Array.from(range.getClientRects()).every(r => r.left >= box.left && r.right <= box.right);
-            })), firstVisible: rows[0].getBoundingClientRect().top >= 0 &&
-              rows[0].getBoundingClientRect().bottom <= innerHeight,
-            headers: Array.from(table.tHead.rows[0].cells).map(cell => [cell.tagName, cell.scope]),
-            display: getComputedStyle(table).display,
-            regionWidth: region.clientWidth, regionContent: region.scrollWidth,
-            pageWidth: document.documentElement.scrollWidth};
-        })()""")
+        geometry = browser.uf_geometry()
+        geometry['cellsFit'] = all(rect['left'] >= geometry['regionLeft'] and
+                                   rect['right'] <= geometry['regionRight']
+                                   for rect in geometry['textBounds'])
+        geometry['firstVisible'] = (geometry['firstTop'] >= 0 and
+                                    geometry['firstBottom'] <= geometry['height'])
         assert geometry['cellsFit'] and geometry['firstVisible'], geometry
         assert geometry['labels'] == LABELS, geometry
         assert geometry['display'] == 'table' and geometry['headers'] == [['TH', 'col'], ['TH', 'col']], geometry

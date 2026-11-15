@@ -100,7 +100,7 @@ inicial para usar o ponteiro ou a tabela. Ao sair do plot, a guia visual some, m
 o último mês e valor inspecionados permanecem, inclusive ao mover o ponteiro para
 o texto. Gráfico e tabela continuam úteis sem JavaScript, sem leitura de inspeção
 vazia. Todos os ativos e JSON são locais, com caminhos relativos ao subcaminho de
-Pages. A verificação opcional com mouse real está descrita em [operação](docs/operations.md#aceitação-local-com-mouse-real-18-20-e-21).
+Pages. A verificação opcional com mouse real está descrita em [operação](docs/operations.md#aceitação-local-com-mouse-real-18-20-21-e-41).
 
 A coleta usa timeout de 30 s por tentativa e até três tentativas por requisição
 em falhas transitórias (esperas de 0,1 e 0,2 s); erros de validação não são
