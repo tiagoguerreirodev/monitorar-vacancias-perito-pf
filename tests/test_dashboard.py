@@ -101,7 +101,11 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(page.text("time", datetime="2026-09"), "setembro de 2026")
         self.assertEqual(page.text("time", datetime="2026-11-13T12:00:00Z"),
                          "13/11/2026 às 09:00 (Brasília, UTC−03:00)")
-        self.assertIn("Última verificação bem-sucedida", page.text("body"))
+        self.assertIn("Última verificação nacional bem-sucedida", page.text("body"))
+        self.assertEqual(page.text("a", href="data/history.json"), "histórico nacional em JSON")
+        self.assertEqual(page.text("a", href="data/status.json"), "última verificação nacional em JSON")
+        self.assertIn("Recorte do histórico nacional: a partir de junho de 2025; "
+                      "não implica observações aceitas em todos os meses.", page.text("body"))
         self.assertEqual(page.text("h2", id="current-title"), "Cargos vagos")
         self.assertEqual(page.text("dd", id="vacant-count"), "87")
         self.assertEqual(page.text("dd", id="vacancy-rate"), "7,3%")
@@ -346,7 +350,7 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(history.get("corrections", []), [])
         self.assertEqual(page.text("time", datetime="2026-09"), "setembro de 2026")
         self.assertIn("1.108", page.text("table", id="current-values"))
-        self.assertIn("Histórico a partir de junho de 2025", page.text("body"))
+        self.assertIn("Recorte do histórico nacional: a partir de junho de 2025", page.text("body"))
         chart = page.one("svg", id="history-chart")
         # The scrollable timeline must not scale its 15px labels down as months grow.
         minimum_width = float(chart["attrs"]["style"].split(":")[1].strip().removesuffix("px"))

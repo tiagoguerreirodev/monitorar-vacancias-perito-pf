@@ -68,8 +68,17 @@ class UFDashboardTests(unittest.TestCase):
             self.assertTrue(page.matching('a', href=link))
             self.assertEqual((self.site / link).read_bytes(), (self.data / Path(link).name).read_bytes())
         self.assertIn('5f88f93738b41b035a4bf58450292366afd2aa28b66019c8103e079c0aa6fb55', page.text(id='uf-panel'))
-        region = page.one('div', **{'aria-label': 'Tabela de pessoal ativo por UF; role horizontalmente em telas pequenas'})
+        region = page.one(role='region', **{'aria-label': 'Tabela de pessoal ativo por UF'})
         self.assertEqual(region['attrs']['tabindex'], '0')
+        table = page.one('table', id='uf-values')
+        self.assertIn(region, table['parents'])
+        self.assertEqual(next(n['text'] for n in page.matching('caption') if table in n['parents']),
+                         'Pessoas ativas por UF — valores exatos')
+        self.assertEqual([n['text'] for n in page.matching('th', scope='col') if table in n['parents']],
+                         ['UF', 'Pessoas ativas'])
+        self.assertEqual(len([n for n in page.matching('th', scope='row') if table in n['parents']]), 27)
+        self.assertTrue(page.matching(role='region', **{
+            'aria-label': 'Tabela histórica; role horizontalmente em telas pequenas'}))
         self.assertEqual(page.text(id='vacant-count'), '87')
         self.assertEqual(page.text(id='vacancy-rate'), '7,3%')
         self.assertIn('julho de 2025: indisponível', page.text(id='history-chart'))
@@ -162,8 +171,11 @@ class UFDashboardTests(unittest.TestCase):
 
     def test_first_absence_in_either_direction_does_not_invent_values_checks_or_links(self):
         page = self.refresh(uf=UnavailableUF())
-        self.assertIn('ausência não é zero', page.text('body'))
+        self.assertIn('Pessoal ativo por UF indisponível — sem observação aceita; ausência não é zero',
+                      page.text('body'))
         self.assertFalse(page.matching(id='uf-bars'))
+        self.assertFalse(page.matching(id='uf-reference'))
+        self.assertFalse(page.matching(id='uf-check'))
         self.assertFalse(page.matching('a', href='data/uf.json'))
         self.assertFalse(page.matching('a', href='data/uf-status.json'))
         self.assertFalse((self.site / 'data/uf.json').exists())
@@ -171,11 +183,21 @@ class UFDashboardTests(unittest.TestCase):
         self.data, self.site = self.root / 'only-uf-data', self.root / 'only-uf-site'
         page = self.refresh(national=UnavailableNational())
         self.assertEqual(self.counts(page), RANKED)
+        self.assertIn('Dados nacionais indisponíveis', page.text('body'))
+        self.assertIn('Nenhuma observação nacional válida está disponível.', page.text('body'))
+        self.assertNotIn('Não há números ou proporções a exibir', page.text('body'))
         self.assertIn('Verificação nacional indisponível', page.text('body'))
+        self.assertEqual(page.text(id='uf-reference'), 'setembro de 2026')
+        self.assertEqual(page.one(id='uf-check')['attrs']['datetime'], '2026-11-14T12:00:00Z')
+        self.assertTrue(page.matching('a', href='data/uf.json'))
+        self.assertTrue(page.matching('a', href='data/uf-status.json'))
+        self.assertTrue(page.matching('a', href='data/uf-history.json'))
+        self.assertFalse(page.matching(id='history-chart'))
         self.assertFalse(page.matching(id='vacant-count'))
         self.assertFalse(page.matching('a', href='data/history.json'))
         self.assertFalse(page.matching('a', href='data/status.json'))
         self.assertFalse((self.site / 'data/status.json').exists())
+        self.assertFalse((self.site / 'data/history.json').exists())
 
 
 if __name__ == '__main__':
