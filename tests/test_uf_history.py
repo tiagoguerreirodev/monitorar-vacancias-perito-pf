@@ -13,6 +13,7 @@ import unittest
 from perito_dashboard import refresh_and_build
 from tests.sources import ControlledArchive, UnavailableUF
 from tests.test_uf import ExportSource, NOW, UnavailableNational, workbook_variant
+from tests.test_dashboard import Page
 
 ROOT = Path(__file__).resolve().parents[1]
 UF_FILES = ('uf.json', 'uf-status.json', 'uf-history.json')
@@ -67,6 +68,29 @@ class UFHistoryTests(unittest.TestCase):
     def saved(self, name='uf-history.json'):
         self.assertEqual((self.data / name).read_bytes(), (self.site / 'data' / name).read_bytes())
         return json.loads((self.data / name).read_text())
+
+    def assert_current_view(self, month, expected):
+        """Read public saved/published JSON and HTML, not owning render helpers."""
+        latest = self.saved()['observations'][-1]
+        self.assertEqual(latest['reference_month'], month)
+        self.assertEqual(latest['counts_by_uf'], {label.split(' — ')[0]: count for label, count in expected})
+        self.assertEqual(self.saved('uf.json')['current'], latest)
+        page = Page((self.site / 'index.html').read_text())
+        self.assertEqual(page.one(id='uf-reference')['attrs']['datetime'], month)
+        bars = page.one('ol', id='uf-bars')
+        items = [node for node in page.matching('li') if bars in node['parents']]
+        labels = page.matching('span', **{'class': 'uf-label'})
+        counts = page.matching('span', **{'class': 'uf-count'})
+        self.assertEqual([
+            (next(node['text'] for node in labels if item in node['parents']),
+             int(next(node['text'] for node in counts if item in node['parents']).split()[0].replace('.', '')))
+            for item in items], expected)
+        table = page.one('table', id='uf-values')
+        rows = [node for node in page.matching('tr') if table in node['parents']][1:]
+        self.assertEqual([
+            (next(node['text'] for node in page.matching('th') if row in node['parents']),
+             int(next(node['text'] for node in page.matching('td') if row in node['parents']).replace('.', '')))
+            for row in rows], expected)
 
     def output_state(self):
         return {str(p.relative_to(self.root)): (p.read_bytes(), p.stat().st_mode)
@@ -275,9 +299,42 @@ class UFHistoryTests(unittest.TestCase):
         september_A = self.saved()['observations'][0]
         self.refresh(uf=counterfactual(ac_first=0), day=2)
         september_B = self.saved()['observations'][0]
+        self.assert_current_view('2026-09', [
+            ('DF — Distrito Federal', 324), ('SP — São Paulo', 130),
+            ('MG — Minas Gerais', 79), ('PR — Paraná', 71), ('RS — Rio Grande do Sul', 57),
+            ('RJ — Rio de Janeiro', 55), ('SC — Santa Catarina', 37), ('PE — Pernambuco', 31),
+            ('CE — Ceará', 30), ('GO — Goiás', 28), ('BA — Bahia', 27),
+            ('MS — Mato Grosso do Sul', 27), ('PB — Paraíba', 25), ('RO — Rondônia', 24),
+            ('ES — Espírito Santo', 21), ('RN — Rio Grande do Norte', 15),
+            ('AL — Alagoas', 14), ('AM — Amazonas', 14), ('PI — Piauí', 14),
+            ('MT — Mato Grosso', 13), ('PA — Pará', 13), ('SE — Sergipe', 12),
+            ('TO — Tocantins', 12), ('MA — Maranhão', 11), ('AC — Acre', 8),
+            ('RR — Roraima', 8), ('AP — Amapá', 7)])
         self.refresh(uf=counterfactual('2026-10'), day=3)
         october_C = self.saved()['observations'][1]
+        self.assert_current_view('2026-10', [
+            ('DF — Distrito Federal', 324), ('SP — São Paulo', 130),
+            ('MG — Minas Gerais', 79), ('PR — Paraná', 71), ('RS — Rio Grande do Sul', 57),
+            ('RJ — Rio de Janeiro', 55), ('SC — Santa Catarina', 37), ('PE — Pernambuco', 31),
+            ('CE — Ceará', 30), ('GO — Goiás', 28), ('BA — Bahia', 27),
+            ('MS — Mato Grosso do Sul', 27), ('PB — Paraíba', 25), ('RO — Rondônia', 24),
+            ('ES — Espírito Santo', 21), ('RN — Rio Grande do Norte', 15),
+            ('AL — Alagoas', 14), ('AM — Amazonas', 14), ('PI — Piauí', 14),
+            ('MT — Mato Grosso', 13), ('PA — Pará', 13), ('SE — Sergipe', 12),
+            ('TO — Tocantins', 12), ('MA — Maranhão', 11), ('AC — Acre', 9),
+            ('RR — Roraima', 8), ('AP — Amapá', 7)])
         self.refresh(uf=counterfactual('2026-10', ac_first=2), day=4)
+        self.assert_current_view('2026-10', [
+            ('DF — Distrito Federal', 324), ('SP — São Paulo', 130),
+            ('MG — Minas Gerais', 79), ('PR — Paraná', 71), ('RS — Rio Grande do Sul', 57),
+            ('RJ — Rio de Janeiro', 55), ('SC — Santa Catarina', 37), ('PE — Pernambuco', 31),
+            ('CE — Ceará', 30), ('GO — Goiás', 28), ('BA — Bahia', 27),
+            ('MS — Mato Grosso do Sul', 27), ('PB — Paraíba', 25), ('RO — Rondônia', 24),
+            ('ES — Espírito Santo', 21), ('RN — Rio Grande do Norte', 15),
+            ('AL — Alagoas', 14), ('AM — Amazonas', 14), ('PI — Piauí', 14),
+            ('MT — Mato Grosso', 13), ('PA — Pará', 13), ('SE — Sergipe', 12),
+            ('TO — Tocantins', 12), ('MA — Maranhão', 11), ('AC — Acre', 10),
+            ('RR — Roraima', 8), ('AP — Amapá', 7)])
         archive = self.saved()
         october_D = archive['observations'][1]
         self.assertEqual([r['reference_month'] for r in archive['observations']], ['2026-09', '2026-10'])
@@ -307,7 +364,6 @@ class UFHistoryTests(unittest.TestCase):
         self.assertEqual({n: (self.data / n).read_bytes() for n in original}, original)
 
     def test_archive_link_single_point_and_gaps_are_honest_and_subpath_relative(self):
-        from tests.test_dashboard import Page
         self.refresh()
         page = Page((self.site / 'index.html').read_text())
         self.assertTrue(page.matching('a', href='data/uf-history.json'))

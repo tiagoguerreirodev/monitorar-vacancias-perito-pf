@@ -25,7 +25,7 @@ import zlib
 from ._render import render_site
 from ._shared import CUTOFF, PF_ORGANIZATION, write_json
 from ._uf import accept_export, load_saved, UFInvalidExport, UFSourceDenied
-from ._uf_history import load_history, retain
+from ._uf_history import _latest, load_history, retain
 from ._collector import OfficialUF, UFBlocked
 from .runtime import UFRuntimeError, UFRuntimeIntegrityError
 
@@ -515,15 +515,11 @@ def _refresh_locked(data_dir, site_dir, source, uf_source, clock):
             raise _StaleRefresh('Stale UF collection clock moved backward or lost timezone')
         uf_checked_at = uf_now.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z')
         current = accept_export(export, uf_checked_at)
-        if uf and current['reference_month'] < uf['current']['reference_month']:
-            raise ValueError('UF source reference month is older than accepted latest')
         candidate_uf_history = retain(uf_history, current, uf_checked_at)
-        changed = uf is None or current['semantic_identity'] != uf['current']['semantic_identity']
+        candidate_uf = _latest(candidate_uf_history)
+        changed = candidate_uf != uf
         if changed:
-            corrections = []
-            if uf and current['reference_month'] == uf['current']['reference_month']:
-                corrections = uf['corrections'] + [{'superseded': uf['current'], 'corrected_at': uf_checked_at}]
-            uf = {'schema_version': 1, 'current': current, 'corrections': corrections}
+            uf = candidate_uf
             documents['uf.json'] = uf
         if candidate_uf_history != uf_history or not (data_dir / 'uf-history.json').exists():
             documents['uf-history.json'] = candidate_uf_history

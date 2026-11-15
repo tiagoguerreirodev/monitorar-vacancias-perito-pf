@@ -71,7 +71,24 @@ class UFHistoryDeliveryTests(unittest.TestCase):
                 {'workbook': str(fixture / 'run-6.xlsx'), 'evidence': str(fixture / 'run-6.json')},
                 {'workbook': str(fixture / 'run-7.xlsx'), 'evidence': str(fixture / 'run-7.json')}])
             program = '''
-import io, runpy, sys
+import datetime, io, runpy, sys, time
+
+# External wall time is fixed before importing any application/test source module.
+# Keep monotonic time real so the owned process/control timeouts remain bounded.
+class FixedDateTime(datetime.datetime):
+    @classmethod
+    def now(cls, tz=None):
+        instant = cls(2026, 11, 14, 12, tzinfo=datetime.timezone.utc)
+        return instant.astimezone(tz) if tz is not None else instant.replace(tzinfo=None)
+
+    @classmethod
+    def utcnow(cls):
+        return cls(2026, 11, 14, 12)
+
+datetime.datetime = FixedDateTime
+time.time = lambda: 1794657600.0
+time.time_ns = lambda: 1794657600000000000
+
 from urllib.request import urlopen as real_open
 from unittest.mock import patch
 from tests.sources import ControlledArchive, ARCHIVE_URL
@@ -98,3 +115,6 @@ with patch('urllib.request.urlopen', side_effect=response):
             self.assertEqual(archive['coverage']['available_months'], ['2026-09'])
             self.assertEqual(archive['observations'][0]['counts_by_uf']['DF'], 324)
             self.assertEqual(archive['observations'][0]['total'], 1108)
+            for name in ('status.json', 'uf-status.json'):
+                status = json.loads((root / 'data' / name).read_text())
+                self.assertEqual(status['last_successful_check'], '2026-11-14T12:00:00Z')

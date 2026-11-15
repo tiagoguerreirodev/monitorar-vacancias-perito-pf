@@ -81,11 +81,18 @@ def _validate_audits(archive, uf, check, timestamp):
         tails[month] = after
         previous_time, previous_month = instant, month
     _require(all(canonical[month] == tail for month, tail in tails.items()), 'saved transition canonical tail')
-    latest = uf['current']['reference_month']
-    compatibility = [audit for audit in legacy if audit['superseded']['reference_month'] == latest]
-    compatibility += [{'superseded': audit['superseded'], 'corrected_at': audit['corrected_at']}
-                      for audit in transitions if audit['superseded']['reference_month'] == latest]
-    _require(compatibility == uf['corrections'], 'saved latest correction compatibility')
+    _require(_latest(archive)['corrections'] == uf['corrections'], 'saved latest correction compatibility')
+
+
+def _latest(archive):
+    """Project the compatible latest-only bundle from retained evidence."""
+    current = archive['observations'][-1]
+    month = current['reference_month']
+    corrections = [audit for audit in archive['legacy_corrections']
+                   if audit['superseded']['reference_month'] == month]
+    corrections += [{'superseded': audit['superseded'], 'corrected_at': audit['corrected_at']}
+                    for audit in archive['corrections'] if audit['superseded']['reference_month'] == month]
+    return {'schema_version': 1, 'current': current, 'corrections': corrections}
 
 
 def retain(archive, current, checked_at):
@@ -96,6 +103,8 @@ def retain(archive, current, checked_at):
                 'coverage': _coverage(observations), 'corrections': [], 'legacy_corrections': []}
     candidate = deepcopy(archive)
     previous = candidate['observations'][-1]
+    if current['reference_month'] < previous['reference_month']:
+        raise ValueError('UF source reference month is older than accepted latest')
     if previous['semantic_identity'] == current['semantic_identity']:
         return candidate
     if previous['reference_month'] == current['reference_month']:
