@@ -7,11 +7,15 @@
   if (!svg || !plot || !table) return;
   const months = Array.from(table.tBodies[0].rows);
   const bounds = plot.getBBox();
-  const tooltip = document.createElement("div");
-  tooltip.className = "inspection-tooltip";
-  tooltip.setAttribute("role", "tooltip");
-  tooltip.hidden = true;
-  document.body.append(tooltip);
+  const readout = document.createElement("p");
+  readout.className = "inspection-readout";
+  const label = document.createElement("strong");
+  label.textContent = "Última inspeção: ";
+  const valueText = document.createElement("span");
+  valueText.className = "inspection-value";
+  valueText.textContent = "Mova o ponteiro sobre o gráfico para inspecionar um mês, ou consulte a tabela abaixo.";
+  readout.append(label, valueText);
+  svg.parentElement.after(readout);
   const guide = document.createElementNS("http://www.w3.org/2000/svg", "line");
   guide.classList.add("inspection-guide");
   guide.setAttribute("y1", bounds.y);
@@ -23,7 +27,6 @@
   let pointer = null;
   function clear() {
     pointer = null;
-    tooltip.hidden = true;
     guide.style.display = "none";
   }
   plot.addEventListener("mouseleave", clear);
@@ -51,20 +54,7 @@
     const row = months[index];
     const value = row.cells.length === 2 ? "dados indisponíveis"
       : `Cargos vagos: ${row.cells[2].textContent}`;
-    tooltip.textContent = `${row.cells[0].textContent} — ${value}`;
-    tooltip.hidden = false;
-    const clip = svg.parentElement.getBoundingClientRect();
-    const left = Math.max(8, clip.left);
-    const right = Math.min(document.documentElement.clientWidth - 8, clip.right);
-    tooltip.style.maxWidth = `${right - left}px`;
-    // Measure at a stable origin: edge positioning must not squeeze/wrap the text.
-    tooltip.style.left = `${left}px`;
-    tooltip.style.top = "8px";
-    const box = tooltip.getBoundingClientRect();
-    tooltip.style.left = `${Math.max(left, Math.min(event.clientX + 12, right - box.width))}px`;
-    const top = event.clientY + 12 + box.height > innerHeight - 8
-      ? event.clientY - box.height - 12 : event.clientY + 12;
-    tooltip.style.top = `${Math.max(8, Math.min(top, innerHeight - box.height - 8))}px`;
+    valueText.textContent = `${row.cells[0].textContent} — ${value}`;
     const x = months.length === 1 ? bounds.x + bounds.width / 2
       : bounds.x + index * bounds.width / (months.length - 1);
     guide.setAttribute("x1", x);
