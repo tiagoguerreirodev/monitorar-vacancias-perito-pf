@@ -18,6 +18,8 @@ from urllib.request import urlopen
 from perito_dashboard import refresh_and_build
 from tests.sources import CHECK_TIME, ControlledArchive, national_resources, resource_url, UnavailableUF
 from tests.test_dashboard import monthly_resource
+from tests.test_uf import ExportSource, NOW
+from tests.test_uf_dashboard import RANKED
 
 
 class Browser:
@@ -63,20 +65,23 @@ class Browser:
           p.y = last.y1.baseVal.value + {height} *
                 (first.y1.baseVal.value - last.y1.baseVal.value);
           const screen = p.matrixTransform(svg.getScreenCTM());
-          return {{x: screen.x, y: screen.y}};
+          // Native mouse coordinates are quantized; keep endpoints inside the plot.
+          const x = {fraction} === 0 ? Math.ceil(screen.x)
+            : {fraction} === 1 ? Math.floor(screen.x) : screen.x;
+          return {{x, y: screen.y}};
         }})()""")
 
-    def tooltip(self):
+    def readout(self):
         return self.evaluate("""(() => {
-          const tooltip = document.querySelector('[role="tooltip"]');
-          return tooltip && !tooltip.hidden && getComputedStyle(tooltip).display !== 'none'
-            ? tooltip.textContent.trim() : null;
+          const value = document.querySelector('.inspection-value');
+          return value && getComputedStyle(value).display !== 'none'
+            ? value.textContent.trim() : null;
         })()""")
 
     def inspect(self, fraction, height, expected):
         point = self.point(fraction, height)
         self.move(point["x"], point["y"])
-        observed = self.tooltip()
+        observed = self.readout()
         assert observed == expected, (expected, observed, point)
         print(f"PASS mouse ({point['x']:.2f}, {point['y']:.2f}): {observed}")
 
@@ -118,33 +123,42 @@ class Browser:
 
     def contained(self):
         geometry = self.evaluate("""(() => {
-          const tip = document.querySelector('[role="tooltip"]').getBoundingClientRect();
-          const clip = document.querySelector('.chart-scroll').getBoundingClientRect();
-          return {left: tip.left, right: tip.right, top: tip.top, bottom: tip.bottom,
-                  clipLeft: Math.max(0, clip.left),
-                  clipRight: Math.min(innerWidth, clip.right), height: innerHeight,
+          const readout = document.querySelector('.inspection-readout');
+          const box = readout.getBoundingClientRect();
+          const clip = document.querySelector('.chart-scroll');
+          const style = getComputedStyle(readout);
+          return {left: box.left, right: box.right, top: box.top,
+                  plotBottom: clip.getBoundingClientRect().bottom,
+                  outside: !clip.contains(readout), label: readout.textContent,
+                  position: style.position, selectable: style.userSelect !== 'none',
+                  popup: !!document.querySelector('[role="tooltip"]'),
+                  live: !!readout.closest('[aria-live], [role="status"], [role="alert"]'),
                   pageWidth: document.documentElement.scrollWidth, width: innerWidth,
-                  fontSize: parseFloat(getComputedStyle(document.querySelector('[role="tooltip"]')).fontSize),
-                  textFits: document.querySelector('[role="tooltip"]').scrollWidth <=
-                            document.querySelector('[role="tooltip"]').clientWidth};
+                  fontSize: parseFloat(style.fontSize),
+                  textFits: readout.scrollWidth <= readout.clientWidth};
         })()""")
         assert geometry["fontSize"] >= 16 and geometry["textFits"], geometry
-        assert geometry["left"] >= geometry["clipLeft"], geometry
-        assert geometry["right"] <= geometry["clipRight"], geometry
-        assert 0 <= geometry["top"] <= geometry["bottom"] <= geometry["height"], geometry
-        assert geometry["pageWidth"] == geometry["width"], geometry
-        print("PASS tooltip contained/readable without page overflow", geometry)
+        assert 0 <= geometry["left"] < geometry["right"] <= geometry["width"], geometry
+        assert geometry["outside"] and geometry["top"] >= geometry["plotBottom"], geometry
+        assert geometry["position"] == 'static' and geometry["selectable"], geometry
+        assert 'Última inspeção:' in geometry["label"], geometry
+        assert not geometry["popup"] and not geometry["live"], geometry
+        assert geometry["pageWidth"] <= geometry["width"], geometry
+        print("PASS labeled, selectable in-flow readout outside plot without overlap/overflow", geometry)
 
     def leave(self):
-        point = self.point(.5, -.03)
-        point["x"] = self.evaluate("""(() => {
-          const clip = document.querySelector('.chart-scroll').getBoundingClientRect();
-          return (clip.left + clip.right) / 2;
+        last = self.readout()
+        point = self.evaluate("""(() => {
+          const readout = document.querySelector('.inspection-readout');
+          readout.scrollIntoView({block: 'center'});
+          const box = readout.getBoundingClientRect();
+          return {x: (box.left + box.right) / 2, y: (box.top + box.bottom) / 2};
         })()""")
         self.move(point["x"], point["y"])
-        assert self.tooltip() is None, ("Stale inspection after leaving plot", self.tooltip())
+        assert last is not None and self.readout() == last, (last, self.readout())
         assert self.evaluate("getComputedStyle(document.querySelector('.inspection-guide')).display") == 'none'
-        print("PASS leaving plot clears inspection and guide")
+        self.contained()
+        print("PASS moving onto readout retains last month/value and hides guide without Escape")
 
 
 def prepare(root):
@@ -168,6 +182,8 @@ def prepare(root):
         refresh_and_build(root / f"data-{name}",
                           root / f"www/{name}/monitorar-vacancias-perito-pf",
                           source=ControlledArchive(documents), uf_source=UnavailableUF(), clock=lambda: CHECK_TIME)
+    refresh_and_build(root / 'data-uf', root / 'www/uf/monitorar-vacancias-perito-pf',
+                      source=ControlledArchive(national_resources()), uf_source=ExportSource(), clock=lambda: NOW)
     fallback = root / "www/fallback/monitorar-vacancias-perito-pf"
     shutil.copytree(root / "www/national/monitorar-vacancias-perito-pf",
                     fallback, dirs_exist_ok=True)
@@ -189,7 +205,7 @@ def check_summary(browser):
         assert [row[2] if len(row) == 5 else None for row in content['rows']] == [
             '79', None, '84', '87', '93', '94', '99', '101', '105', '106', '110',
             '112', '112', '121', '128', '87'], content
-        assert content['pageWidth'] == width, content
+        assert content['pageWidth'] <= width, content
         assert 'não representam vagas de concurso' in content['explanation'], content
         assert 'A data da verificação não é a referência dos cargos.' in content['explanation'], content
         assert 'data/history.json' in content['sources'] and 'data/status.json' in content['sources'], content
@@ -252,9 +268,14 @@ def check_narrow(browser):
     browser.inspect(0, .08, "junho de 2025 — Cargos vagos: 79")
     browser.inspect(1 / 15 - .002, .92, "julho de 2025 — dados indisponíveis")
     browser.contained()
+    # Keep the stationary pointer in the plot's visible area at both scroll ends.
+    point = browser.point(0, .08)
+    point['x'] = browser.evaluate("(() => { const r = document.querySelector('.chart-scroll').getBoundingClientRect(); return (r.left + r.right) / 2; })()")
+    browser.move(point['x'], point['y'])
+    assert browser.readout() == 'junho de 2025 — Cargos vagos: 79', browser.readout()
     browser.evaluate("document.querySelector('.chart-scroll').scrollLeft = 99999")
     browser.command("wait", "--text", "setembro de 2026 — Cargos vagos: 87")
-    assert browser.tooltip() == "setembro de 2026 — Cargos vagos: 87", browser.tooltip()
+    assert browser.readout() == "setembro de 2026 — Cargos vagos: 87", browser.readout()
     browser.inspect(1, .08, "setembro de 2026 — Cargos vagos: 87")
     browser.contained()
     # Move the plot near the bottom of the viewport through ordinary page scrolling.
@@ -269,7 +290,7 @@ def check_fallback(browser):
     browser.setup()
     point = browser.point(3 / 15, .08)
     browser.move(point["x"], point["y"])
-    assert browser.tooltip() is None, "Optional script should be unavailable"
+    assert browser.readout() is None, "No inspection-only placeholder without the optional script"
     static = browser.evaluate("""(() => {
           const chart = document.querySelector('#history-chart');
           const table = document.querySelector('#history-values');
@@ -288,7 +309,7 @@ def check_fallback(browser):
     browser.setup(width=320, height=800)
     point = browser.point(0, .08)
     browser.move(point['x'], point['y'])
-    assert browser.tooltip() is None, 'No enhancement should appear on mobile either'
+    assert browser.readout() is None, 'No enhancement should appear on mobile either'
     scroll = browser.evaluate("""(() => {
           const regions = Array.from(document.querySelectorAll('[role="region"]'));
           regions.forEach(region => { region.scrollLeft = 99999; });
@@ -297,7 +318,7 @@ def check_fallback(browser):
                   pageWidth: document.documentElement.scrollWidth, pageX: scrollX};
         })()""")
     assert all(offset > 0 for offset in scroll['offsets']), scroll
-    assert all(scroll['names']) and scroll['pageWidth'] == 320 and scroll['pageX'] == 0, scroll
+    assert all(scroll['names']) and scroll['pageWidth'] <= 320 and scroll['pageX'] == 0, scroll
     print("PASS unavailable JS leaves useful static chart, equivalent table and named tab stops; independent 320px scrollers", scroll)
 
 
@@ -338,6 +359,128 @@ def check_zero(browser):
     browser.leave()
 
 
+def check_prose(browser):
+    browser.command('viewport', '--width', '1440', '--height', '1000')
+    paragraphs = browser.evaluate("""(() => {
+      return Array.from(document.querySelectorAll('p')).filter(p => p.checkVisibility()).map(paragraph => {
+        const lines = [];
+        const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
+        const tolerance = parseFloat(getComputedStyle(paragraph).fontSize) / 2;
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          for (let i = 0; i < node.length; i++) {
+            const range = document.createRange();
+            range.setStart(node, i); range.setEnd(node, i + 1);
+            const box = range.getBoundingClientRect();
+            if (!box.width || !box.height) continue;
+            let line = lines.find(line => Math.abs(line.top - box.top) < tolerance);
+            if (!line) { line = {top: box.top, text: ''}; lines.push(line); }
+            line.text += node.textContent[i];
+          }
+        }
+        return {text: paragraph.textContent.trim(),
+          lines: lines.map(line => line.text.trim().length),
+          font: getComputedStyle(paragraph).fontFamily,
+          width: paragraph.getBoundingClientRect().width};
+      }).filter(paragraph => paragraph.lines.length);
+    })()""")
+    full_lines = [length for paragraph in paragraphs for length in paragraph['lines'][:-1]]
+    assert full_lines and max(length for paragraph in paragraphs for length in paragraph['lines']) <= 75, paragraphs
+    assert max(full_lines) >= 60, paragraphs
+    data = browser.evaluate("""({chart: document.querySelector('.chart-scroll').clientWidth,
+      table: document.querySelector('.uf-table').clientWidth,
+      panel: document.querySelector('#uf-panel').clientWidth})""")
+    assert data['chart'] > 1000 and data['table'] > 1000, data
+    for width in (320, 720):
+        browser.command('viewport', '--width', str(width), '--height', '1000')
+        assert browser.evaluate('document.documentElement.scrollWidth <= innerWidth')
+        assert browser.evaluate("Array.from(document.querySelectorAll('p')).every(p => p.scrollWidth <= p.clientWidth + 1)")
+    print('PASS measured desktop prose lines, full-width data, 320/720px normal wrapping', paragraphs, data)
+
+
+def check_skip(browser):
+    browser.command('viewport', '--width', '1440', '--height', '1000')
+    browser.evaluate('window.scrollTo(0, 0)')
+    # A real click at the page origin focuses an otherwise background Orca page.
+    browser.move(1, 1)
+    browser.command('mouse', 'down')
+    browser.command('mouse', 'up')
+    browser.command('reload')  # Start the first Tab in a fresh document, not a restored tab position.
+    browser.command('viewport', '--width', '1440', '--height', '1000')
+    browser.command('keypress', '--key', 'Tab')
+    focus = browser.evaluate("""(() => {
+      const link = document.querySelector('.skip-link');
+      const box = link.getBoundingClientRect();
+      let adjacent = document.elementFromPoint(box.right + 5, (box.top + box.bottom) / 2);
+      while (adjacent && getComputedStyle(adjacent).backgroundColor === 'rgba(0, 0, 0, 0)')
+        adjacent = adjacent.parentElement;
+      const luminance = color => {
+        const rgb = color.match(/[0-9.]+/g).slice(0, 3).map(Number).map(n => n / 255)
+          .map(n => n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4);
+        return .2126 * rgb[0] + .7152 * rgb[1] + .0722 * rgb[2];
+      };
+      const style = getComputedStyle(link);
+      const background = getComputedStyle(adjacent).backgroundColor;
+      const a = luminance(style.outlineColor), b = luminance(background);
+      return {first: document.activeElement === link, visible: box.top >= 0,
+        outline: style.outlineColor, background, outlineWidth: style.outlineWidth,
+        contrast: (Math.max(a, b) + .05) / (Math.min(a, b) + .05)};
+    })()""")
+    assert focus['first'] and focus['visible'] and float(focus['outlineWidth'][:-2]) > 0, focus
+    assert focus['outline'] == 'rgb(255, 255, 255)' and focus['contrast'] >= 3, focus
+    browser.command('keypress', '--key', 'Enter')
+    browser.url = browser.url.split('#')[0] + '#conteudo'
+    target = browser.evaluate("({id: document.activeElement.id, tag: document.activeElement.tagName})")
+    assert target == {'id': 'conteudo', 'tag': 'MAIN'}, target
+    print('PASS first native Tab reveals local contrasting skip focus; Enter focuses main', focus, target)
+
+
+def check_uf_layout(browser):
+    browser.command('viewport', '--width', '320', '--height', '1000')
+    browser.evaluate("document.querySelector('#uf-values').scrollIntoView({block:'start'})")
+    content = browser.evaluate("""(() => {
+      const table = document.querySelector('#uf-values');
+      const region = table.closest('[role="region"]');
+      const box = region.getBoundingClientRect();
+      const rows = Array.from(table.tBodies[0].rows);
+      return {rows: rows.map(row => [row.cells[0].textContent.split(' — ')[0],
+                Number(row.cells[1].textContent.replaceAll('.', ''))]),
+        labels: rows.map(row => row.cells[0].textContent),
+        cellsFit: rows.every(row => Array.from(row.cells).every(cell => {
+          const rect = cell.getBoundingClientRect();
+          return rect.left >= box.left && rect.right <= box.right + 1;
+        })), firstVisible: rows[0].getBoundingClientRect().bottom < innerHeight,
+        name: region.getAttribute('aria-label'), tabindex: region.tabIndex,
+        headers: Array.from(table.tHead.rows[0].cells).map(cell => [cell.tagName, cell.scope]),
+        display: getComputedStyle(table).display,
+        regionWidth: region.clientWidth, regionContent: region.scrollWidth,
+        pageWidth: document.documentElement.scrollWidth, width: innerWidth,
+        chartScrolls: document.querySelector('.chart-scroll').scrollWidth >
+                      document.querySelector('.chart-scroll').clientWidth,
+        nationalScrolls: document.querySelector('#history-values').scrollWidth >
+                         document.querySelector('#history-values').parentElement.clientWidth};
+    })()""")
+    assert content['rows'] == [list(row) for row in RANKED], content
+    assert content['labels'][0] == 'DF — Distrito Federal', content
+    assert 'RN — Rio Grande do Norte' in content['labels'], content
+    assert content['cellsFit'] and content['firstVisible'], content
+    assert content['regionContent'] <= content['regionWidth'], content
+    assert content['pageWidth'] <= content['width'] == 320, content
+    assert content['display'] == 'table' and content['headers'] == [['TH', 'col'], ['TH', 'col']], content
+    assert content['name'] and content['tabindex'] == 0, content
+    assert content['chartScrolls'] and content['nationalScrolls'], content
+    print('PASS 320px UF first rows/both columns, full 27 exact counts/native headers; national scrollers retained', content)
+
+
+def check_initial(browser):
+    browser.setup()
+    assert browser.readout() == ('Mova o ponteiro sobre o gráfico para inspecionar um mês, '
+                                 'ou consulte a tabela abaixo.'), browser.readout()
+    browser.contained()
+    assert browser.evaluate("getComputedStyle(document.querySelector('.inspection-guide')).display") == 'none'
+    print('PASS initial pointer/table instruction without an invented month/value')
+
+
 def check_nearest(browser):
     browser.setup()
     # September 2025 is slot 3 of 16, away from every marker/line vertically.
@@ -368,7 +511,7 @@ def check_scroll(browser):
     check_nearest(browser)
     browser.evaluate("document.querySelector('.chart-scroll').scrollLeft = 341.333333")
     browser.command("wait", "--text", "janeiro de 2026 — Cargos vagos: 101")
-    assert browser.tooltip() == "janeiro de 2026 — Cargos vagos: 101", browser.tooltip()
+    assert browser.readout() == "janeiro de 2026 — Cargos vagos: 101", browser.readout()
     browser.contained()
     browser.inspect(14 / 15, .08, "agosto de 2026 — Cargos vagos: 128")
 
@@ -388,13 +531,17 @@ def check_resize(browser):
     check_nearest(browser)
     browser.command("viewport", "--width", "1200", "--height", "1000")
     browser.command("wait", "--text", "outubro de 2025 — Cargos vagos: 93")
-    assert browser.tooltip() == "outubro de 2025 — Cargos vagos: 93", browser.tooltip()
+    assert browser.readout() == "outubro de 2025 — Cargos vagos: 93", browser.readout()
     browser.contained()
     browser.inspect(0, .92, "junho de 2025 — Cargos vagos: 79")
 
 
 # Every selectable case names both its documents and its complete check.
 CASES = {
+    "prose": ("uf", check_prose),
+    "skip": ("national", check_skip),
+    "uf-layout": ("uf", check_uf_layout),
+    "initial": ("national", check_initial),
     "nearest": ("national", check_nearest),
     "gap": ("national", check_gap),
     "leave": ("national", check_leave),
