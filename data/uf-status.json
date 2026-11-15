@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_successful_check": "2026-11-15T16:47:38.600786Z",
+  "last_successful_check": "2026-11-15T18:50:48.595422Z",
   "last_export": {
     "reference_month": "2026-09",
     "rows": [
@@ -885,8 +885,8 @@
       "url": "https://pep.paineis.gov.br/extensions/pep/index.html",
       "app_id": "aec332a1-406b-4fec-a776-b1ed66735961",
       "table": "Dwnkq",
-      "retrieved_at": "2026-11-15T16:47:37.087Z",
-      "download_guid": "988a59e4-d094-40c6-b110-9be58ec61e18",
+      "retrieved_at": "2026-11-15T18:50:46.180Z",
+      "download_guid": "89856830-4a59-450c-9eaf-313fb6eec999",
       "own_source_total": 1108,
       "filters": {
         "Seção": [
@@ -931,8 +931,8 @@
         "cookie_count_before_navigation": 0,
         "websocket_status": 101
       },
-      "evidence_sha256": "d896150ba38ffeb996a55b1234a5fe0876bd20bf55a7f37bbb5fb79b3be9c611",
-      "sha256": "459a8838418be1f66ae9cac289cfed276eee30a922198af21555227adf01a06c"
+      "evidence_sha256": "03be83581cf5d40135d245c4e2a4c0553ae43e06987cafee8410b4eafc9b6789",
+      "sha256": "f7e1cd2658efafd056c7a38bf858e317a3f5acb0f8b7e084933b77cc073fc704"
     }
   }
 }
