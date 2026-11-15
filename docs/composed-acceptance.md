@@ -1,5 +1,10 @@
 # Aceitação composta local — #16
 
+> As seções de #16 abaixo são o recibo histórico de 14/11/2026, inclusive seus
+> estados/gates e contrato de tooltip/rolagem então vigentes; não foram
+> reexecutadas nem reescritas por #44. O contrato e a evidência novos estão em
+> [Interface #41/#44](#interface-4144--verificação-local-de-15112026).
+
 ## Estado e fronteiras
 
 A implementação inicial já reúne nacional (#7/#10–#12/#18/#20/#21), coletor UF
@@ -124,3 +129,93 @@ local `/tmp/perito-uf-implementation/issue-16-result.md`; não são ativos publi
    build, upload ou PNG local não substitui deploy público conferido.
 6. Só após esse gate pode declarar #16/#8 aceitos. #9 requer então a autorização
    condicional já concedida; não implementar histórico UF nesta entrega.
+
+## Interface #41/#44 — verificação local de 15/11/2026
+
+### Contrato novo, não reexecução de #16/#14
+
+Base de código conferida antes dos edits:
+`28199c135f3bd825337ac7a174c9e825aa2b9165` (integração de #42/#43).
+#44 altera somente driver composto e documentação; não coleta no governo,
+requalifica runtime, publica Pages ou muda dados aceitos. Os recibos originais
+acima e de #14 continuam datados, não são prova reemitida para esta revisão.
+
+- Tabela UF: nomes completos e inteiros juntos desde a primeira linha em 320 px;
+  27 contagens literais, cabeçalhos nativos e região nomeada/focável. Sem overflow
+  horizontal UF/página; gráfico e tabela nacionais mantêm rolagem contida.
+- Indisponibilidade explicitamente nacional ou UF, sem fabricar zero, check ou
+  links da fonte ausente. A outra fonte permanece utilizável. Referências,
+  verificações e proveniência independentes, inclusive após falha posterior.
+- Inspeção nacional em fluxo, selecionável, rotulada e fora do plot. Instrução
+  inicial ponteiro/tabela; mês/valor ou lacuna exatos; ao sair só a guia some e a
+  última leitura permanece. Sem popup/live/Escape. Scroll/resize com ponteiro
+  parado preservados; sem JS, gráfico/tabelas/fontes completos e nenhum
+  placeholder vazio. Zeros, formatação e mês isolado continuam nos casos nacionais.
+- Tab/Enter nativos para skip link e JSON de proveniência UF; medir o contorno
+  contra o fundo realmente adjacente, não apenas atributos CSS.
+- Prosa explicativa com medida aproximada de 60–75 caracteres em linhas desktop,
+  fonte resolvida, sem estreitar dados; wrapping normal em 320 px. Zoom real de
+  200% é uma condição separada, não sinônimo de viewport menor/DPR/CSS zoom.
+- Cobertura usa “1 mês aceito” / “N meses aceitos”, datas/lacunas reais e ressalvas
+  prospectivas. Novembro/2026 nesta fixture é **contrafactual**, não fonte nova.
+
+### Método e resultados observados
+
+`python3 -m tests.browser_uf prepare --root "$PREVIEW"` usa o
+`refresh_and_build` público, ambas as fontes externas controladas e relógio.
+`python3 -u -m tests.browser_uf check --root "$PREVIEW" --orca "$ORCA" --page "$PAGE" --base-url "$BASE/"`
+usa somente página/servidor próprios, mouse e teclado nativos, DOM para
+leitura/medida/rolagem, URL conferida e viewport restaurado após navegação/PNG.
+Não há handlers privados, eventos sintéticos ou substituição de lógica de seleção.
+Ver a receita portátil em [uf-view.md](uf-view.md).
+
+Nesta execução, WSL ArchLinux/Python 3.14.10 e Orca Windows por ponte executável
+local, sob `http://127.0.0.1:8844/…/monitorar-vacancias-perito-pf/`:
+
+| Verificação | Resultado / limite |
+| --- | --- |
+| `tests.test_dashboard tests.test_uf_dashboard tests.test_uf_history`, uid/gid 65534 sem grupos suplementares | **35 passam**; não executados como root |
+| `node --check perito_dashboard/assets/inspection.js` | passa; sintaxe, não prova de browser |
+| 19 casos nacionais preservados no driver composto | **18 passam**; `edges` falha no empate exato, abaixo |
+| UF composta / somente UF / somente nacional / arquivo UF / fallback / teclado | **6 passam**; dois reruns direcionados após corrigir comparação string/número no próprio teste |
+| UF 1440/320 px, todas as 27 contagens e primeiro/último trecho | colunas cabem; região 1086/239 px, conteúdo igual; nomes completos quebram em 320 px |
+| Readout composto | instrução, lacuna, persistência, guia, scroll/resize e 320 px passam; PNGs abertos |
+| Skip link nativo | primeiro Tab revela; branco sobre `rgb(18, 57, 76)`, **12,2425:1**; Enter foca `MAIN#conteudo` |
+| Proveniência | Tab/Enter abrem o JSON UF real; JSONs locais lidos por HTTP; fontes oficiais permanecem links, sem acesso ao governo |
+| Prosa resolvida | máximo observado **73 caracteres**, dados com **1086 px**; wrapping 320/720 px passa (720 não é prova de zoom) |
+| Cobertura / retenção | singular setembro genuíno; dois meses setembro/novembro e lacuna outubro controlados; check nacional avança a 16/11, UF retém 15/11 após falha |
+
+O RED da migração do driver exigia `scrollLeft > 0` em 320 px; o artefato novo
+corretamente devolveu zero. Remover essa exigência obsoleta e medir as duas colunas
+produziu GREEN. As duas outras falhas do teste eram comparação de texto numérico
+parseado pelo driver com string; a asserção agora compara o texto literalmente no
+browser. Não houve correção de produção ou alegação de RED produtivo inventado.
+O primeiro comando completo terminou com `['edges', 'no-uf', 'composed-archive']`;
+os reruns `no-uf` e `composed-archive` passaram após essas correções. Não se afirma
+que o comando completo ficou verde: `edges` continua falhando, sem skip/epsilon.
+
+### Not verified e fronteiras da prova
+
+- **Empate nativo exato: Not verified.** Em 1440 px, coordenada solicitada
+  `894.1761474609375` devolve janeiro/101 em vez de fevereiro/105. #43 reproduziu
+  essa falha também na base `a98d57ba8a18ca44f944239814705b9c54563a77`.
+  Tentativa limitada em 1000 px, inclusive após Control+0, não estabeleceu o
+  alinhamento inteiro proposto: matriz `a=d=0.9999999859116286`,
+  `e=46.90340805053711`, X `771.9033813476562` para SVG X=725. Não se arredondou,
+  nudged ou substituiu input; `tests/browser_mouse.py` e `Math.round` inalterados.
+- **Zoom genuíno 200%: Not verified.** Após foco nativo, seis Control+Add e seis
+  Control+Shift+Equal não mudaram métricas: innerWidth 1440, outerWidth 3128,
+  DPR ≈1, visualViewport.scale 1 e parágrafo 517,5 px. A captura dessa tentativa
+  não é prova de zoom; nenhum DPR/CSS zoom foi usado como substituto.
+- A suíte completa não é verde. Comparação do coordenador em clone LF limpo
+  como usuário sem privilégios (uid 65534, não root): base `a98d57b` e integração
+  `28199c1`, **184 testes,
+  3 falhas e 3 erros com as mesmas seis identidades** de runtime/protected-parent.
+  Isso é comparação de baseline, não nova execução integral final de #44. A
+  revisão e execução final do snapshot limpo pertencem ao coordenador.
+
+Comandos exatos, revisões, logs e PNGs inspecionados desta execução estão fora do
+repositório em `C:/Users/tiago/AppData/Local/Temp/spec41-44-evidence/HANDOFF.md`.
+Foram abertos os estados de primeira/última linha UF, readout inicial/persistente,
+indisponibilidade, fallback, prosa e foco. **Não se declara validação integral de
+#41/#44**, publicação ou certificação WCAG/leitor de tela/toque/print/forced colors.
