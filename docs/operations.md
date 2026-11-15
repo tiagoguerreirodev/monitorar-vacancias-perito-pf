@@ -50,18 +50,22 @@ python3 -m http.server --bind 127.0.0.1 --directory "$PREVIEW" 8000
 # Abrir http://127.0.0.1:8000/monitorar-vacancias-perito-pf/
 ```
 
-## Aceitação local com mouse real (#18, #20 e #21)
+## Aceitação local com mouse real (#18, #20, #21 e #41)
 
 A inspeção é um aprimoramento opcional, sem fetch: lê os meses e valores já
 renderizados na tabela, inclusive lacunas desde junho/2025. A posição horizontal
 no plot escolhe o mês calendário mais próximo, com empate para o posterior;
 a altura não precisa coincidir com um ponto ou linha. Uma guia vertical identifica
-o mês (sem criar ponto na lacuna), e a caixa mostra o mês em pt-BR e o valor
-formatado exato ou “dados indisponíveis”. Zero aceito continua zero. A seleção
-atualiza com movimento, rolagem e redimensionamento e limpa ao sair do plot.
-A caixa fica dentro da parte visível do gráfico e da janela; pode quebrar linhas
-e aparecer acima do mouse. Não há novos controles de teclado/toque. Descrições,
-tabela equivalente e regiões roláveis existentes continuam disponíveis sem JS.
+o mês (sem criar ponto na lacuna). #41 substitui a caixa flutuante por uma leitura
+rotulada “Última inspeção”, selecionável, no fluxo e **fora** do plot rolável.
+Antes da primeira inspeção há uma instrução ponteiro/tabela, sem mês inventado.
+Depois, mostra o mês em pt-BR e o valor exato ou “dados indisponíveis”; zero aceito
+continua zero. A seleção atualiza com movimento, rolagem e redimensionamento.
+Ao sair do plot, só a guia desaparece: mês/texto permanecem, inclusive ao mover o
+ponteiro sobre a leitura. Não há popup, semântica de tooltip, anúncio live repetido
+ou necessidade de Escape. O texto quebra normalmente em 320 px. Não há novos
+controles de seleção por teclado/toque. Sem JS, descrições, gráfico, tabela e
+fontes continuam disponíveis, sem placeholder de inspeção vazio.
 
 `tests/browser_mouse.py` é aceitação **opcional local**, não um teste de CI nem
 prova de Pages publicado. Usa apenas stdlib e o Orca já disponível: resolve-se o
@@ -83,7 +87,7 @@ CURRENT=$BASE/national/monitorar-vacancias-perito-pf/
 orca tab create --url "$CURRENT" --json
 # Copiar SOMENTE o browserPageId recém-criado:
 PAGE=ID_DA_PAGINA_PROPRIA
-for CASE in nearest gap leave clamp scroll resize edges narrow summary; do
+for CASE in initial nearest gap leave clamp scroll resize edges narrow summary; do
   python3 -m tests.browser_mouse check --orca orca --page "$PAGE" \
     --base-url "$BASE/" --case "$CASE" || break
 done
@@ -98,12 +102,12 @@ done
 
 Os casos cobrem valores literais nacionais, alturas longe dos marcadores, lacuna,
 saída, extremos, empate e seus dois lados, mouse parado durante scroll/resize,
-escala SVG, tela de 320 px, caixa junto à borda inferior, zero isolado, série toda
+escala SVG, tela de 320 px, leitura persistente fora do plot, zero isolado, série toda
 zero e `12.345` sem arredondamento. `single` confere o ponto positivo isolado (12),
 sem linha/tendência; `sparse` usa documentos **controlados**, não publicações reais,
 com lacunas consecutivas e outro ano, para distinguir ausência de zero e impedir
-pontes. A guia é conferida em lacunas/ponto isolado, e a caixa mantém fonte de ao
-menos 16 px, texto sem corte e limites visíveis. `allzero` também confere taxa
+pontes. A guia é conferida em lacunas/ponto isolado, e a leitura mantém fonte de ao
+menos 16 px, texto selecionável sem corte e nenhum overlap/overflow. `allzero` também confere taxa
 indisponível e eixo de zero a quatro. `summary` confere cabeçalho, taxa/contexto da
 mesma referência, todos os valores da tabela e eixo nacional de zero a 160 em
 1440/320 px, verificação distinta da referência e links/fontes; busca os JSON
@@ -116,6 +120,20 @@ incluindo o script; a suíte Python não executa o JS. Ao final, fechar somente
 pelo handle guardado, seguindo o guia. Apagar apenas o diretório temporário próprio.
 Para #21, repetir no artefato revisado e no Pages real, comparar também
 `assets/inspection.js` e não confundir esta aceitação local com publicação.
+
+Para a composição nacional + UF, usar a receita de [uf-view.md](uf-view.md):
+`tests/browser_uf.py` executa também os casos `prose`, `skip` e `uf-layout`.
+Mede linhas reais da prosa com a fonte resolvida sem estreitar dados; Tab/Enter
+nativos e contraste do contorno contra o fundo adjacente; 27 contagens e as duas
+colunas UF em 1440/320 px sem rolagem horizontal UF. Mantém os scrollers nacionais,
+fontes independentes, retenção após falha, cobertura singular/plural e fallback.
+Zoom real de 200% exige tentativa e comprovação próprias: reduzir viewport,
+aumentar DPR ou aplicar CSS zoom **não** o substitui. Falha de entrega de coordenada
+no empate não autoriza arredondar/nudging, epsilon ou mudar a seleção de produção.
+Registrar **Not verified** e não declarar validação integral quando necessário.
+Ver [recibo local #41/#44 e limites](composed-acceptance.md#interface-4144--verificação-local-de-15112026).
+Essa execução nova não requalifica runtime, não publica Pages e não reescreve a
+prova histórica abaixo.
 
 ### Evidência local de #21 — não é aceite de publicação
 

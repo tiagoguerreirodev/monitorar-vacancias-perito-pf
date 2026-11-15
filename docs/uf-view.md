@@ -1,4 +1,4 @@
-# Visualização do retrato UF — #14
+# Visualização do retrato UF — #14 e contrato de interface #41
 
 A página estática mantém cargos vagos e histórico **nacionais** como primeira
 leitura. A seção separada “Pessoal ativo por UF” usa exclusivamente o retrato UF
@@ -13,8 +13,11 @@ somente o link/explicação da retenção prospectiva, mantendo esse último ret
   empates pela sigla em ordem alfabética. Sigla, nome completo e inteiro exato
   aparecem em texto; a cor e a largura não são o único meio de leitura.
 - Lista sem controles interativos e tabela HTML equivalente com cabeçalhos.
-  Em 320 px, os rótulos/barras se reorganizam sem transbordar a página; a tabela
-  tem região nomeada com `tabindex="0"` e rolagem horizontal independente.
+  Em 320 px, os rótulos/barras se reorganizam sem transbordar a página; as duas
+  colunas da tabela cabem juntas desde as primeiras linhas, com nomes completos
+  quebrando normalmente. As 27 linhas e cabeçalhos nativos permanecem, na região
+  nomeada com `tabindex="0"`, sem exigir rolagem horizontal UF. Gráfico e tabela
+  **nacionais** continuam com rolagem horizontal contida e independente da página.
 - Aviso destacado: **UF Servidores como UF de lotação é premissa do projeto,
   não verificada oficialmente**. A autorização dessa premissa não certifica a
   geografia da fonte. Ver [evidência e limites](uf-source.md).
@@ -27,9 +30,15 @@ somente o link/explicação da retenção prospectiva, mantendo esse último ret
   gráfico, números ou links JSON UF fictícios. Uma primeira falha nacional não
   esconde UF válida nem inventa check nacional.
 - Apenas o último retrato UF é desenhado: as mesmas 27 barras/tabela, sem seletor,
-  novo gráfico ou tabela histórica. A inspeção nacional com mouse não muda.
+  novo gráfico ou tabela histórica. #41 substitui a antiga caixa flutuante nacional
+  por “Última inspeção” no fluxo, fora do plot: começa com instrução ponteiro/tabela,
+  mostra mês e valor exatos e retém a última leitura ao sair, ocultando só a guia.
+  Não há popup, anúncio live ou necessidade de Escape; a tabela continua a rota
+  equivalente sem ponteiro. Sem JS, gráfico/tabelas/fontes permanecem completos,
+  sem placeholder vazio de inspeção.
 - `data/uf-history.json` é um link relativo, válido sob subcaminho; a página informa
-  início/fim reais e lacunas entre meses aceitos, que **não são zeros**. Um único
+  “1 mês aceito” ou “N meses aceitos”, início/fim reais e lacunas entre meses
+  aceitos, que **não são zeros**. Um único
   mês não permite inferir tendência. A retenção é prospectiva, não uma consulta
   retrospectiva nem inferência de fluxos de pessoal. A origem genuína é somente
   setembro/2026 (1.108, DF 324), não os 15 meses nacionais. A migração não recupera
@@ -70,10 +79,17 @@ python3 -u -m tests.browser_uf check --root "$PREVIEW" --page "$PAGE" \
   --orca orca --base-url http://127.0.0.1:8144/
 ```
 
-O driver reaproveita os 15 casos nacionais de `tests/browser_mouse.py`, acrescenta
-UF composta e UF sem nacional em 1440/320 px, datas/proveniência independentes,
-contagens literais, barras, ausência UF, rolagem da tabela e fallback composto sem
-JS. Repete lacuna/inspeção em 320 px também no artefato **com ambas as fontes**.
+O driver reaproveita os 19 casos nacionais de `tests/browser_mouse.py`, sem remover
+empate ou scroll/resize. Acrescenta composição e primeiras ausências de cada feed
+em 1440/320 px, 27 contagens literais, barras, ambas as colunas UF desde a primeira
+linha e nenhum overflow horizontal UF/página. Confere datas/proveniência e retenção
+após falha posterior de cada fonte; singular genuíno e plural/lacuna **contrafactual**
+(novembro/2026) pelo build completo. Exercita instrução, lacuna, leitura persistente,
+scroll/resize e inspeção em 320 px também no artefato **com ambas as fontes**.
+Fallback composto simula somente o ativo JS ausente. Tab/Enter nativos conferem o
+skip link, contraste local e abertura do JSON UF real; fontes/JSON relativos são
+conferidos sem navegar ao governo. Todos os casos são tentados; falhas de asserção
+são relatadas e o comando termina com erro, não transforma limitação em passe.
 Move o mouse real via `orca mouse move`, nunca eventos sintéticos, estado forçado
 ou helpers privados. Avaliação DOM apenas lê/mede e altera rolagem.
 Cada navegação recebe viewport explícito; capturas têm URL conferida antes/depois,
@@ -82,8 +98,11 @@ PNGs ficam em `$PREVIEW/evidence`: abrir os arquivos, não apenas gerar capturas
 Ao terminar, fechar somente a página e o terminal próprios e interromper o servidor
 pelo handle guardado. Preservar os PNGs/logs necessários ao relatório.
 
-Esse procedimento/evidência de #14 é histórico: fixtures locais não qualificam
-runtime, Actions/Pages nem WCAG/foco/teclado nativo. Não adiciona inspeção por
-teclado/toque. #8/#16 foram posteriormente aceitas; a retenção #39/#9 exige nova
-verificação do coordenador. Este documento não afirma execução desse browser
-sobre a implementação nova.
+A evidência original de #14 é histórica: não incluiu prova de foco/teclado nativo.
+#8/#16 foram posteriormente aceitas; seus recibos não foram reexecutados por #44.
+O novo contrato e a execução local de #44 estão separados em
+[aceitação composta — #41/#44](composed-acceptance.md#interface-4144--verificação-local-de-15112026).
+O empate nativo exato e zoom real de 200% ficaram **Not verified** nesta execução;
+não se afirma validação integral. Fixtures locais não qualificam runtime,
+Actions/Pages nem certificam WCAG, leitor de tela ou toque. Não se acrescenta
+seleção do gráfico por teclado/toque.
