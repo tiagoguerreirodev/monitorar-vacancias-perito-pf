@@ -366,14 +366,28 @@ class UFHistoryTests(unittest.TestCase):
     def test_archive_link_single_point_and_gaps_are_honest_and_subpath_relative(self):
         self.refresh()
         page = Page((self.site / 'index.html').read_text())
-        self.assertTrue(page.matching('a', href='data/uf-history.json'))
+        self.assertEqual(page.text('a', href='data/uf-history.json'), 'Arquivo mensal UF em JSON')
+        self.assertIn('Retenção prospectiva UF: 1 mês aceito, de setembro de 2026 a setembro de 2026.',
+                      page.text(id='uf-coverage'))
         self.assertIn('Uma única observação não permite inferir tendência', page.text(id='uf-coverage'))
-        self.assertIn('setembro de 2026', page.text(id='uf-coverage'))
+        self.assertIn('Sem lacunas entre os meses aceitos; não se presume cobertura anterior ao início.',
+                      page.text(id='uf-coverage'))
+        self.assertIn('Não há consulta retrospectiva nem inferência de fluxos de pessoal.',
+                      page.text(id='uf-coverage'))
+        self.assertNotIn('(es)', page.text(id='uf-coverage'))
+        self.assertNotIn('(s)', page.text(id='uf-coverage'))
         self.assertNotIn('Somente o retrato mais recente aceito, sem série histórica UF.', page.text(id='uf-panel'))
         self.refresh(uf=counterfactual('2027-01'), day=100)
         page = Page((self.site / 'index.html').read_text())
+        self.assertIn('Retenção prospectiva UF: 2 meses aceitos, de setembro de 2026 a janeiro de 2027.',
+                      page.text(id='uf-coverage'))
         self.assertIn('outubro de 2026, novembro de 2026, dezembro de 2026', page.text(id='uf-coverage'))
         self.assertIn('não são zeros', page.text(id='uf-coverage'))
+        self.assertIn('Não há consulta retrospectiva nem inferência de fluxos de pessoal.',
+                      page.text(id='uf-coverage'))
+        self.assertNotIn('Uma única observação', page.text(id='uf-coverage'))
+        self.assertNotIn('(es)', page.text(id='uf-coverage'))
+        self.assertNotIn('(s)', page.text(id='uf-coverage'))
         self.assertEqual(page.one(id='uf-reference')['attrs']['datetime'], '2027-01')
         self.assertEqual(len(page.matching('ol', id='uf-bars')), 1)
         self.assertEqual(len(page.matching('table', id='uf-values')), 1)

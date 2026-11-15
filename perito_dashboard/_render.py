@@ -133,7 +133,8 @@ def _uf_archive(archive):
     gap_text = ('Meses indisponíveis entre observações: ' + gaps + '; ausências não são zeros.'
                 if gaps else 'Sem lacunas entre os meses aceitos; não se presume cobertura anterior ao início.')
     single = (' Uma única observação não permite inferir tendência.' if len(months) == 1 else '')
-    return (f'<p id="uf-coverage">Retenção prospectiva UF: {len(months)} mês(es) aceito(s), '
+    accepted = '1 mês aceito' if len(months) == 1 else f'{len(months)} meses aceitos'
+    return (f'<p id="uf-coverage">Retenção prospectiva UF: {accepted}, '
             f'de {_month(coverage["start"])} a {_month(coverage["end"])}. '
             f'{gap_text}{single} Não há consulta retrospectiva nem inferência de fluxos de pessoal. '
             '<a href="data/uf-history.json">Arquivo mensal UF em JSON</a>.</p>')
@@ -167,7 +168,7 @@ Classes ausentes por UF não são zeros; ausência, supressão ou UF desconhecid
 <p>Contagens exatas; empates em ordem alfabética da sigla. Barras partem de zero.</p>
 <ol id="uf-bars" class="uf-bars" role="list">{''.join(bars)}</ol>
 <figcaption>Quantidade de pessoas ativas, não postos legais. Valores também na tabela abaixo.</figcaption></figure>
-<div class="table-scroll uf-table" tabindex="0" role="region" aria-label="Tabela de pessoal ativo por UF; role horizontalmente em telas pequenas">
+<div class="table-scroll uf-table" tabindex="0" role="region" aria-label="Tabela de pessoal ativo por UF">
 <table id="uf-values"><caption>Pessoas ativas por UF — valores exatos</caption>
 <thead><tr><th scope="col">UF</th><th scope="col">Pessoas ativas</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div>
 <div class="uf-provenance"><p>Fonte UF: <a href="{escape(source['url'], quote=True)}">Painel Estatístico de Pessoal (PEP) — Servidores</a>.
@@ -186,18 +187,17 @@ def render_site(history, status, destination, *, uf=None, uf_status=None, uf_his
     shutil.copytree(Path(__file__).with_name("assets"), destination / "assets", dirs_exist_ok=True)
     observations = sorted(history["observations"], key=lambda row: row["reference_month"]) if history else []
     current_content = (_current(observations[-1]) if observations else
-                       '<section class="panel"><h2>Dados indisponíveis</h2>'
-                       '<p>Nenhuma observação oficial válida está disponível. '
-                       'Não há números ou proporções a exibir.</p></section>')
+                       '<section class="panel"><h2>Dados nacionais indisponíveis</h2>'
+                       '<p>Nenhuma observação nacional válida está disponível.</p></section>')
     history_content = _history(observations) if observations else ""
     check_content = ('<p>Verificação nacional indisponível.</p>' if status is None else
-                     f'<p>Última verificação bem-sucedida: <strong><time datetime="{escape(status["last_successful_check"], quote=True)}">'
+                     f'<p>Última verificação nacional bem-sucedida: <strong><time datetime="{escape(status["last_successful_check"], quote=True)}">'
                      f'{_check_time(status["last_successful_check"])}</time></strong>.</p>')
-    uf_content = '<section class="panel"><h2>Pessoal ativo por UF</h2><p>Indisponível — sem observação aceita; ausência não é zero.</p></section>'
+    uf_content = '<section class="panel"><h2>Pessoal ativo por UF</h2><p>Pessoal ativo por UF indisponível — sem observação aceita; ausência não é zero.</p></section>'
     if uf is not None:
         uf_content = _uf_panel(uf, uf_status) + _uf_archive(uf_history)
-    national_links = ('<p>Dados para consulta: <a href="data/history.json">histórico em JSON</a> e '
-                      '<a href="data/status.json">última verificação em JSON</a>.</p>' if status else
+    national_links = ('<p>Dados nacionais para consulta: <a href="data/history.json">histórico nacional em JSON</a> e '
+                      '<a href="data/status.json">última verificação nacional em JSON</a>.</p>' if status else
                       '<p>Fonte nacional indisponível; nenhum retrato nacional aceito.</p>')
     html = f'''<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8">
@@ -221,7 +221,7 @@ def render_site(history, status, destination, *, uf=None, uf_status=None, uf_his
 <section class="sources" aria-labelledby="sources-title"><h2 id="sources-title">Fontes e escopo</h2>
 <p><a href="{DATASET_URL}">Cargos Vagos e Vacâncias — conjunto de dados oficial</a>.</p>
 <p>Somente Polícia Federal (órgão {PF_ORGANIZATION["code"]}), cargo Perito Criminal Federal, somando Classe Especial, 1ª, 2ª e 3ª classes. Outras carreiras e organizações não estão incluídas.</p>
-<p>Histórico a partir de {_month(CUTOFF)}. Dados agregados, sem registros pessoais.</p>
+<p>Recorte do histórico nacional: a partir de {_month(CUTOFF)}; não implica observações aceitas em todos os meses. Dados agregados, sem registros pessoais.</p>
 {national_links}</section>
 </main><footer class="wrap"><p>Fonte mensal oficial. Sem estimativas de efetivo ou previsões de concurso.</p></footer></body></html>
 '''
