@@ -146,6 +146,31 @@ class Browser:
         assert geometry["pageWidth"] <= geometry["width"], geometry
         print("PASS labeled, selectable in-flow readout outside plot without overlap/overflow", geometry)
 
+    def uf_geometry(self):
+        """Read UF table geometry; each scenario keeps its own bounds policy."""
+        return self.evaluate("""(() => {
+          const table = document.querySelector('#uf-values');
+          const region = table.closest('[role="region"]');
+          const box = region.getBoundingClientRect();
+          const rows = Array.from(table.tBodies[0].rows);
+          const cells = rows.flatMap(row => Array.from(row.cells));
+          const first = rows[0].getBoundingClientRect();
+          return {rows: rows.map(row => [row.cells[0].textContent.split(' — ')[0],
+                    Number(row.cells[1].textContent.replaceAll('.', ''))]),
+            labels: rows.map(row => row.cells[0].textContent),
+            cellBounds: cells.map(cell => cell.getBoundingClientRect().toJSON()),
+            textBounds: cells.flatMap(cell => {
+              const range = document.createRange(); range.selectNodeContents(cell);
+              return Array.from(range.getClientRects()).map(rect => rect.toJSON());
+            }), regionLeft: box.left, regionRight: box.right,
+            firstTop: first.top, firstBottom: first.bottom, height: innerHeight,
+            name: region.getAttribute('aria-label'), tabindex: region.tabIndex,
+            headers: Array.from(table.tHead.rows[0].cells).map(cell => [cell.tagName, cell.scope]),
+            display: getComputedStyle(table).display,
+            regionWidth: region.clientWidth, regionContent: region.scrollWidth,
+            pageWidth: document.documentElement.scrollWidth, width: innerWidth};
+        })()""")
+
     def leave(self):
         last = self.readout()
         point = self.evaluate("""(() => {
@@ -438,28 +463,17 @@ def check_skip(browser):
 def check_uf_layout(browser):
     browser.command('viewport', '--width', '320', '--height', '1000')
     browser.evaluate("document.querySelector('#uf-values').scrollIntoView({block:'start'})")
-    content = browser.evaluate("""(() => {
-      const table = document.querySelector('#uf-values');
-      const region = table.closest('[role="region"]');
-      const box = region.getBoundingClientRect();
-      const rows = Array.from(table.tBodies[0].rows);
-      return {rows: rows.map(row => [row.cells[0].textContent.split(' — ')[0],
-                Number(row.cells[1].textContent.replaceAll('.', ''))]),
-        labels: rows.map(row => row.cells[0].textContent),
-        cellsFit: rows.every(row => Array.from(row.cells).every(cell => {
-          const rect = cell.getBoundingClientRect();
-          return rect.left >= box.left && rect.right <= box.right + 1;
-        })), firstVisible: rows[0].getBoundingClientRect().bottom < innerHeight,
-        name: region.getAttribute('aria-label'), tabindex: region.tabIndex,
-        headers: Array.from(table.tHead.rows[0].cells).map(cell => [cell.tagName, cell.scope]),
-        display: getComputedStyle(table).display,
-        regionWidth: region.clientWidth, regionContent: region.scrollWidth,
-        pageWidth: document.documentElement.scrollWidth, width: innerWidth,
-        chartScrolls: document.querySelector('.chart-scroll').scrollWidth >
-                      document.querySelector('.chart-scroll').clientWidth,
-        nationalScrolls: document.querySelector('#history-values').scrollWidth >
-                         document.querySelector('#history-values').parentElement.clientWidth};
-    })()""")
+    content = browser.uf_geometry()
+    content['cellsFit'] = all(rect['left'] >= content['regionLeft'] and
+                              rect['right'] <= content['regionRight'] + 1
+                              for rect in content['cellBounds'])
+    content['firstVisible'] = content['firstBottom'] < content['height']
+    content.update(browser.evaluate("""({
+      chartScrolls: document.querySelector('.chart-scroll').scrollWidth >
+                    document.querySelector('.chart-scroll').clientWidth,
+      nationalScrolls: document.querySelector('#history-values').scrollWidth >
+                       document.querySelector('#history-values').parentElement.clientWidth
+    })"""))
     assert content['rows'] == [list(row) for row in RANKED], content
     assert content['labels'][0] == 'DF — Distrito Federal', content
     assert 'RN — Rio Grande do Norte' in content['labels'], content
