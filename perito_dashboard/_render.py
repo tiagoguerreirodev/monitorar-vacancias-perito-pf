@@ -5,7 +5,7 @@ import math
 from pathlib import Path
 import shutil
 
-from ._shared import CUTOFF, PF_ORGANIZATION, write_json
+from ._shared import CUTOFF, PF_ORGANIZATION
 
 
 MONTHS = ("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
@@ -181,15 +181,8 @@ Verificação e obtenção não são o mês de referência.</p>
 
 
 def render_site(history, status, destination, *, uf=None, uf_status=None, uf_history=None):
-    """Build a complete artifact; never fetch sources, read a clock or mutate inputs."""
+    """Render HTML and assets; never fetch sources, read a clock or mutate inputs."""
     destination = Path(destination)
-    (destination / "data").mkdir(parents=True, exist_ok=True)
-    for name, value in (("history", history), ("status", status)):
-        if value is not None:
-            write_json(destination / "data" / f"{name}.json", value)
-    for name, value in (("uf", uf), ("uf-status", uf_status)):
-        if value is not None:
-            write_json(destination / "data" / f"{name}.json", value)
     shutil.copytree(Path(__file__).with_name("assets"), destination / "assets", dirs_exist_ok=True)
     observations = sorted(history["observations"], key=lambda row: row["reference_month"]) if history else []
     current_content = (_current(observations[-1]) if observations else

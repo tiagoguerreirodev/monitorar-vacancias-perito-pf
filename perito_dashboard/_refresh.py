@@ -555,9 +555,10 @@ def _refresh_locked(data_dir, site_dir, source, uf_source, clock):
         _saved_history(staged[0][0])
         saved_uf, saved_status = load_saved(staged[0][0], _timestamp)
         saved_archive = load_history(staged[0][0], saved_uf, saved_status, _timestamp)
+        (staged[1][0] / 'data').mkdir(parents=True, exist_ok=True)
         render_site(history if status else None, status, staged[1][0], uf=uf, uf_status=uf_status,
                     uf_history=saved_archive if (staged[0][0] / 'uf-history.json').exists() else None)
-        # Rendered JSON is the exact accepted byte representation, including a failed feed.
+        # Publish the exact accepted byte representation, including a failed feed.
         for name in allowed:
             if (staged[0][0] / name).exists():
                 public = site_dir / 'data' / name
