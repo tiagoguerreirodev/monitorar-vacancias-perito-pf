@@ -1,0 +1,949 @@
+{
+  "schema_version": 1,
+  "observations": [
+    {
+      "reference_month": "2026-09",
+      "rows": [
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "AC",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "AM",
+          "2"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "CE",
+          "3"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "DF",
+          "34"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "GO",
+          "2"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "MA",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "MG",
+          "6"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "MS",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "PA",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "PB",
+          "4"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "PE",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "PI",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "PR",
+          "11"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "RJ",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "RN",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "RO",
+          "2"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "RR",
+          "2"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "RS",
+          "5"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "SC",
+          "3"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "SE",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "SP",
+          "11"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 1a Cla",
+          "DPF",
+          "TO",
+          "2"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "AC",
+          "4"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "AM",
+          "6"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "AP",
+          "4"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "BA",
+          "4"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "CE",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "DF",
+          "49"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "ES",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "GO",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "MA",
+          "2"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "MG",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "MS",
+          "5"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "MT",
+          "5"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "PA",
+          "5"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "PB",
+          "2"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "PE",
+          "2"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "PI",
+          "3"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "PR",
+          "13"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "RO",
+          "7"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "RR",
+          "3"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "RS",
+          "3"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "SE",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "SP",
+          "14"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 2a Cla",
+          "DPF",
+          "TO",
+          "7"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "AC",
+          "3"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "AL",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "AM",
+          "2"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "AP",
+          "3"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "DF",
+          "20"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "ES",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "MG",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "MS",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "MT",
+          "2"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "PA",
+          "2"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "PI",
+          "3"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "PR",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "RJ",
+          "2"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "RO",
+          "8"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "RR",
+          "2"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "RS",
+          "2"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal 3a Cla",
+          "DPF",
+          "SP",
+          "4"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "AC",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "AL",
+          "13"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "AM",
+          "4"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "BA",
+          "23"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "CE",
+          "26"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "DF",
+          "221"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "ES",
+          "19"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "GO",
+          "25"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "MA",
+          "8"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "MG",
+          "71"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "MS",
+          "20"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "MT",
+          "6"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "PA",
+          "5"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "PB",
+          "19"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "PE",
+          "28"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "PI",
+          "7"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "PR",
+          "46"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "RJ",
+          "52"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "RN",
+          "14"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "RO",
+          "7"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "RR",
+          "1"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "RS",
+          "47"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "SC",
+          "34"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "SE",
+          "10"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "SP",
+          "101"
+        ],
+        [
+          "2026",
+          "Set",
+          "Ativo",
+          "Perito Criminal Federal Classe",
+          "DPF",
+          "TO",
+          "3"
+        ]
+      ],
+      "counts_by_uf": {
+        "AC": 9,
+        "AL": 14,
+        "AM": 14,
+        "AP": 7,
+        "BA": 27,
+        "CE": 30,
+        "DF": 324,
+        "ES": 21,
+        "GO": 28,
+        "MA": 11,
+        "MG": 79,
+        "MS": 27,
+        "MT": 13,
+        "PA": 13,
+        "PB": 25,
+        "PE": 31,
+        "PI": 14,
+        "PR": 71,
+        "RJ": 55,
+        "RN": 15,
+        "RO": 24,
+        "RR": 8,
+        "RS": 57,
+        "SC": 37,
+        "SE": 12,
+        "SP": 130,
+        "TO": 12
+      },
+      "total": 1108,
+      "scope": {
+        "organization": "DPF",
+        "native_organization": "Departamento De Policia Federal",
+        "status": "Ativo",
+        "classes": [
+          "Perito Criminal Federal 1a Cla",
+          "Perito Criminal Federal 2a Cla",
+          "Perito Criminal Federal 3a Cla",
+          "Perito Criminal Federal Classe"
+        ],
+        "metric": "Servidores"
+      },
+      "coverage": {
+        "ufs": [
+          "AC",
+          "AL",
+          "AM",
+          "AP",
+          "BA",
+          "CE",
+          "DF",
+          "ES",
+          "GO",
+          "MA",
+          "MG",
+          "MS",
+          "MT",
+          "PA",
+          "PB",
+          "PE",
+          "PI",
+          "PR",
+          "RJ",
+          "RN",
+          "RO",
+          "RR",
+          "RS",
+          "SC",
+          "SE",
+          "SP",
+          "TO"
+        ],
+        "absent_class_uf_pairs": "not_asserted_zero"
+      },
+      "geography": {
+        "source_field": "UF Servidores",
+        "meaning": "UF de lotação",
+        "basis": "project_assumption",
+        "officially_verified": false
+      },
+      "semantic_identity": {
+        "version": 1,
+        "sha256": "dae419f1145ea7c81fe8add8f2df7d5b9f605741ee5ce7d86bf61db4da901e0a"
+      },
+      "source": {
+        "url": "https://pep.paineis.gov.br/extensions/pep/index.html",
+        "app_id": "aec332a1-406b-4fec-a776-b1ed66735961",
+        "table": "Dwnkq",
+        "retrieved_at": "2026-11-14T20:50:16.275Z",
+        "download_guid": "161c44c3-c3ec-4afd-82c9-3a34b8063250",
+        "own_source_total": 1108,
+        "filters": {
+          "Seção": [
+            "Servidores"
+          ],
+          "Mês/Ano": [
+            "Set 2026"
+          ],
+          "Grupo Situação do Vinculo": [
+            "Ativo"
+          ],
+          "Orgão": [
+            "Departamento De Policia Federal"
+          ],
+          "Cargo": [
+            "Perito Criminal Federal 1a Cla",
+            "Perito Criminal Federal 2a Cla",
+            "Perito Criminal Federal 3a Cla",
+            "Perito Criminal Federal Classe"
+          ],
+          "Dimensão": [
+            "Grupo Situação do Vínculo",
+            "Nome do Cargo",
+            "Orgão",
+            "UF"
+          ],
+          "Métricas": [
+            "Servidores"
+          ]
+        },
+        "organization_mapping": {
+          "nativeOrgaoField": "Órgão (Servidores)",
+          "nativePfLabel": "Departamento De Policia Federal",
+          "physicalFields": [
+            "Sigla Orgão Vinculado (Servidores)"
+          ],
+          "availableAbbreviations": [
+            "DPF"
+          ]
+        },
+        "anonymous_session": {
+          "cookie_count_before_navigation": 0,
+          "websocket_status": 101
+        },
+        "evidence_sha256": "2a7cd1f0b05b79dfe41f3cc9439cce09ed2594c8dd9d8a07f44d534f2aa1eca7",
+        "sha256": "10c45252b95c79c6f8b5a8d33f046a588e1e875b52d4e2ef5a60c6540e0b2543"
+      }
+    }
+  ],
+  "coverage": {
+    "available_months": [
+      "2026-09"
+    ],
+    "start": "2026-09",
+    "end": "2026-09",
+    "missing_months": []
+  },
+  "corrections": [],
+  "legacy_corrections": []
+}
