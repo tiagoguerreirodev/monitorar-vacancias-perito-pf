@@ -58,12 +58,13 @@ class UFHistoryTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.data, self.site = self.root / 'data', self.root / 'site'
+        self.base_time = NOW
 
     def refresh(self, uf=None, national=None, day=1):
         return refresh_and_build(self.data, self.site,
             source=national if national is not None else ControlledArchive(),
             uf_source=uf if uf is not None else ExportSource(),
-            clock=lambda: NOW + timedelta(days=day))
+            clock=lambda: self.base_time + timedelta(days=day))
 
     def saved(self, name='uf-history.json'):
         self.assertEqual((self.data / name).read_bytes(), (self.site / 'data' / name).read_bytes())
@@ -100,6 +101,9 @@ class UFHistoryTests(unittest.TestCase):
         self.data.mkdir()
         for name in ('uf.json', 'uf-status.json'):
             shutil.copy2(ROOT / 'data' / name, self.data / name)
+        status = json.loads((self.data / 'uf-status.json').read_text())
+        self.base_time = max(NOW, datetime.fromisoformat(
+            status['last_successful_check'].replace('Z', '+00:00')))
         return json.loads((self.data / 'uf.json').read_text())['current']
 
     def test_genuine_accepted_current_migrates_without_rewriting_original_evidence(self):
